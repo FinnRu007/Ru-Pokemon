@@ -1,0 +1,402 @@
+{
+  "player_house_1f": {
+    "name": "Zuhause – Erdgeschoss", "indoor": true, "size": [10, 8],
+    "spawns": { "SpawnPoint": [0, 2], "from_2f": [0, -1] },
+    "stairs": [ { "at": [0, -2], "to": "player_house_2f", "spawn": "from_1f", "facing": "up" } ],
+    "warps": [ { "at": [0, 3], "to": "zweiblattdorf", "spawn": "from_house" } ],
+    "objects": [
+      { "at": [-3, 1], "kind": "deco", "tile": 27, "name": "Tisch" },
+      { "at": [3, 1], "kind": "deco", "tile": 52, "name": "Bücherregal" }
+    ],
+    "npcs": [
+      { "at": [-2, -1], "name": "Mama", "role": "villager_f", "facing": "down",
+        "lines": "Guten Morgen! Hast du gut geschlafen?\nProfessor Eibe wollte dich sprechen – er ist auf Route 201, gleich nördlich vom Dorf.\nVergiss nicht, dich ordentlich anzuziehen, bevor du rausgehst!", "heal": true }
+    ],
+    "signs": [ { "at": [3, -1], "text": "Ein Herd und ein gedeckter Tisch – hier duftet es nach Frühstück." } ]
+  },
+
+  "player_house_2f": {
+    "name": "Zuhause – Kinderzimmer", "indoor": true, "size": [8, 7],
+    "spawns": { "SpawnPoint": [0, -1], "from_1f": [0, -1] },
+    "stairs": [ { "at": [0, -2], "to": "player_house_1f", "spawn": "from_2f", "facing": "down" } ],
+    "objects": [
+      { "at": [-2, -2], "kind": "deco", "tile": 49, "w": 1.4, "h": 1.1, "name": "Bett" },
+      { "at": [2, -2], "kind": "deco", "tile": 50, "name": "Kommode" },
+      { "at": [-2, 1], "kind": "deco", "tile": 54, "solid": false },
+      { "at": [2, 0], "kind": "tv", "flag": "watched_tv_intro" }
+    ],
+    "signs": [ { "at": [0, 1], "text": "Dein Zimmer. Der Fernseher läuft schon." } ]
+  },
+
+  "rival_house": {
+    "name": "Nachbarhaus", "indoor": true, "size": [10, 8],
+    "spawns": { "SpawnPoint": [0, 2] },
+    "warps": [ { "at": [0, 3], "to": "zweiblattdorf", "spawn": "from_rival_house" } ],
+    "objects": [
+      { "at": [-2, -1], "kind": "deco", "tile": 49, "name": "Bett" },
+      { "at": [2, -1], "kind": "deco", "tile": 52, "name": "Regal" }
+    ],
+    "npcs": [
+      { "at": [0, -1], "name": "Nachbarin", "role": "villager_f", "facing": "down",
+        "lines": "Meine Tochter ist schon vorausgelaufen, um Professor Eibe zu treffen!\nBeeil dich lieber, sonst kommst du zu spät." }
+    ]
+  },
+
+  "zweiblattdorf": {
+    "name": "Zweiblattdorf", "size": [20, 16],
+    "_layout_note": "Nachempfunden an Twinleaf Town (Bulbapedia): Spielerhaus SO-Ecke, Rivalenhaus NW-Ecke, kleiner Teich im Süden, 2 Blumenbeete am Nordeingang, Baum-/Zaunrand ringsum mit Öffnung nur im Norden.",
+    "spawns": {
+      "SpawnPoint": [0, 4], "from_house": [6, 7], "from_rival_house": [-6, -1], "from_route201": [0, -6]
+    },
+    "doors": [
+      { "at": [6, 6], "to": "player_house_1f", "spawn": "SpawnPoint", "facing": "up" },
+      { "at": [-6, -2], "to": "rival_house", "spawn": "SpawnPoint", "facing": "up", "style": "green" }
+    ],
+    "buildings": [
+      { "at": [-6, 6], "style": "green" },
+      { "at": [6, -2], "style": "green" }
+    ],
+    "warps": [ { "at": [0, -7], "to": "route201", "spawn": "from_town" } ],
+    "roads": [
+      { "rect": [-1, -7, 2, 15] },
+      { "rect": [-6, -2, 6, 2] },
+      { "rect": [1, 6, 6, 2] }
+    ],
+    "water": [ { "rect": [-2, 6, 4, 2] } ],
+    "fences": [
+      [-4, -5], [-3, -5], [2, -5], [3, -5],
+      [-3, 6], [-3, 7], [3, 6], [3, 7]
+    ],
+    "flowers": [
+      { "rect": [-4, -6, 2, 2] }, { "rect": [2, -6, 2, 2] }
+    ],
+    "npcs": [
+      { "at": [-5, -1], "name": "Nachbarin", "role": "villager_f", "facing": "right",
+        "lines": "Das ist das Haus deiner Rivalin/deines Rivalen.\nEr bzw. sie ist bestimmt schon zu Professor Eibe unterwegs!" },
+      { "at": [-2, -5], "name": "Kind", "role": "boy", "facing": "up",
+        "lines": "Nach Norden geht es raus auf Route 201." },
+      { "at": [0, 5], "name": "Angler", "role": "hiker", "facing": "down",
+        "lines": "Der kleine Teich hier ist ganz hübsch, findest du nicht?" }
+    ],
+    "signs": [ { "at": [1, -6], "text": "ZWEIBLATTDORF – Wo die Blätter zweifach spriessen." } ]
+  },
+
+  "route201": {
+    "name": "Route 201", "size": [14, 24],
+    "spawns": { "from_town": [0, 10], "from_sandgem": [0, -10] },
+    "warps": [
+      { "at": [0, 11], "to": "zweiblattdorf", "spawn": "from_route201" },
+      { "at": [0, -11], "to": "sandgemme", "spawn": "from_route201" }
+    ],
+    "grass": [ { "rect": [-4, -7, 8, 7], "table": "route201" } ],
+    "roads": [ { "rect": [-5, 2, 6, 2] } ],
+    "objects": [
+      { "at": [-4, 6], "kind": "starter_table", "name": "Professor Eibe" },
+      { "at": [0, 3], "kind": "gate", "name": "Professor Eibe", "facing": "down",
+        "open_flag": "got_starter",
+        "block_text": "Warte! Da vorn ist hohes Gras – da lauern wilde Pokémon.\nOhne eigenes Pokémon ist das viel zu gefährlich.\nNimm dir eines aus meinem Koffer dort drüben!",
+        "open_text": "Viel Glück auf deiner Reise! Sandgemme liegt weiter nördlich." }
+    ],
+    "npcs": [
+      { "at": [3, 8], "name": "Wanderer", "role": "hiker", "facing": "left",
+        "lines": "Route 201 verbindet Zweiblattdorf mit Sandgemme." },
+      { "at": [-5, 3], "name": "Angler Nick", "role": "hiker", "facing": "right",
+        "lines": "Im Westen liegt der Corallosee – ein schöner Ort zum Angeln." }
+    ],
+    "signs": [ { "at": [-6, 3], "text": "Zum Corallosee." } ]
+  },
+
+  "sandgemme": {
+    "name": "Sandgemme", "size": [20, 18],
+    "spawns": {
+      "SpawnPoint": [0, 4], "from_route201": [0, 7], "from_route202": [0, -7],
+      "from_lab": [-5, 0], "from_mart": [5, 0], "from_center": [0, 2]
+    },
+    "doors": [
+      { "at": [-5, -1], "to": "proflab", "spawn": "SpawnPoint", "facing": "up" },
+      { "at": [5, -1], "to": "pokemart", "spawn": "SpawnPoint", "facing": "up" },
+      { "at": [0, 1], "to": "pokecenter", "spawn": "SpawnPoint", "facing": "up" }
+    ],
+    "warps": [
+      { "at": [0, 8], "to": "route201", "spawn": "from_sandgem" },
+      { "at": [0, -8], "to": "route202", "spawn": "from_sandgem" }
+    ],
+    "buildings": [ { "at": [-6, 6], "style": "green" } ],
+    "roads": [
+      { "rect": [-1, -8, 2, 17] },
+      { "rect": [-5, -1, 6, 2] },
+      { "rect": [0, -1, 6, 2] }
+    ],
+    "flowers": [ { "rect": [3, 4, 2, 2] } ],
+    "npcs": [
+      { "at": [-3, 3], "name": "Fischer", "role": "gent", "facing": "right",
+        "lines": "Sandgemme! Hier ist das Labor von Professor Eibe.\nDaneben der Markt, in der Mitte das Pokémon-Center." },
+      { "at": [-6, 5], "name": "Nachbarsjunge", "role": "boy", "facing": "up",
+        "lines": "Mein Vater assistiert Professor Eibe im Labor nebenan!" }
+    ],
+    "signs": [ { "at": [3, 3], "text": "SANDGEMME – Am Meer gelegen." } ]
+  },
+
+  "proflab": {
+    "name": "Eibes Labor", "indoor": true, "size": [14, 12],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 5], "to": "sandgemme", "spawn": "from_lab" } ],
+    "objects": [ { "at": [0, -3], "kind": "professor", "name": "Professor Eibe", "facing": "down" } ],
+    "npcs": [ { "at": [4, -2], "name": "Assistent", "role": "villager_m", "facing": "left",
+      "lines": "Der Professor erforscht, wo Pokémon herkommen." } ],
+    "signs": [ { "at": [-4, -2], "text": "Ein Bücherregal voller Pokémon-Studien." } ]
+  },
+
+  "pokemart": {
+    "name": "Pokémon-Markt", "indoor": true, "size": [12, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "sandgemme", "spawn": "from_mart" } ],
+    "objects": [
+      { "at": [0, -2], "kind": "shop", "name": "Verkäufer", "facing": "down",
+        "stock": ["poke-ball", "great-ball", "potion", "super-potion", "antidote", "paralyze-heal", "awakening", "burn-heal", "escape-rope"] }
+    ]
+  },
+
+  "pokecenter": {
+    "name": "Pokémon-Center", "indoor": true, "size": [14, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "sandgemme", "spawn": "from_center" } ],
+    "npcs": [
+      { "at": [0, -2], "name": "Schwester Joy", "role": "girl", "facing": "down",
+        "lines": "Willkommen im Pokémon-Center!\nSollen sich deine Pokémon ausruhen?", "heal": true }
+    ]
+  },
+
+  "route202": {
+    "name": "Route 202", "size": [24, 14],
+    "spawns": { "from_sandgem": [-10, 0], "from_jubilife": [10, 0] },
+    "warps": [
+      { "at": [-11, 0], "to": "sandgemme", "spawn": "from_route202" },
+      { "at": [11, 0], "to": "jubelstadt", "spawn": "from_route202" }
+    ],
+    "grass": [
+      { "rect": [-9, -2, 3, 5], "table": "route202" },
+      { "rect": [-6, 1, 8, 4], "table": "route202" },
+      { "rect": [3, -5, 6, 4], "table": "route202" },
+      { "rect": [8, -1, 3, 3], "table": "route202" }
+    ],
+    "trainers": [
+      { "at": [-7, -1], "facing": "down", "sight": 3, "name": "Jungspund Tristan", "role": "boy",
+        "team": [["starly", 4]], "prize": 160, "flag": "beat_tristan",
+        "text": "He, du da! Lust auf ein Pokémon-Duell?" },
+      { "at": [-3, 3], "facing": "up", "sight": 3, "name": "Jugendliche Natalie", "role": "lass",
+        "team": [["bidoof", 5], ["starly", 6]], "prize": 240, "flag": "beat_natalie",
+        "text": "Ha! Ich hab dich gesehen! Kämpfen wir!" },
+      { "at": [4, -3], "facing": "down", "sight": 4, "name": "Jungspund Logan", "role": "boy",
+        "team": [["shinx", 7], ["kricketot", 6]], "prize": 360, "flag": "beat_logan",
+        "text": "Ein Neuling auf Route 202? Zeig mir, was du kannst!",
+        "win_text": "Stark! Du hast Talent." }
+    ],
+    "npcs": [ { "at": [8, 1], "name": "Fänger-Lisa", "role": "girl", "facing": "right",
+      "lines": "Willst du ein wildes Pokémon fangen?\nSchwäch es im Kampf und wirf dann einen Pokéball!" } ]
+  },
+
+  "jubelstadt": {
+    "name": "Jubelstadt", "size": [22, 16],
+    "_layout_note": "Nachempfunden an Jubilife City (Bulbapedia): TV-Sender im Norden, Pokétch-Firma im Nordwesten, Trainerschule im Nordosten, dazu Center/Markt – alle begehbar.",
+    "spawns": {
+      "SpawnPoint": [0, 5], "from_route202": [-9, 0], "from_route203": [9, 0],
+      "from_tv": [0, -3], "from_poketch": [-8, -1], "from_school": [8, -1],
+      "from_jcenter": [-4, -1], "from_jmart": [4, -1]
+    },
+    "doors": [
+      { "at": [0, -6], "to": "jubel_tv", "spawn": "SpawnPoint", "facing": "up", "style": "shop" },
+      { "at": [-8, -4], "to": "poketch_hq", "spawn": "SpawnPoint", "facing": "up", "style": "lab" },
+      { "at": [8, -4], "to": "trainer_school", "spawn": "SpawnPoint", "facing": "up", "style": "center" },
+      { "at": [-4, -4], "to": "pokecenter_jubel", "spawn": "SpawnPoint", "facing": "up", "style": "center" },
+      { "at": [4, -4], "to": "pokemart_jubel", "spawn": "SpawnPoint", "facing": "up", "style": "shop" }
+    ],
+    "warps": [
+      { "at": [-10, 0], "to": "route202", "spawn": "from_jubilife" },
+      { "at": [10, 0], "to": "route203", "spawn": "from_jubilife" }
+    ],
+    "roads": [
+      { "rect": [-9, -1, 18, 2] },
+      { "rect": [-1, -6, 2, 6] },
+      { "rect": [-5, -4, 10, 2] }
+    ],
+    "signs": [
+      { "at": [0, -1], "text": "JUBELSTADT – Die grösste Stadt Sinnohs.\n\nIm Osten führt Route 203 weiter Richtung Erzelingen." },
+      { "at": [0, -3], "text": "JUBEL-TV – Hier wird Mystery Gift freigeschaltet, sobald du den Orden von Erzelingen hast." },
+      { "at": [-8, -1], "text": "POKÉTCH-FIRMA – Erfinder der praktischen Pokétch-Armbanduhr." }
+    ],
+    "npcs": [
+      { "at": [2, -2], "name": "Stadtführer", "role": "gent", "facing": "left",
+        "lines": "Willkommen in der Jubelstadt!\nÜber Route 203 im Osten erreichst du den Erzelingen-Tunnel." },
+      { "at": [8, -1], "name": "Schülerin", "role": "girl", "facing": "down",
+        "lines": "Die Trainerschule dort drüben bringt dir alle Grundlagen bei!" }
+    ]
+  },
+
+  "jubel_tv": {
+    "name": "Jubel-TV", "indoor": true, "size": [12, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "jubelstadt", "spawn": "from_tv" } ],
+    "npcs": [ { "at": [0, -2], "name": "Clown", "role": "villager_m", "facing": "down",
+      "lines": "Halt! Der Sender ist gerade nicht zu besichtigen.\nKomm zurück, sobald du den Steinorden aus Erzelingen hast!" } ],
+    "signs": [ { "at": [-3, -2], "text": "Kameras, Kabel und ganz viel Technik." } ]
+  },
+
+  "poketch_hq": {
+    "name": "Pokétch-Firma", "indoor": true, "size": [12, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "jubelstadt", "spawn": "from_poketch" } ],
+    "npcs": [ { "at": [0, -2], "name": "Ingenieurin", "role": "villager_f", "facing": "down",
+      "lines": "Wir tüfteln hier an der nächsten Pokétch-App!\nDamit lässt sich später einiges am Handgelenk erledigen." } ],
+    "signs": [ { "at": [3, -2], "text": "Baupläne für Armbanduhren, überall verstreut." } ]
+  },
+
+  "trainer_school": {
+    "name": "Trainerschule", "indoor": true, "size": [12, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "jubelstadt", "spawn": "from_school" } ],
+    "npcs": [
+      { "at": [-2, -2], "name": "Lehrer", "role": "gent", "facing": "down",
+        "lines": "Typvorteile entscheiden oft den Kampf!\nSchau dir die Typtafel genau an." },
+      { "at": [2, -2], "name": "Schüler", "role": "boy", "facing": "down",
+        "lines": "Wechsle dein Pokémon, bevor es K.O. geht – so verlierst du keine Erfahrung!" }
+    ],
+    "signs": [ { "at": [0, 2], "text": "Hier lernst du die Grundlagen des Pokémon-Trainings." } ]
+  },
+
+  "pokecenter_jubel": {
+    "name": "Pokémon-Center", "indoor": true, "size": [14, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "jubelstadt", "spawn": "from_jcenter" } ],
+    "npcs": [
+      { "at": [0, -2], "name": "Schwester Joy", "role": "girl", "facing": "down",
+        "lines": "Willkommen im Pokémon-Center!\nSollen sich deine Pokémon ausruhen?", "heal": true }
+    ]
+  },
+
+  "pokemart_jubel": {
+    "name": "Pokémon-Markt", "indoor": true, "size": [12, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "jubelstadt", "spawn": "from_jmart" } ],
+    "objects": [
+      { "at": [0, -2], "kind": "shop", "name": "Verkäufer", "facing": "down",
+        "stock": ["poke-ball", "great-ball", "potion", "super-potion", "antidote", "paralyze-heal", "awakening", "burn-heal", "escape-rope", "repel"] }
+    ]
+  },
+
+  "route203": {
+    "name": "Route 203", "size": [22, 12],
+    "spawns": { "from_jubilife": [-9, 0], "from_gate": [9, 0] },
+    "warps": [
+      { "at": [-10, 0], "to": "jubelstadt", "spawn": "from_route203" },
+      { "at": [10, 0], "to": "oreburgh_gate", "spawn": "from_route203" }
+    ],
+    "grass": [ { "rect": [-4, -4, 10, 3], "table": "route203" }, { "rect": [-2, 2, 9, 3], "table": "route203" } ],
+    "trainers": [
+      { "at": [0, -3], "facing": "down", "sight": 3, "name": "Schulkind Max", "role": "boy",
+        "team": [["shinx", 9], ["bidoof", 9]], "prize": 320, "flag": "beat_max",
+        "text": "Auf zum Erzelingen-Tunnel? Erst musst du an mir vorbei!" }
+    ],
+    "npcs": [ { "at": [5, 3], "name": "Radlerin", "role": "lass", "facing": "left",
+      "lines": "Mit dem Fahrrad kommst du hier viel schneller voran!" } ]
+  },
+
+  "oreburgh_gate": {
+    "name": "Erzelingen-Tunnel", "size": [14, 20], "indoor": true, "cave": true,
+    "spawns": { "from_route203": [0, 9], "from_erzbingen": [0, -9] },
+    "warps": [
+      { "at": [0, 10], "to": "route203", "spawn": "from_gate" },
+      { "at": [0, -10], "to": "erzbingen", "spawn": "from_gate" }
+    ],
+    "npcs": [
+      { "at": [-2, 2], "name": "Grubenarbeiter", "role": "hiker", "facing": "down",
+        "lines": "Ohne Licht ist es hier drin ganz schön dunkel!\nHalt Ausschau nach wilden Höhlen-Pokémon." },
+      { "at": [2, -3], "name": "Alter Bergmann", "role": "oldman", "facing": "up",
+        "flag_after": "got_hm_rock_smash",
+        "lines": "Da drüben liegt etwas Glänzendes am Boden – nimm es mit!\nMit der VM Zertrümmerer lassen sich brüchige Felsen zerschlagen, sobald du einen Orden hast.",
+        "lines_after": "Pass auf dich auf hier drin." }
+    ],
+    "objects": [
+      { "at": [3, -3], "kind": "item", "item": "hm06-rock-smash", "amount": 1, "flag": "got_hm_rock_smash" },
+      { "at": [-4, 4], "kind": "deco", "tile": 46, "name": "Lorenwagen" },
+      { "at": [4, -6], "kind": "deco", "tile": 47, "name": "Erz" }
+    ],
+    "grass": [ { "rect": [-3, -6, 6, 5], "table": "oreburgh_gate" } ],
+    "signs": [ { "at": [0, 0], "text": "Der Tunnel führt weiter nach Erzelingen." } ]
+  },
+
+  "erzbingen": {
+    "name": "Erzelingen", "size": [20, 18],
+    "spawns": { "from_gate": [0, 7], "from_mine": [-6, -2], "from_gym": [0, -3], "from_museum": [7, -3] },
+    "doors": [
+      { "at": [0, -4], "to": "erzbingen_gym", "spawn": "SpawnPoint", "facing": "up", "style": "gym" },
+      { "at": [7, -5], "to": "erzbingen_museum", "spawn": "SpawnPoint", "facing": "up", "style": "center" }
+    ],
+    "warps": [
+      { "at": [0, 8], "to": "oreburgh_gate", "spawn": "from_erzbingen" },
+      { "at": [-8, -2], "to": "coal_mine", "spawn": "from_erzbingen" }
+    ],
+    "npcs": [
+      { "at": [4, 2], "name": "Bergmann Theo", "role": "hiker", "facing": "left",
+        "lines": "Erzelingen lebt vom Kohleabbau.\nDie Mine im Westen ist auch für Trainer interessant." },
+      { "at": [-3, 4], "name": "Fan", "role": "boy", "facing": "up",
+        "lines": "Arenaleiter Veit nutzt Gesteins-Pokémon.\nFeuer- und Wasser-Attacken sind stark gegen ihn!" }
+    ],
+    "objects": [
+      { "at": [6, 5], "kind": "item", "item": "bicycle", "amount": 1, "flag": "got_bicycle" }
+    ],
+    "signs": [
+      { "at": [4, -3], "text": "ERZELINGEN-ARENA\nArenaleiter: Veit – Gesteins-Pokémon" },
+      { "at": [7, -3], "text": "ERZBAU-MUSEUM – Eintritt frei. Fossilien werden hier kostenlos wiederbelebt." },
+      { "at": [6, 4], "text": "FAHRRADLADEN\nHeute im Angebot: 1 Fahrrad – gratis für Trainer auf Durchreise!" }
+    ]
+  },
+
+  "erzbingen_museum": {
+    "name": "Erzbau-Museum", "indoor": true, "size": [14, 10],
+    "spawns": { "SpawnPoint": [0, 3] },
+    "warps": [ { "at": [0, 4], "to": "erzbingen", "spawn": "from_museum" } ],
+    "npcs": [
+      { "at": [0, -2], "name": "Museumswärter", "role": "gent", "facing": "down",
+        "lines": "Willkommen im Erzbau-Museum!\nHier erwecken wir Fossilien kostenlos zum Leben – bring mir eins, wenn du eins findest." },
+      { "at": [-3, 1], "name": "Besucherin", "role": "villager_f", "facing": "right",
+        "lines": "Die alten Steinwerkzeuge hier sind faszinierend!" }
+    ],
+    "signs": [ { "at": [3, -2], "text": "Eine Vitrine voller alter Gesteins-Fossilien." } ]
+  },
+
+  "erzbingen_gym": {
+    "name": "Erzelingen-Arena", "indoor": true, "gym": true, "size": [12, 14],
+    "spawns": { "SpawnPoint": [0, 5] },
+    "warps": [ { "at": [0, 6], "to": "erzbingen", "spawn": "from_gym" } ],
+    "trainers": [
+      { "at": [0, -3], "facing": "down", "sight": 6, "name": "Arenaleiter Veit", "role": "hiker",
+        "team": [["geodude", 12], ["geodude", 12], ["onix", 14]], "prize": 1400,
+        "flag": "beat_roark", "badge_id": "coal", "badge_name": "Steinorden",
+        "text": "Willkommen in der Erzelingen-Arena! Meine Gesteins-Pokémon sind hart wie Fels – zeig mir dein Talent!",
+        "win_text": "Unglaublich! Du hast meine Gesteinsmauer durchbrochen!" }
+    ],
+    "npcs": [ { "at": [-4, 2], "name": "Arena-Assistent", "role": "villager_m", "facing": "right",
+      "lines": "Arenaleiter Veit ist der Sohn des berühmten Professor Wörth.\nEr setzt nur auf Gesteins-Pokémon!" } ]
+  },
+
+  "coal_mine": {
+    "name": "Kohlemine", "size": [16, 16], "indoor": true, "cave": true,
+    "spawns": { "from_erzbingen": [6, 6] },
+    "warps": [ { "at": [7, 7], "to": "erzbingen", "spawn": "from_mine" } ],
+    "grass": [ { "rect": [-6, -6, 10, 10], "table": "coal_mine" } ],
+    "objects": [
+      { "at": [-5, -5], "kind": "smash_rock", "badge": "coal", "item": "hm06-rock-smash",
+        "reward_item": "sitrus-berry", "reward_amount": 1, "flag": "mine_rock_smashed" },
+      { "at": [3, -4], "kind": "item", "item": "oran-berry", "amount": 2, "flag": "mine_berry_picked" },
+      { "at": [0, 0], "kind": "deco", "tile": 42, "w": 2.0, "h": 1.4, "name": "Große Erzplatte" }
+    ],
+    "ledges": [ { "at": [2, 1], "dir": "down" } ],
+    "npcs": [ { "at": [1, 1], "name": "Minenarbeiter", "role": "hiker", "facing": "left",
+      "lines": "Diese Erzplatte in der Mitte ist echt hartnäckig.\nWir graben schon seit Wochen daran." } ],
+    "signs": [
+      { "at": [6, 0], "text": "KOHLEMINE – Vorsicht, Trittsteine sind rutschig." },
+      { "at": [2, -2], "text": "Da vorn ist eine Kante – man kann nur runterspringen, nicht hoch." }
+    ]
+  }
+}

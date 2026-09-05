@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/main/main.gd" id="1_main"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="WorldViewport" type="SubViewportContainer" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+stretch = true
+stretch_shrink = 2
+texture_filter = 1
+
+[node name="SubViewport" type="SubViewport" parent="WorldViewport"]
+own_world_3d = true
+transparent_bg = false
+handle_input_locally = false
+msaa_3d = 0
+screen_space_aa = 0
+size = Vector2i(640, 360)
+
+[node name="UILayer" type="CanvasLayer" parent="."]

@@ -1,0 +1,31 @@
+# Godot 4
+.godot/
+/android/
+/build/
+/exports/
+*.translation
+export_presets.cfg
+
+# Editor / OS
+.import/
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Godot-Editor-Binary (liegt lokal im Ordner)
+Godot_v*.exe
+
+# temporäre Test-Szenen
+_*test*.*
+/.work/
+/.pokeapi_cache/
+SmokeTest.gd
+
+# Große / abgeleitete Assets – per Skript nachladbar (tools/download_assets.py)
+/assets/maps_gltf/
+/assets/spritesheets/
+/assets/audio/
+/assets/fonts/
+/assets/ASSET_MANIFEST.json
+/resources/characters/
+/.pokeapi_cache/

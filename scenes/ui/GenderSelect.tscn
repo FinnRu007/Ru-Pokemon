@@ -1,0 +1,71 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/gender_select.gd" id="1_gs"]
+
+[node name="GenderSelect" type="CanvasLayer"]
+layer = 16
+script = ExtResource("1_gs")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.04, 0.05, 0.09, 0.92)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="V" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Center/V"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+text = "Bist du ein Junge oder ein Mädchen?"
+
+[node name="Row" type="HBoxContainer" parent="Center/V"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 40
+
+[node name="BoyBox" type="VBoxContainer" parent="Center/V/Row"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BoyPortrait" type="TextureRect" parent="Center/V/Row/BoyBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+texture_filter = 1
+
+[node name="BoyButton" type="Button" parent="Center/V/Row/BoyBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Junge (Lucius)"
+
+[node name="GirlBox" type="VBoxContainer" parent="Center/V/Row"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="GirlPortrait" type="TextureRect" parent="Center/V/Row/GirlBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+texture_filter = 1
+
+[node name="GirlButton" type="Button" parent="Center/V/Row/GirlBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Mädchen (Lucia)"

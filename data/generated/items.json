@@ -1,0 +1,282 @@
+{
+ "poke-ball": {
+  "name": "Pokéball",
+  "category": "balls",
+  "price": 200,
+  "ball_bonus": 1.0
+ },
+ "great-ball": {
+  "name": "Superball",
+  "category": "balls",
+  "price": 600,
+  "ball_bonus": 1.5
+ },
+ "ultra-ball": {
+  "name": "Hyperball",
+  "category": "balls",
+  "price": 1200,
+  "ball_bonus": 2.0
+ },
+ "master-ball": {
+  "name": "Meisterball",
+  "category": "balls",
+  "price": 0,
+  "ball_bonus": 255.0
+ },
+ "premier-ball": {
+  "name": "Premierball",
+  "category": "balls",
+  "price": 200,
+  "ball_bonus": 1.0
+ },
+ "potion": {
+  "name": "Trank",
+  "category": "medicine",
+  "price": 300,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 20
+  }
+ },
+ "super-potion": {
+  "name": "Supertrank",
+  "category": "medicine",
+  "price": 700,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 60
+  }
+ },
+ "hyper-potion": {
+  "name": "Hypertrank",
+  "category": "medicine",
+  "price": 1200,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 120
+  }
+ },
+ "max-potion": {
+  "name": "Top-Trank",
+  "category": "medicine",
+  "price": 2500,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 9999
+  }
+ },
+ "full-restore": {
+  "name": "Top-Genesung",
+  "category": "medicine",
+  "price": 3000,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 9999,
+   "cure_status": "all"
+  }
+ },
+ "revive": {
+  "name": "Beleber",
+  "category": "medicine",
+  "price": 1500,
+  "effect": {
+   "kind": "revive",
+   "ratio": 0.5
+  }
+ },
+ "max-revive": {
+  "name": "Top-Beleber",
+  "category": "medicine",
+  "price": 4000,
+  "effect": {
+   "kind": "revive",
+   "ratio": 1.0
+  }
+ },
+ "antidote": {
+  "name": "Gegengift",
+  "category": "medicine",
+  "price": 100,
+  "effect": {
+   "kind": "cure_status",
+   "status": "poison"
+  }
+ },
+ "burn-heal": {
+  "name": "Feuerheiler",
+  "category": "medicine",
+  "price": 250,
+  "effect": {
+   "kind": "cure_status",
+   "status": "burn"
+  }
+ },
+ "ice-heal": {
+  "name": "Eisheiler",
+  "category": "medicine",
+  "price": 250,
+  "effect": {
+   "kind": "cure_status",
+   "status": "freeze"
+  }
+ },
+ "awakening": {
+  "name": "Aufwecker",
+  "category": "medicine",
+  "price": 250,
+  "effect": {
+   "kind": "cure_status",
+   "status": "sleep"
+  }
+ },
+ "paralyze-heal": {
+  "name": "Para-Heiler",
+  "category": "medicine",
+  "price": 200,
+  "effect": {
+   "kind": "cure_status",
+   "status": "paralysis"
+  }
+ },
+ "full-heal": {
+  "name": "Hyperheiler",
+  "category": "medicine",
+  "price": 600,
+  "effect": {
+   "kind": "cure_status",
+   "status": "all"
+  }
+ },
+ "ether": {
+  "name": "Äther",
+  "category": "medicine",
+  "price": 1200,
+  "effect": {
+   "kind": "restore_pp",
+   "amount": 10
+  }
+ },
+ "max-ether": {
+  "name": "Top-Äther",
+  "category": "medicine",
+  "price": 2000,
+  "effect": {
+   "kind": "restore_pp",
+   "amount": 9999
+  }
+ },
+ "escape-rope": {
+  "name": "Fluchtseil",
+  "category": "items",
+  "price": 550,
+  "effect": {
+   "kind": "escape"
+  }
+ },
+ "repel": {
+  "name": "Schutz",
+  "category": "items",
+  "price": 350,
+  "effect": {
+   "kind": "repel",
+   "steps": 100
+  }
+ },
+ "super-repel": {
+  "name": "Superschutz",
+  "category": "items",
+  "price": 500,
+  "effect": {
+   "kind": "repel",
+   "steps": 200
+  }
+ },
+ "town-map": {
+  "name": "Stadtplan",
+  "category": "key",
+  "price": 0
+ },
+ "running-shoes": {
+  "name": "Turbo-Schuhe",
+  "category": "key",
+  "price": 0
+ },
+ "bicycle": {
+  "name": "Fahrrad",
+  "category": "key",
+  "price": 0
+ },
+ "hm06-rock-smash": {
+  "name": "VM Zertrümmerer",
+  "category": "tm",
+  "teaches": "rock-smash"
+ },
+ "coal-badge": {
+  "name": "Steinorden",
+  "category": "key",
+  "price": 0
+ },
+ "oran-berry": {
+  "name": "Bahabeere",
+  "category": "berries",
+  "price": 50,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 10
+  }
+ },
+ "sitrus-berry": {
+  "name": "Practibeere",
+  "category": "berries",
+  "price": 100,
+  "effect": {
+   "kind": "heal_hp",
+   "amount": 30
+  }
+ },
+ "cheri-berry": {
+  "name": "Petitzibeere",
+  "category": "berries",
+  "price": 40,
+  "effect": {
+   "kind": "cure_status",
+   "status": "paralysis"
+  }
+ },
+ "chesto-berry": {
+  "name": "Citrunbeere",
+  "category": "berries",
+  "price": 40,
+  "effect": {
+   "kind": "cure_status",
+   "status": "sleep"
+  }
+ },
+ "pecha-berry": {
+  "name": "Pomtambeere",
+  "category": "berries",
+  "price": 40,
+  "effect": {
+   "kind": "cure_status",
+   "status": "poison"
+  }
+ },
+ "rawst-berry": {
+  "name": "Nazonobeere",
+  "category": "berries",
+  "price": 40,
+  "effect": {
+   "kind": "cure_status",
+   "status": "burn"
+  }
+ },
+ "aspear-berry": {
+  "name": "Apikobeere",
+  "category": "berries",
+  "price": 40,
+  "effect": {
+   "kind": "cure_status",
+   "status": "freeze"
+  }
+ }
+}

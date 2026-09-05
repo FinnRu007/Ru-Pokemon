@@ -1,0 +1,141 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1_pm"]
+
+[node name="PauseMenu" type="CanvasLayer"]
+layer = 12
+script = ExtResource("1_pm")
+
+[node name="Root" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="MainList" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -190.0
+offset_right = -30.0
+offset_bottom = 190.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="Root/MainList"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="V" type="VBoxContainer" parent="Root/MainList/M"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Objective" type="Label" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+autowrap_mode = 3
+modulate = Color(1, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 13
+text = "Ziel: ..."
+
+[node name="PartyBtn" type="Button" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+text = "POKéMON"
+
+[node name="BagBtn" type="Button" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+text = "BEUTEL"
+
+[node name="DexBtn" type="Button" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+text = "POKéDEX"
+
+[node name="SaveBtn" type="Button" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+text = "SPEICHERN"
+
+[node name="CloseBtn" type="Button" parent="Root/MainList/M/V"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(210, 44)
+layout_mode = 2
+text = "ZURÜCK"
+
+[node name="Detail" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -420.0
+offset_top = -280.0
+offset_right = 420.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="Root/Detail"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="V" type="VBoxContainer" parent="Root/Detail/M"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DetailTitle" type="Label" parent="Root/Detail/M/V"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "POKéMON"
+
+[node name="DetailText" type="RichTextLabel" parent="Root/Detail/M/V"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_active = true
+
+[node name="ItemButtons" type="VBoxContainer" parent="Root/Detail/M/V"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SaveRow" type="HBoxContainer" parent="Root/Detail/M/V"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="DetailBack" type="Button" parent="Root/Detail/M/V"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Zurück (ESC)"

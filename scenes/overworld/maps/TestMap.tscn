@@ -1,0 +1,132 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/overworld/map.gd" id="1_map"]
+[ext_resource type="Script" path="res://scripts/overworld/trainer.gd" id="2_trainer"]
+[ext_resource type="Script" path="res://scripts/overworld/starter_table.gd" id="3_starter"]
+[ext_resource type="Script" path="res://scripts/overworld/npc.gd" id="4_npc"]
+[ext_resource type="Script" path="res://scripts/overworld/grass_zone.gd" id="5_grass"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_Ground"]
+albedo_color = Color(0.4, 0.56, 0.34, 1)
+
+[sub_resource type="PlaneMesh" id="Plane_Ground"]
+material = SubResource("Mat_Ground")
+size = Vector2(40, 40)
+
+[sub_resource type="StandardMaterial3D" id="Mat_Rock"]
+albedo_color = Color(0.5, 0.42, 0.36, 1)
+
+[sub_resource type="BoxMesh" id="Box_Rock"]
+material = SubResource("Mat_Rock")
+
+[sub_resource type="BoxShape3D" id="Shape_Rock"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_Grass"]
+transparency = 1
+albedo_color = Color(0.29, 0.5, 0.24, 0.85)
+
+[sub_resource type="BoxMesh" id="Box_Grass"]
+material = SubResource("Mat_Grass")
+size = Vector3(8, 0.12, 6)
+
+[sub_resource type="BoxShape3D" id="Shape_Grass"]
+size = Vector3(8, 2, 6)
+
+[node name="TestMap" type="Node3D"]
+script = ExtResource("1_map")
+map_id = "TestMap"
+display_name = "Testroute"
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_Ground")
+
+[node name="SpawnPoint" type="Marker3D" parent="."]
+
+[node name="Grass" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -1)
+script = ExtResource("5_grass")
+table_id = "testmap"
+
+[node name="Mesh" type="MeshInstance3D" parent="Grass"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+mesh = SubResource("Box_Grass")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Grass"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("Shape_Grass")
+
+[node name="StarterTable" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.5, -3)
+script = ExtResource("3_starter")
+giver_name = "Professor Eibe"
+
+[node name="Mesh" type="MeshInstance3D" parent="StarterTable"]
+mesh = SubResource("Box_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StarterTable"]
+shape = SubResource("Shape_Rock")
+
+[node name="Healer" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.5, 0)
+script = ExtResource("4_npc")
+npc_name = "Schwester Joy"
+lines = "Willkommen! Sollen sich deine Pokémon ausruhen?
+Bitte sehr!"
+heal_party_on_talk = true
+
+[node name="Mesh" type="MeshInstance3D" parent="Healer"]
+mesh = SubResource("Box_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Healer"]
+shape = SubResource("Shape_Rock")
+
+[node name="Villager" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, 4)
+script = ExtResource("4_npc")
+npc_name = "Junge"
+lines = "Im hohen Gras östlich von hier tummeln sich wilde Pokémon!
+Wenn du eins fangen willst, brauchst du Pokébälle."
+
+[node name="Mesh" type="MeshInstance3D" parent="Villager"]
+mesh = SubResource("Box_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Villager"]
+shape = SubResource("Shape_Rock")
+
+[node name="Trainer" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.5, 6)
+script = ExtResource("2_trainer")
+trainer_name = "Käfersammler Klaus"
+species_list = PackedStringArray("starly", "chimchar")
+level_list = PackedInt32Array(7, 8)
+prize_money = 400
+pre_text = "Hey! Du siehst nach einem Kampf aus!"
+win_text = "Wow, du bist stark!"
+defeat_flag = "beat_klaus"
+
+[node name="Mesh" type="MeshInstance3D" parent="Trainer"]
+mesh = SubResource("Box_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Trainer"]
+shape = SubResource("Shape_Rock")
+
+[node name="Fence" type="Node3D" parent="."]
+
+[node name="R1" type="StaticBody3D" parent="Fence"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -6)
+
+[node name="M" type="MeshInstance3D" parent="Fence/R1"]
+mesh = SubResource("Box_Rock")
+
+[node name="C" type="CollisionShape3D" parent="Fence/R1"]
+shape = SubResource("Shape_Rock")
+
+[node name="R2" type="StaticBody3D" parent="Fence"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.5, -1)
+
+[node name="M" type="MeshInstance3D" parent="Fence/R2"]
+mesh = SubResource("Box_Rock")
+
+[node name="C" type="CollisionShape3D" parent="Fence/R2"]
+shape = SubResource("Shape_Rock")

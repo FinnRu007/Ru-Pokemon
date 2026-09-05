@@ -1,0 +1,54 @@
+{
+  "testmap": {
+    "rate": 22,
+    "grass": [
+      { "species": "bidoof",    "min": 2, "max": 4, "weight": 40 },
+      { "species": "starly",    "min": 2, "max": 4, "weight": 30 },
+      { "species": "shinx",     "min": 3, "max": 5, "weight": 15 },
+      { "species": "kricketot", "min": 2, "max": 3, "weight": 10 },
+      { "species": "budew",     "min": 3, "max": 5, "weight": 5 }
+    ]
+  },
+  "route201": {
+    "rate": 20,
+    "grass": [
+      { "species": "starly",    "min": 2, "max": 3, "weight": 50 },
+      { "species": "bidoof",    "min": 2, "max": 3, "weight": 50 }
+    ]
+  },
+  "route202": {
+    "rate": 24,
+    "grass": [
+      { "species": "starly",    "min": 3, "max": 5, "weight": 35 },
+      { "species": "bidoof",    "min": 3, "max": 5, "weight": 30 },
+      { "species": "shinx",     "min": 4, "max": 6, "weight": 15 },
+      { "species": "kricketot", "min": 3, "max": 5, "weight": 15 },
+      { "species": "budew",     "min": 4, "max": 5, "weight": 5 }
+    ]
+  },
+  "route203": {
+    "rate": 22,
+    "grass": [
+      { "species": "shinx",     "min": 5, "max": 7, "weight": 30 },
+      { "species": "starly",    "min": 5, "max": 7, "weight": 25 },
+      { "species": "geodude",   "min": 6, "max": 8, "weight": 25 },
+      { "species": "machop",    "min": 6, "max": 8, "weight": 15 },
+      { "species": "budew",     "min": 5, "max": 7, "weight": 5 }
+    ]
+  },
+  "oreburgh_gate": {
+    "rate": 18,
+    "grass": [
+      { "species": "zubat",     "min": 5, "max": 8, "weight": 55 },
+      { "species": "geodude",   "min": 6, "max": 9, "weight": 45 }
+    ]
+  },
+  "coal_mine": {
+    "rate": 20,
+    "grass": [
+      { "species": "geodude",   "min": 8, "max": 12, "weight": 45 },
+      { "species": "zubat",     "min": 7, "max": 11, "weight": 40 },
+      { "species": "onix",      "min": 9, "max": 12, "weight": 15 }
+    ]
+  }
+}

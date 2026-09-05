@@ -1,0 +1,1790 @@
+{
+ "abra": [
+  {
+   "min_level": 16,
+   "to": "kadabra",
+   "trigger": "level-up"
+  }
+ ],
+ "aipom": [
+  {
+   "known_move": "double-hit",
+   "to": "ambipom",
+   "trigger": "level-up"
+  }
+ ],
+ "anorith": [
+  {
+   "min_level": 40,
+   "to": "armaldo",
+   "trigger": "level-up"
+  }
+ ],
+ "aron": [
+  {
+   "min_level": 32,
+   "to": "lairon",
+   "trigger": "level-up"
+  }
+ ],
+ "azurill": [
+  {
+   "min_happiness": 160,
+   "to": "marill",
+   "trigger": "level-up"
+  }
+ ],
+ "bagon": [
+  {
+   "min_level": 30,
+   "to": "shelgon",
+   "trigger": "level-up"
+  }
+ ],
+ "baltoy": [
+  {
+   "min_level": 36,
+   "to": "claydol",
+   "trigger": "level-up"
+  }
+ ],
+ "barboach": [
+  {
+   "min_level": 30,
+   "to": "whiscash",
+   "trigger": "level-up"
+  }
+ ],
+ "bayleef": [
+  {
+   "min_level": 32,
+   "to": "meganium",
+   "trigger": "level-up"
+  }
+ ],
+ "beldum": [
+  {
+   "min_level": 20,
+   "to": "metang",
+   "trigger": "level-up"
+  }
+ ],
+ "bellsprout": [
+  {
+   "min_level": 21,
+   "to": "weepinbell",
+   "trigger": "level-up"
+  }
+ ],
+ "bidoof": [
+  {
+   "min_level": 15,
+   "to": "bibarel",
+   "trigger": "level-up"
+  }
+ ],
+ "bonsly": [
+  {
+   "known_move": "mimic",
+   "to": "sudowoodo",
+   "trigger": "level-up"
+  }
+ ],
+ "bronzor": [
+  {
+   "min_level": 33,
+   "to": "bronzong",
+   "trigger": "level-up"
+  }
+ ],
+ "budew": [
+  {
+   "min_happiness": 160,
+   "time_of_day": "day",
+   "to": "roselia",
+   "trigger": "level-up"
+  }
+ ],
+ "buizel": [
+  {
+   "min_level": 26,
+   "to": "floatzel",
+   "trigger": "level-up"
+  }
+ ],
+ "bulbasaur": [
+  {
+   "min_level": 16,
+   "to": "ivysaur",
+   "trigger": "level-up"
+  }
+ ],
+ "buneary": [
+  {
+   "min_happiness": 160,
+   "to": "lopunny",
+   "trigger": "level-up"
+  }
+ ],
+ "burmy": [
+  {
+   "min_level": 20,
+   "to": "wormadam",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 20,
+   "to": "mothim",
+   "trigger": "level-up"
+  }
+ ],
+ "cacnea": [
+  {
+   "min_level": 32,
+   "to": "cacturne",
+   "trigger": "level-up"
+  }
+ ],
+ "carvanha": [
+  {
+   "min_level": 30,
+   "to": "sharpedo",
+   "trigger": "level-up"
+  }
+ ],
+ "cascoon": [
+  {
+   "min_level": 10,
+   "to": "dustox",
+   "trigger": "level-up"
+  }
+ ],
+ "caterpie": [
+  {
+   "min_level": 7,
+   "to": "metapod",
+   "trigger": "level-up"
+  }
+ ],
+ "chansey": [
+  {
+   "min_happiness": 160,
+   "to": "blissey",
+   "trigger": "level-up"
+  }
+ ],
+ "charmander": [
+  {
+   "min_level": 16,
+   "to": "charmeleon",
+   "trigger": "level-up"
+  }
+ ],
+ "charmeleon": [
+  {
+   "min_level": 36,
+   "to": "charizard",
+   "trigger": "level-up"
+  }
+ ],
+ "cherubi": [
+  {
+   "min_level": 25,
+   "to": "cherrim",
+   "trigger": "level-up"
+  }
+ ],
+ "chikorita": [
+  {
+   "min_level": 16,
+   "to": "bayleef",
+   "trigger": "level-up"
+  }
+ ],
+ "chimchar": [
+  {
+   "min_level": 14,
+   "to": "monferno",
+   "trigger": "level-up"
+  }
+ ],
+ "chinchou": [
+  {
+   "min_level": 27,
+   "to": "lanturn",
+   "trigger": "level-up"
+  }
+ ],
+ "chingling": [
+  {
+   "min_happiness": 220,
+   "time_of_day": "night",
+   "to": "chimecho",
+   "trigger": "level-up"
+  }
+ ],
+ "clamperl": [
+  {
+   "held_item": "deep-sea-tooth",
+   "to": "huntail",
+   "trigger": "trade"
+  },
+  {
+   "held_item": "deep-sea-scale",
+   "to": "gorebyss",
+   "trigger": "trade"
+  }
+ ],
+ "clefairy": [
+  {
+   "item": "moon-stone",
+   "to": "clefable",
+   "trigger": "use-item"
+  }
+ ],
+ "cleffa": [
+  {
+   "min_happiness": 160,
+   "to": "clefairy",
+   "trigger": "level-up"
+  }
+ ],
+ "combee": [
+  {
+   "min_level": 21,
+   "to": "vespiquen",
+   "trigger": "level-up"
+  }
+ ],
+ "combusken": [
+  {
+   "min_level": 36,
+   "to": "blaziken",
+   "trigger": "level-up"
+  }
+ ],
+ "corphish": [
+  {
+   "min_level": 30,
+   "to": "crawdaunt",
+   "trigger": "level-up"
+  }
+ ],
+ "corsola": [
+  {
+   "min_level": 38,
+   "to": "cursola",
+   "trigger": "level-up"
+  }
+ ],
+ "cranidos": [
+  {
+   "min_level": 30,
+   "to": "rampardos",
+   "trigger": "level-up"
+  }
+ ],
+ "croagunk": [
+  {
+   "min_level": 37,
+   "to": "toxicroak",
+   "trigger": "level-up"
+  }
+ ],
+ "croconaw": [
+  {
+   "min_level": 30,
+   "to": "feraligatr",
+   "trigger": "level-up"
+  }
+ ],
+ "cubone": [
+  {
+   "min_level": 28,
+   "to": "marowak",
+   "trigger": "level-up"
+  }
+ ],
+ "cyndaquil": [
+  {
+   "min_level": 14,
+   "to": "quilava",
+   "trigger": "level-up"
+  }
+ ],
+ "diglett": [
+  {
+   "min_level": 26,
+   "to": "dugtrio",
+   "trigger": "level-up"
+  }
+ ],
+ "doduo": [
+  {
+   "min_level": 31,
+   "to": "dodrio",
+   "trigger": "level-up"
+  }
+ ],
+ "dragonair": [
+  {
+   "min_level": 55,
+   "to": "dragonite",
+   "trigger": "level-up"
+  }
+ ],
+ "dratini": [
+  {
+   "min_level": 30,
+   "to": "dragonair",
+   "trigger": "level-up"
+  }
+ ],
+ "drifloon": [
+  {
+   "min_level": 28,
+   "to": "drifblim",
+   "trigger": "level-up"
+  }
+ ],
+ "drowzee": [
+  {
+   "min_level": 26,
+   "to": "hypno",
+   "trigger": "level-up"
+  }
+ ],
+ "dunsparce": [
+  {
+   "known_move": "hyper-drill",
+   "to": "dudunsparce",
+   "trigger": "level-up"
+  }
+ ],
+ "dusclops": [
+  {
+   "held_item": "reaper-cloth",
+   "to": "dusknoir",
+   "trigger": "trade"
+  }
+ ],
+ "duskull": [
+  {
+   "min_level": 37,
+   "to": "dusclops",
+   "trigger": "level-up"
+  }
+ ],
+ "eevee": [
+  {
+   "item": "water-stone",
+   "to": "vaporeon",
+   "trigger": "use-item"
+  },
+  {
+   "item": "thunder-stone",
+   "to": "jolteon",
+   "trigger": "use-item"
+  },
+  {
+   "item": "fire-stone",
+   "to": "flareon",
+   "trigger": "use-item"
+  },
+  {
+   "min_happiness": 160,
+   "time_of_day": "day",
+   "to": "espeon",
+   "trigger": "level-up"
+  },
+  {
+   "min_happiness": 160,
+   "time_of_day": "night",
+   "to": "umbreon",
+   "trigger": "level-up"
+  },
+  {
+   "location": "eterna-forest",
+   "to": "leafeon",
+   "trigger": "level-up"
+  },
+  {
+   "location": "sinnoh-route-217",
+   "to": "glaceon",
+   "trigger": "level-up"
+  },
+  {
+   "to": "sylveon",
+   "trigger": "level-up"
+  }
+ ],
+ "ekans": [
+  {
+   "min_level": 22,
+   "to": "arbok",
+   "trigger": "level-up"
+  }
+ ],
+ "electabuzz": [
+  {
+   "held_item": "electirizer",
+   "to": "electivire",
+   "trigger": "trade"
+  }
+ ],
+ "electrike": [
+  {
+   "min_level": 26,
+   "to": "manectric",
+   "trigger": "level-up"
+  }
+ ],
+ "elekid": [
+  {
+   "min_level": 30,
+   "to": "electabuzz",
+   "trigger": "level-up"
+  }
+ ],
+ "exeggcute": [
+  {
+   "item": "leaf-stone",
+   "to": "exeggutor",
+   "trigger": "use-item"
+  }
+ ],
+ "farfetchd": [
+  {
+   "to": "sirfetchd",
+   "trigger": "three-critical-hits"
+  }
+ ],
+ "feebas": [
+  {
+   "to": "milotic",
+   "trigger": "level-up"
+  }
+ ],
+ "finneon": [
+  {
+   "min_level": 31,
+   "to": "lumineon",
+   "trigger": "level-up"
+  }
+ ],
+ "flaaffy": [
+  {
+   "min_level": 30,
+   "to": "ampharos",
+   "trigger": "level-up"
+  }
+ ],
+ "gabite": [
+  {
+   "min_level": 48,
+   "to": "garchomp",
+   "trigger": "level-up"
+  }
+ ],
+ "gastly": [
+  {
+   "min_level": 25,
+   "to": "haunter",
+   "trigger": "level-up"
+  }
+ ],
+ "geodude": [
+  {
+   "min_level": 25,
+   "to": "graveler",
+   "trigger": "level-up"
+  }
+ ],
+ "gible": [
+  {
+   "min_level": 24,
+   "to": "gabite",
+   "trigger": "level-up"
+  }
+ ],
+ "girafarig": [
+  {
+   "known_move": "twin-beam",
+   "to": "farigiraf",
+   "trigger": "level-up"
+  }
+ ],
+ "glameow": [
+  {
+   "min_level": 38,
+   "to": "purugly",
+   "trigger": "level-up"
+  }
+ ],
+ "gligar": [
+  {
+   "held_item": "razor-fang",
+   "time_of_day": "night",
+   "to": "gliscor",
+   "trigger": "level-up"
+  }
+ ],
+ "gloom": [
+  {
+   "item": "leaf-stone",
+   "to": "vileplume",
+   "trigger": "use-item"
+  },
+  {
+   "item": "sun-stone",
+   "to": "bellossom",
+   "trigger": "use-item"
+  }
+ ],
+ "golbat": [
+  {
+   "min_happiness": 160,
+   "to": "crobat",
+   "trigger": "level-up"
+  }
+ ],
+ "goldeen": [
+  {
+   "min_level": 33,
+   "to": "seaking",
+   "trigger": "level-up"
+  }
+ ],
+ "graveler": [
+  {
+   "to": "golem",
+   "trigger": "trade"
+  }
+ ],
+ "grimer": [
+  {
+   "min_level": 38,
+   "to": "muk",
+   "trigger": "level-up"
+  }
+ ],
+ "grotle": [
+  {
+   "min_level": 32,
+   "to": "torterra",
+   "trigger": "level-up"
+  }
+ ],
+ "grovyle": [
+  {
+   "min_level": 36,
+   "to": "sceptile",
+   "trigger": "level-up"
+  }
+ ],
+ "growlithe": [
+  {
+   "item": "fire-stone",
+   "to": "arcanine",
+   "trigger": "use-item"
+  }
+ ],
+ "gulpin": [
+  {
+   "min_level": 26,
+   "to": "swalot",
+   "trigger": "level-up"
+  }
+ ],
+ "happiny": [
+  {
+   "held_item": "oval-stone",
+   "time_of_day": "day",
+   "to": "chansey",
+   "trigger": "level-up"
+  }
+ ],
+ "haunter": [
+  {
+   "to": "gengar",
+   "trigger": "trade"
+  }
+ ],
+ "hippopotas": [
+  {
+   "min_level": 34,
+   "to": "hippowdon",
+   "trigger": "level-up"
+  }
+ ],
+ "hoothoot": [
+  {
+   "min_level": 20,
+   "to": "noctowl",
+   "trigger": "level-up"
+  }
+ ],
+ "hoppip": [
+  {
+   "min_level": 18,
+   "to": "skiploom",
+   "trigger": "level-up"
+  }
+ ],
+ "horsea": [
+  {
+   "min_level": 32,
+   "to": "seadra",
+   "trigger": "level-up"
+  }
+ ],
+ "houndour": [
+  {
+   "min_level": 24,
+   "to": "houndoom",
+   "trigger": "level-up"
+  }
+ ],
+ "igglybuff": [
+  {
+   "min_happiness": 160,
+   "to": "jigglypuff",
+   "trigger": "level-up"
+  }
+ ],
+ "ivysaur": [
+  {
+   "min_level": 32,
+   "to": "venusaur",
+   "trigger": "level-up"
+  }
+ ],
+ "jigglypuff": [
+  {
+   "item": "moon-stone",
+   "to": "wigglytuff",
+   "trigger": "use-item"
+  }
+ ],
+ "kabuto": [
+  {
+   "min_level": 40,
+   "to": "kabutops",
+   "trigger": "level-up"
+  }
+ ],
+ "kadabra": [
+  {
+   "to": "alakazam",
+   "trigger": "trade"
+  }
+ ],
+ "kakuna": [
+  {
+   "min_level": 10,
+   "to": "beedrill",
+   "trigger": "level-up"
+  }
+ ],
+ "kirlia": [
+  {
+   "min_level": 30,
+   "to": "gardevoir",
+   "trigger": "level-up"
+  },
+  {
+   "item": "dawn-stone",
+   "to": "gallade",
+   "trigger": "use-item"
+  }
+ ],
+ "koffing": [
+  {
+   "min_level": 35,
+   "to": "weezing",
+   "trigger": "level-up"
+  }
+ ],
+ "krabby": [
+  {
+   "min_level": 28,
+   "to": "kingler",
+   "trigger": "level-up"
+  }
+ ],
+ "kricketot": [
+  {
+   "min_level": 10,
+   "to": "kricketune",
+   "trigger": "level-up"
+  }
+ ],
+ "lairon": [
+  {
+   "min_level": 42,
+   "to": "aggron",
+   "trigger": "level-up"
+  }
+ ],
+ "larvitar": [
+  {
+   "min_level": 30,
+   "to": "pupitar",
+   "trigger": "level-up"
+  }
+ ],
+ "ledyba": [
+  {
+   "min_level": 18,
+   "to": "ledian",
+   "trigger": "level-up"
+  }
+ ],
+ "lickitung": [
+  {
+   "known_move": "rollout",
+   "to": "lickilicky",
+   "trigger": "level-up"
+  }
+ ],
+ "lileep": [
+  {
+   "min_level": 40,
+   "to": "cradily",
+   "trigger": "level-up"
+  }
+ ],
+ "linoone": [
+  {
+   "min_level": 35,
+   "time_of_day": "night",
+   "to": "obstagoon",
+   "trigger": "level-up"
+  }
+ ],
+ "lombre": [
+  {
+   "item": "water-stone",
+   "to": "ludicolo",
+   "trigger": "use-item"
+  }
+ ],
+ "lotad": [
+  {
+   "min_level": 14,
+   "to": "lombre",
+   "trigger": "level-up"
+  }
+ ],
+ "loudred": [
+  {
+   "min_level": 40,
+   "to": "exploud",
+   "trigger": "level-up"
+  }
+ ],
+ "luxio": [
+  {
+   "min_level": 30,
+   "to": "luxray",
+   "trigger": "level-up"
+  }
+ ],
+ "machoke": [
+  {
+   "to": "machamp",
+   "trigger": "trade"
+  }
+ ],
+ "machop": [
+  {
+   "min_level": 28,
+   "to": "machoke",
+   "trigger": "level-up"
+  }
+ ],
+ "magby": [
+  {
+   "min_level": 30,
+   "to": "magmar",
+   "trigger": "level-up"
+  }
+ ],
+ "magikarp": [
+  {
+   "min_level": 20,
+   "to": "gyarados",
+   "trigger": "level-up"
+  }
+ ],
+ "magmar": [
+  {
+   "held_item": "magmarizer",
+   "to": "magmortar",
+   "trigger": "trade"
+  }
+ ],
+ "magnemite": [
+  {
+   "min_level": 30,
+   "to": "magneton",
+   "trigger": "level-up"
+  }
+ ],
+ "magneton": [
+  {
+   "location": "mt-coronet",
+   "to": "magnezone",
+   "trigger": "level-up"
+  }
+ ],
+ "makuhita": [
+  {
+   "min_level": 24,
+   "to": "hariyama",
+   "trigger": "level-up"
+  }
+ ],
+ "mankey": [
+  {
+   "min_level": 28,
+   "to": "primeape",
+   "trigger": "level-up"
+  }
+ ],
+ "mantyke": [
+  {
+   "to": "mantine",
+   "trigger": "level-up"
+  }
+ ],
+ "mareep": [
+  {
+   "min_level": 15,
+   "to": "flaaffy",
+   "trigger": "level-up"
+  }
+ ],
+ "marill": [
+  {
+   "min_level": 18,
+   "to": "azumarill",
+   "trigger": "level-up"
+  }
+ ],
+ "marshtomp": [
+  {
+   "min_level": 36,
+   "to": "swampert",
+   "trigger": "level-up"
+  }
+ ],
+ "meditite": [
+  {
+   "min_level": 37,
+   "to": "medicham",
+   "trigger": "level-up"
+  }
+ ],
+ "meowth": [
+  {
+   "min_level": 28,
+   "to": "persian",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 28,
+   "to": "perrserker",
+   "trigger": "level-up"
+  }
+ ],
+ "metang": [
+  {
+   "min_level": 45,
+   "to": "metagross",
+   "trigger": "level-up"
+  }
+ ],
+ "metapod": [
+  {
+   "min_level": 10,
+   "to": "butterfree",
+   "trigger": "level-up"
+  }
+ ],
+ "mime-jr": [
+  {
+   "known_move": "mimic",
+   "to": "mr-mime",
+   "trigger": "level-up"
+  }
+ ],
+ "misdreavus": [
+  {
+   "item": "dusk-stone",
+   "to": "mismagius",
+   "trigger": "use-item"
+  }
+ ],
+ "monferno": [
+  {
+   "min_level": 36,
+   "to": "infernape",
+   "trigger": "level-up"
+  }
+ ],
+ "mr-mime": [
+  {
+   "min_level": 42,
+   "to": "mr-rime",
+   "trigger": "level-up"
+  }
+ ],
+ "mudkip": [
+  {
+   "min_level": 16,
+   "to": "marshtomp",
+   "trigger": "level-up"
+  }
+ ],
+ "munchlax": [
+  {
+   "min_happiness": 160,
+   "to": "snorlax",
+   "trigger": "level-up"
+  }
+ ],
+ "murkrow": [
+  {
+   "item": "dusk-stone",
+   "to": "honchkrow",
+   "trigger": "use-item"
+  }
+ ],
+ "natu": [
+  {
+   "min_level": 25,
+   "to": "xatu",
+   "trigger": "level-up"
+  }
+ ],
+ "nidoran-f": [
+  {
+   "min_level": 16,
+   "to": "nidorina",
+   "trigger": "level-up"
+  }
+ ],
+ "nidoran-m": [
+  {
+   "min_level": 16,
+   "to": "nidorino",
+   "trigger": "level-up"
+  }
+ ],
+ "nidorina": [
+  {
+   "item": "moon-stone",
+   "to": "nidoqueen",
+   "trigger": "use-item"
+  }
+ ],
+ "nidorino": [
+  {
+   "item": "moon-stone",
+   "to": "nidoking",
+   "trigger": "use-item"
+  }
+ ],
+ "nincada": [
+  {
+   "min_level": 20,
+   "to": "ninjask",
+   "trigger": "level-up"
+  },
+  {
+   "to": "shedinja",
+   "trigger": "shed"
+  }
+ ],
+ "nosepass": [
+  {
+   "location": "mt-coronet",
+   "to": "probopass",
+   "trigger": "level-up"
+  }
+ ],
+ "numel": [
+  {
+   "min_level": 33,
+   "to": "camerupt",
+   "trigger": "level-up"
+  }
+ ],
+ "nuzleaf": [
+  {
+   "item": "leaf-stone",
+   "to": "shiftry",
+   "trigger": "use-item"
+  }
+ ],
+ "oddish": [
+  {
+   "min_level": 21,
+   "to": "gloom",
+   "trigger": "level-up"
+  }
+ ],
+ "omanyte": [
+  {
+   "min_level": 40,
+   "to": "omastar",
+   "trigger": "level-up"
+  }
+ ],
+ "onix": [
+  {
+   "held_item": "metal-coat",
+   "to": "steelix",
+   "trigger": "trade"
+  }
+ ],
+ "paras": [
+  {
+   "min_level": 24,
+   "to": "parasect",
+   "trigger": "level-up"
+  }
+ ],
+ "phanpy": [
+  {
+   "min_level": 25,
+   "to": "donphan",
+   "trigger": "level-up"
+  }
+ ],
+ "phione": [
+  {
+   "to": "manaphy",
+   "trigger": "level-up"
+  }
+ ],
+ "pichu": [
+  {
+   "min_happiness": 220,
+   "to": "pikachu",
+   "trigger": "level-up"
+  }
+ ],
+ "pidgeotto": [
+  {
+   "min_level": 36,
+   "to": "pidgeot",
+   "trigger": "level-up"
+  }
+ ],
+ "pidgey": [
+  {
+   "min_level": 18,
+   "to": "pidgeotto",
+   "trigger": "level-up"
+  }
+ ],
+ "pikachu": [
+  {
+   "item": "thunder-stone",
+   "to": "raichu",
+   "trigger": "use-item"
+  }
+ ],
+ "piloswine": [
+  {
+   "known_move": "ancient-power",
+   "to": "mamoswine",
+   "trigger": "level-up"
+  }
+ ],
+ "pineco": [
+  {
+   "min_level": 31,
+   "to": "forretress",
+   "trigger": "level-up"
+  }
+ ],
+ "piplup": [
+  {
+   "min_level": 16,
+   "to": "prinplup",
+   "trigger": "level-up"
+  }
+ ],
+ "poliwag": [
+  {
+   "min_level": 25,
+   "to": "poliwhirl",
+   "trigger": "level-up"
+  }
+ ],
+ "poliwhirl": [
+  {
+   "item": "water-stone",
+   "to": "poliwrath",
+   "trigger": "use-item"
+  },
+  {
+   "held_item": "kings-rock",
+   "to": "politoed",
+   "trigger": "trade"
+  }
+ ],
+ "ponyta": [
+  {
+   "min_level": 40,
+   "to": "rapidash",
+   "trigger": "level-up"
+  }
+ ],
+ "poochyena": [
+  {
+   "min_level": 18,
+   "to": "mightyena",
+   "trigger": "level-up"
+  }
+ ],
+ "porygon": [
+  {
+   "held_item": "up-grade",
+   "to": "porygon2",
+   "trigger": "trade"
+  }
+ ],
+ "porygon2": [
+  {
+   "held_item": "dubious-disc",
+   "to": "porygon-z",
+   "trigger": "trade"
+  }
+ ],
+ "primeape": [
+  {
+   "to": "annihilape",
+   "trigger": "use-move"
+  }
+ ],
+ "prinplup": [
+  {
+   "min_level": 36,
+   "to": "empoleon",
+   "trigger": "level-up"
+  }
+ ],
+ "psyduck": [
+  {
+   "min_level": 33,
+   "to": "golduck",
+   "trigger": "level-up"
+  }
+ ],
+ "pupitar": [
+  {
+   "min_level": 55,
+   "to": "tyranitar",
+   "trigger": "level-up"
+  }
+ ],
+ "quilava": [
+  {
+   "min_level": 36,
+   "to": "typhlosion",
+   "trigger": "level-up"
+  }
+ ],
+ "qwilfish": [
+  {
+   "to": "overqwil",
+   "trigger": "strong-style-move"
+  }
+ ],
+ "ralts": [
+  {
+   "min_level": 20,
+   "to": "kirlia",
+   "trigger": "level-up"
+  }
+ ],
+ "rattata": [
+  {
+   "min_level": 20,
+   "to": "raticate",
+   "trigger": "level-up"
+  }
+ ],
+ "remoraid": [
+  {
+   "min_level": 25,
+   "to": "octillery",
+   "trigger": "level-up"
+  }
+ ],
+ "rhydon": [
+  {
+   "held_item": "protector",
+   "to": "rhyperior",
+   "trigger": "trade"
+  }
+ ],
+ "rhyhorn": [
+  {
+   "min_level": 42,
+   "to": "rhydon",
+   "trigger": "level-up"
+  }
+ ],
+ "riolu": [
+  {
+   "min_happiness": 160,
+   "time_of_day": "day",
+   "to": "lucario",
+   "trigger": "level-up"
+  }
+ ],
+ "roselia": [
+  {
+   "item": "shiny-stone",
+   "to": "roserade",
+   "trigger": "use-item"
+  }
+ ],
+ "sandshrew": [
+  {
+   "min_level": 22,
+   "to": "sandslash",
+   "trigger": "level-up"
+  }
+ ],
+ "scyther": [
+  {
+   "held_item": "metal-coat",
+   "to": "scizor",
+   "trigger": "trade"
+  },
+  {
+   "item": "black-augurite",
+   "to": "kleavor",
+   "trigger": "use-item"
+  }
+ ],
+ "seadra": [
+  {
+   "held_item": "dragon-scale",
+   "to": "kingdra",
+   "trigger": "trade"
+  }
+ ],
+ "sealeo": [
+  {
+   "min_level": 44,
+   "to": "walrein",
+   "trigger": "level-up"
+  }
+ ],
+ "seedot": [
+  {
+   "min_level": 14,
+   "to": "nuzleaf",
+   "trigger": "level-up"
+  }
+ ],
+ "seel": [
+  {
+   "min_level": 34,
+   "to": "dewgong",
+   "trigger": "level-up"
+  }
+ ],
+ "sentret": [
+  {
+   "min_level": 15,
+   "to": "furret",
+   "trigger": "level-up"
+  }
+ ],
+ "shelgon": [
+  {
+   "min_level": 50,
+   "to": "salamence",
+   "trigger": "level-up"
+  }
+ ],
+ "shellder": [
+  {
+   "item": "water-stone",
+   "to": "cloyster",
+   "trigger": "use-item"
+  }
+ ],
+ "shellos": [
+  {
+   "min_level": 30,
+   "to": "gastrodon",
+   "trigger": "level-up"
+  }
+ ],
+ "shieldon": [
+  {
+   "min_level": 30,
+   "to": "bastiodon",
+   "trigger": "level-up"
+  }
+ ],
+ "shinx": [
+  {
+   "min_level": 15,
+   "to": "luxio",
+   "trigger": "level-up"
+  }
+ ],
+ "shroomish": [
+  {
+   "min_level": 23,
+   "to": "breloom",
+   "trigger": "level-up"
+  }
+ ],
+ "shuppet": [
+  {
+   "min_level": 37,
+   "to": "banette",
+   "trigger": "level-up"
+  }
+ ],
+ "silcoon": [
+  {
+   "min_level": 10,
+   "to": "beautifly",
+   "trigger": "level-up"
+  }
+ ],
+ "skiploom": [
+  {
+   "min_level": 27,
+   "to": "jumpluff",
+   "trigger": "level-up"
+  }
+ ],
+ "skitty": [
+  {
+   "item": "moon-stone",
+   "to": "delcatty",
+   "trigger": "use-item"
+  }
+ ],
+ "skorupi": [
+  {
+   "min_level": 40,
+   "to": "drapion",
+   "trigger": "level-up"
+  }
+ ],
+ "slakoth": [
+  {
+   "min_level": 18,
+   "to": "vigoroth",
+   "trigger": "level-up"
+  }
+ ],
+ "slowpoke": [
+  {
+   "min_level": 37,
+   "to": "slowbro",
+   "trigger": "level-up"
+  },
+  {
+   "held_item": "kings-rock",
+   "to": "slowking",
+   "trigger": "trade"
+  }
+ ],
+ "slugma": [
+  {
+   "min_level": 38,
+   "to": "magcargo",
+   "trigger": "level-up"
+  }
+ ],
+ "smoochum": [
+  {
+   "min_level": 30,
+   "to": "jynx",
+   "trigger": "level-up"
+  }
+ ],
+ "sneasel": [
+  {
+   "held_item": "razor-claw",
+   "time_of_day": "night",
+   "to": "weavile",
+   "trigger": "level-up"
+  },
+  {
+   "held_item": "razor-claw",
+   "time_of_day": "day",
+   "to": "sneasler",
+   "trigger": "level-up"
+  }
+ ],
+ "snorunt": [
+  {
+   "min_level": 42,
+   "to": "glalie",
+   "trigger": "level-up"
+  },
+  {
+   "item": "dawn-stone",
+   "to": "froslass",
+   "trigger": "use-item"
+  }
+ ],
+ "snover": [
+  {
+   "min_level": 40,
+   "to": "abomasnow",
+   "trigger": "level-up"
+  }
+ ],
+ "snubbull": [
+  {
+   "min_level": 23,
+   "to": "granbull",
+   "trigger": "level-up"
+  }
+ ],
+ "spearow": [
+  {
+   "min_level": 20,
+   "to": "fearow",
+   "trigger": "level-up"
+  }
+ ],
+ "spheal": [
+  {
+   "min_level": 32,
+   "to": "sealeo",
+   "trigger": "level-up"
+  }
+ ],
+ "spinarak": [
+  {
+   "min_level": 22,
+   "to": "ariados",
+   "trigger": "level-up"
+  }
+ ],
+ "spoink": [
+  {
+   "min_level": 32,
+   "to": "grumpig",
+   "trigger": "level-up"
+  }
+ ],
+ "squirtle": [
+  {
+   "min_level": 16,
+   "to": "wartortle",
+   "trigger": "level-up"
+  }
+ ],
+ "stantler": [
+  {
+   "to": "wyrdeer",
+   "trigger": "agile-style-move"
+  }
+ ],
+ "staravia": [
+  {
+   "min_level": 34,
+   "to": "staraptor",
+   "trigger": "level-up"
+  }
+ ],
+ "starly": [
+  {
+   "min_level": 14,
+   "to": "staravia",
+   "trigger": "level-up"
+  }
+ ],
+ "staryu": [
+  {
+   "item": "water-stone",
+   "to": "starmie",
+   "trigger": "use-item"
+  }
+ ],
+ "stunky": [
+  {
+   "min_level": 34,
+   "to": "skuntank",
+   "trigger": "level-up"
+  }
+ ],
+ "sunkern": [
+  {
+   "item": "sun-stone",
+   "to": "sunflora",
+   "trigger": "use-item"
+  }
+ ],
+ "surskit": [
+  {
+   "min_level": 22,
+   "to": "masquerain",
+   "trigger": "level-up"
+  }
+ ],
+ "swablu": [
+  {
+   "min_level": 35,
+   "to": "altaria",
+   "trigger": "level-up"
+  }
+ ],
+ "swinub": [
+  {
+   "min_level": 33,
+   "to": "piloswine",
+   "trigger": "level-up"
+  }
+ ],
+ "taillow": [
+  {
+   "min_level": 22,
+   "to": "swellow",
+   "trigger": "level-up"
+  }
+ ],
+ "tangela": [
+  {
+   "known_move": "ancient-power",
+   "to": "tangrowth",
+   "trigger": "level-up"
+  }
+ ],
+ "teddiursa": [
+  {
+   "min_level": 30,
+   "to": "ursaring",
+   "trigger": "level-up"
+  }
+ ],
+ "tentacool": [
+  {
+   "min_level": 30,
+   "to": "tentacruel",
+   "trigger": "level-up"
+  }
+ ],
+ "togepi": [
+  {
+   "min_happiness": 160,
+   "to": "togetic",
+   "trigger": "level-up"
+  }
+ ],
+ "togetic": [
+  {
+   "item": "shiny-stone",
+   "to": "togekiss",
+   "trigger": "use-item"
+  }
+ ],
+ "torchic": [
+  {
+   "min_level": 16,
+   "to": "combusken",
+   "trigger": "level-up"
+  }
+ ],
+ "totodile": [
+  {
+   "min_level": 18,
+   "to": "croconaw",
+   "trigger": "level-up"
+  }
+ ],
+ "trapinch": [
+  {
+   "min_level": 35,
+   "to": "vibrava",
+   "trigger": "level-up"
+  }
+ ],
+ "treecko": [
+  {
+   "min_level": 16,
+   "to": "grovyle",
+   "trigger": "level-up"
+  }
+ ],
+ "turtwig": [
+  {
+   "min_level": 18,
+   "to": "grotle",
+   "trigger": "level-up"
+  }
+ ],
+ "tyrogue": [
+  {
+   "min_level": 20,
+   "to": "hitmonlee",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 20,
+   "to": "hitmonchan",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 20,
+   "to": "hitmontop",
+   "trigger": "level-up"
+  }
+ ],
+ "ursaring": [
+  {
+   "item": "peat-block",
+   "time_of_day": "full-moon",
+   "to": "ursaluna",
+   "trigger": "use-item"
+  }
+ ],
+ "venonat": [
+  {
+   "min_level": 31,
+   "to": "venomoth",
+   "trigger": "level-up"
+  }
+ ],
+ "vibrava": [
+  {
+   "min_level": 45,
+   "to": "flygon",
+   "trigger": "level-up"
+  }
+ ],
+ "vigoroth": [
+  {
+   "min_level": 36,
+   "to": "slaking",
+   "trigger": "level-up"
+  }
+ ],
+ "voltorb": [
+  {
+   "min_level": 30,
+   "to": "electrode",
+   "trigger": "level-up"
+  }
+ ],
+ "vulpix": [
+  {
+   "item": "fire-stone",
+   "to": "ninetales",
+   "trigger": "use-item"
+  }
+ ],
+ "wailmer": [
+  {
+   "min_level": 40,
+   "to": "wailord",
+   "trigger": "level-up"
+  }
+ ],
+ "wartortle": [
+  {
+   "min_level": 36,
+   "to": "blastoise",
+   "trigger": "level-up"
+  }
+ ],
+ "weedle": [
+  {
+   "min_level": 7,
+   "to": "kakuna",
+   "trigger": "level-up"
+  }
+ ],
+ "weepinbell": [
+  {
+   "item": "leaf-stone",
+   "to": "victreebel",
+   "trigger": "use-item"
+  }
+ ],
+ "whismur": [
+  {
+   "min_level": 20,
+   "to": "loudred",
+   "trigger": "level-up"
+  }
+ ],
+ "wingull": [
+  {
+   "min_level": 25,
+   "to": "pelipper",
+   "trigger": "level-up"
+  }
+ ],
+ "wooper": [
+  {
+   "min_level": 20,
+   "to": "quagsire",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 20,
+   "to": "clodsire",
+   "trigger": "level-up"
+  }
+ ],
+ "wurmple": [
+  {
+   "min_level": 7,
+   "to": "silcoon",
+   "trigger": "level-up"
+  },
+  {
+   "min_level": 7,
+   "to": "cascoon",
+   "trigger": "level-up"
+  }
+ ],
+ "wynaut": [
+  {
+   "min_level": 15,
+   "to": "wobbuffet",
+   "trigger": "level-up"
+  }
+ ],
+ "yanma": [
+  {
+   "known_move": "ancient-power",
+   "to": "yanmega",
+   "trigger": "level-up"
+  }
+ ],
+ "zigzagoon": [
+  {
+   "min_level": 20,
+   "to": "linoone",
+   "trigger": "level-up"
+  }
+ ],
+ "zubat": [
+  {
+   "min_level": 22,
+   "to": "golbat",
+   "trigger": "level-up"
+  }
+ ]
+}
