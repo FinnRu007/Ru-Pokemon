@@ -16,6 +16,8 @@ export class World {
     this.walkMs = 250; this.runMs = 125;
     this.locked = false;      // Kampf, Dialog, Starterwahl
     this.onMapChange = () => {};
+    this.onStep = () => {};   // Effekte und Klang (Gras, Staub, Sprung)
+    this.onBump = () => {};
     this.flags = {};          // Story-Fortschritt vom Server
     this.npcState = {};       // Blickrichtung und Emotes einzelner NPCs (nur Anzeige)
     this.blocked = (m, x, y) => !!npcAt(m, x, y, this.flags);
@@ -44,6 +46,14 @@ export class World {
   }
   addOther(p) { this.others.set(p.id, { ...p, rx: p.x, ry: p.y, anim: null }); }
   removeOther(id) { this.others.delete(id); }
+  // Sprechblase ueber einem Spieler (auch ueber einem selbst)
+  playerEmote(id, kind) {
+    const o = id === this.me?.id ? this.me : this.others.get(id);
+    if (!o) return;
+    o.emote = kind;
+    clearTimeout(o.emoteTimer);
+    o.emoteTimer = setTimeout(() => { o.emote = null; }, 1800);
+  }
   moveOther(m) {
     const o = this.others.get(m.id);
     if (!o) return;
@@ -55,6 +65,7 @@ export class World {
     const o = this.others.get(p.id);
     if (!o) return this.addOther(p);
     Object.assign(o, { dir: p.dir, inBattle: p.inBattle, name: p.name, color: p.color });
+
     if (o.x !== p.x || o.y !== p.y) { o.x = o.rx = p.x; o.y = o.ry = p.y; o.anim = null; }
   }
 
@@ -78,7 +89,7 @@ export class World {
     if (now < (this.turnUntil || 0)) return;
     const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked);
     if (!r.ok) {
-      if (!this.bumpAt || now - this.bumpAt > 300) { this.bumpAt = now; this.net.send({ t: 'face', dir }); }
+      if (!this.bumpAt || now - this.bumpAt > 300) { this.bumpAt = now; this.net.send({ t: 'face', dir }); this.onBump(); }
       return;
     }
     const running = input.running;
@@ -104,6 +115,7 @@ export class World {
     }
     this.anim = { fromX, fromY, toX: r.x, toY: r.y, start: now, dur, jump: r.jump };
     this.me.x = r.x; this.me.y = r.y;
+    this.onStep(this.me.map, r.x, r.y, MAPS[this.me.map].tiles[r.y]?.[r.x], running, r.jump);
     this.net.send({ t: 'move', dir, seq: ++this.seq, running });
   }
 

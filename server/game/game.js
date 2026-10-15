@@ -5,7 +5,7 @@ import { POKEMON, STARTERS } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
 import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, DIRS, isStandable } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
-import { C2S, S2C, WALK_MS, RUN_MS } from '../../shared/protocol.js';
+import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
 import { WildBattle, TrainerBattle } from './battle.js';
 import { RulesEngine, DEFAULT_RULES } from './rules.js';
@@ -26,6 +26,8 @@ export class GameServer {
     this.sessions = new Map(); // playerId -> session
     this.rules = new RulesEngine(repo);
     this.saveTimer = setInterval(() => this.flushPositions(), 2000);
+    this.rosterTimer = setInterval(() => this.broadcastRoster(), 1500);
+    this.lastRoster = '';
   }
 
   // ------------------------------------------------------------------ Verbindung
@@ -73,6 +75,7 @@ export class GameServer {
       case C2S.BUY: return this.buy(s, msg);
       case C2S.SHOP_CLOSE: s.shop = false; return;
       case C2S.USE_ITEM: return this.useItem(s, msg);
+      case C2S.EMOTE: return this.emote(s, msg);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -354,6 +357,26 @@ export class GameServer {
     const r = applyItem(msg.item, mon, displayName(mon), { nuzlocke: this.rules.rulesFor(s.player).nuzlocke });
     if (r.ok) { s.player.items[msg.item]--; this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s); }
     this.notice(s, r.text, r.ok ? 'info' : 'error');
+  }
+
+  // Weltkarte: wer ist wo. Wird nur verschickt, wenn sich etwas geaendert hat.
+  roster() { return [...this.sessions.values()].map((x) => { const p = x.player; return { id: p.id, name: p.name, map: p.map, x: p.x, y: p.y, color: p.color, runId: p.runId }; }); }
+  broadcastRoster(force) {
+    const players = this.roster();
+    const key = JSON.stringify(players);
+    if (key === this.lastRoster && !force) return;
+    this.lastRoster = key;
+    for (const s of this.sessions.values()) this.send(s.ws, { t: S2C.ROSTER, players });
+  }
+
+  emote(s, msg) {
+    if (!EMOTES.includes(msg.kind)) return;
+    const now = Date.now();
+    if (now - (s.lastEmote || 0) < 700) return;
+    s.lastEmote = now;
+    const out = { t: S2C.PLAYER_EMOTE, id: s.player.id, kind: msg.kind };
+    this.broadcastMap(s.player.map, out, s.player.id);
+    this.send(s.ws, out);
   }
 
   chat(s, msg) {
@@ -644,5 +667,5 @@ export class GameServer {
     this.sendParty(s);
   }
 
-  stop() { clearInterval(this.saveTimer); this.flushPositions(); }
+  stop() { clearInterval(this.saveTimer); clearInterval(this.rosterTimer); this.flushPositions(); }
 }

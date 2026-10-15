@@ -8,6 +8,11 @@ import { BattleUI } from './battleUI.js';
 import { Hud } from './hud.js';
 import { monsterDataUrl } from './art/monsters.js';
 import { Dialog } from './dialog.js';
+import { audio, musicForMap } from './audio.js';
+import { WorldMap, placeName, areaOf } from './worldmap.js';
+import { Intro } from './intro.js';
+import { EMOTES } from '/shared/protocol.js';
+import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
 
 const $ = (id) => document.getElementById(id);
 const manifest = await (await fetch('/assets/sprites/manifest.json')).json();
@@ -17,10 +22,14 @@ const world = new World(net);
 const renderer = new Renderer($('game'), manifest);
 const hud = new Hud(net, manifest, MAPS);
 const dialog = new Dialog();
+const worldMap = new WorldMap();
+let mapOpen = false;
+let introDone = false;
+new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { updateLock(); flushDialogs(); },
+  onEnd: () => { updateLock(); flushDialogs(); if (world.me) audio.music(musicForMap(world.me.map, MAPS[world.me.map])); },
   onLearnPrompt: (ev) => learnQueue.push(ev)
 });
 const learnQueue = [];
@@ -29,7 +38,7 @@ let gameOver = false;
 let scriptActive = false;
 let shopOpen = false;
 const pendingDialogs = [];
-function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen; }
+function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || mapOpen; }
 
 // ------------------------------------------------------------------ Login
 const saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
@@ -43,6 +52,8 @@ $('loginBtn').onclick = () => {
     ? { t: 'hello', token: saved.token }
     : { t: 'hello', name, runCode, rules };
   $('loginError').textContent = '';
+  audio.unlock();
+  audio.sfx('select');
   net.connect(hello);
 };
 $('loginName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
@@ -55,7 +66,9 @@ net.on('welcome', (m) => {
   world.walkMs = m.walkMs; world.runMs = m.runMs;
   world.setSelf(m.player);
   world.setOthers(m.players);
-  showMapName(m.player.map);
+  worldMap.setPlayer(m.player.name);
+  worldMap.me = world.me;
+  enterMap(m.player.map, false);
   hud.log(`Willkommen, ${m.player.name}!${m.run ? ` Run: ${m.run.id}` : ' (Solo)'}`, 'dialog');
 });
 net.on('error', (m) => {
@@ -77,14 +90,27 @@ net.on('mapChange', (m) => {
   Object.assign(world.me, { map: m.map, x: m.x, y: m.y, dir: m.dir });
   world.anim = null;
   world.setOthers(m.players);
-  showMapName(m.map);
+  enterMap(m.map, true);
 });
-world.onMapChange = (mapId, warp) => { world.npcState = {}; if (warp) fade(); showMapName(mapId); };
+world.onMapChange = (mapId, warp) => { world.npcState = {}; if (warp) { fade(); audio.sfx('door'); } enterMap(mapId, false); };
+world.onStep = (mapId, x, y, tile, running, jump) => {
+  renderer.amb.step(mapId, x, y, tile, running);
+  if (jump) audio.sfx('ledge'); else if (tile === '"') audio.sfx('grass');
+};
+world.onBump = () => audio.sfx('bump');
+function enterMap(mapId, fromServer) {
+  showMapName(mapId);
+  worldMap.visit(mapId);
+  if (!battle.active) audio.music(musicForMap(mapId, MAPS[mapId]));
+  drawMinimap(true);
+}
 net.on('playerJoined', (m) => { if (m.player.map === world.me?.map) { world.addOther(m.player); hud.log(`${m.player.name} ist hier.`); } });
 net.on('playerLeft', (m) => world.removeOther(m.id));
 net.on('playerMoved', (m) => world.moveOther(m));
 net.on('playerState', (m) => { if (m.player.map === world.me?.map) world.updateOther(m.player); });
 net.on('chat', (m) => hud.chat(m.from, m.text));
+net.on('roster', (m) => { worldMap.roster = m.players; $('onlineCount').textContent = m.players.length; });
+net.on('playerEmote', (m) => { world.playerEmote(m.id, m.kind); audio.sfx('emote'); });
 net.on('notice', (m) => {
   hud.log(m.text, m.kind);
   if (m.kind === 'dialog') showDialog(m.text);
@@ -96,13 +122,16 @@ net.on('soulDeath', (m) => {
     ? `Seelenband gerissen: ${m.pokemonName} von ${m.playerName} ist tot.`
     : `Seelenband: ${m.pokemonName} von ${m.playerName} ist mit ${m.partnerName || 'seinem Partner'} (${m.partnerPlayer}) gestorben.`;
   hud.log(txt, 'death');
+  // Seelenband reisst: roter Puls ueber dem Bild
+  const st = $('stage'); st.classList.remove('soulflash'); void st.offsetWidth; st.classList.add('soulflash');
+  audio.sfx('faint');
 });
 net.on('battleStart', (m) => { world.locked = true; world.anim = null; battle.start(m); });
 // Story: Dialoge vom Server. Waehrend eines Kampfes warten sie, bis der Kampfbildschirm zu ist.
 net.on('dialog', (m) => { pendingDialogs.push(m); flushDialogs(); });
 net.on('script', (m) => { scriptActive = m.active; updateLock(); });
 net.on('progress', (m) => { world.flags = m.flags || {}; hud.setProgress(m); });
-net.on('npcEmote', (m) => world.emote(m.id));
+net.on('npcEmote', (m) => { world.emote(m.id); audio.sfx('exclaim'); });
 net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
 net.on('battleEnd', (m) => {
@@ -145,6 +174,9 @@ function flushDialogs() {
   const m = pendingDialogs.shift();
   if (m.face) world.faceNpc(m.face.id, m.face.dir);
   for (const l of m.lines) hud.log(l.speaker ? `${l.speaker}: ${l.text}` : l.text, 'dialog');
+  const all = m.lines.map((l) => l.text || l).join(' ');
+  if (/wieder gesund/.test(all)) audio.jingle('heal');
+  else if (/(erhältst|bekommst) (den|die|das|einen|eine|\d)/.test(all)) audio.jingle('item');
   showDialog(m.lines, (v) => { net.send({ t: 'dialogDone', token: m.token, choice: v ?? 0 }); setTimeout(flushDialogs, 0); }, m.choices);
 }
 function openShop(m) {
@@ -173,11 +205,62 @@ function processLearnQueue() {
 }
 
 input.on('action', () => {
+  if (!introDone) return;
+  if (mapOpen) return toggleMap(false);
   if (battle.active || starterOpen || gameOver || shopOpen) return;
   if (dialog.open) return dialog.advance();
   if (world.me && !world.anim && !scriptActive) net.send({ t: 'interact' });
 });
 input.on('chat', () => $('chatInput').focus());
+input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
+input.on('escape', () => { if (mapOpen) toggleMap(false); });
+input.on('mute', () => toggleMute());
+input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
+$('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
+$('worldmap').onclick = () => toggleMap(false);
+$('muteBtn').onclick = () => toggleMute();
+$('musicVol').value = Math.round(audio.prefs.music * 100);
+$('sfxVol').value = Math.round(audio.prefs.sfx * 100);
+$('musicVol').oninput = (e) => audio.setVolume('music', e.target.value / 100);
+$('sfxVol').oninput = (e) => { audio.setVolume('sfx', e.target.value / 100); };
+$('sfxVol').onchange = () => audio.sfx('select');
+$('emoteBar').innerHTML = EMOTES.map((k, i) => `<button data-e="${i}" title="Taste ${i + 1}">${k}</button>`).join('');
+$('emoteBar').querySelectorAll('button').forEach((b) => { b.onclick = () => { if (world.me) net.send({ t: 'emote', kind: EMOTES[Number(b.dataset.e)] }); }; });
+function toggleMute() { const m = audio.toggleMute(); $('muteBtn').textContent = m ? '🔇' : '🔊'; $('muteBtn').classList.toggle('off', m); }
+if (audio.prefs.muted) { $('muteBtn').textContent = '🔇'; $('muteBtn').classList.add('off'); }
+
+// ------------------------------------------------------------------ Weltkarte und Minikarte
+function toggleMap(open = !mapOpen) {
+  if (open === mapOpen) return;
+  mapOpen = open;
+  $('worldmap').classList.toggle('hidden', !open);
+  audio.sfx(open ? 'map' : 'back');
+  updateLock();
+  if (open) {
+    const list = worldMap.roster.length ? worldMap.roster : [world.me];
+    $('wmList').innerHTML = list.map((p) => `<span><i style="background:${p.color || '#e53935'}"></i>${escHtml(p.name)}${p.id === world.me.id ? ' (du)' : ''}: ${escHtml(placeName(p.map))}</span>`).join('');
+    requestAnimationFrame(drawWorldMap);
+  }
+}
+function drawWorldMap(now) {
+  if (!mapOpen) return;
+  const c = $('wmCanvas');
+  worldMap.draw(c.getContext('2d'), c.width, c.height, now);
+  const tod = timeOfDay(); const w = weatherFor(areaOf(world.me.map));
+  $('wmInfo').textContent = `${placeName(world.me.map)} · ${TIME_NAMES[tod]}${w !== 'clear' ? ' · ' + { rain: 'Regen', fog: 'Nebel', leaves: 'Windig', ash: 'Kohlenstaub' }[w] : ''}`;
+  requestAnimationFrame(drawWorldMap);
+}
+let miniAt = 0;
+function drawMinimap(force) {
+  const now = performance.now();
+  if (!world.me || (!force && now - miniAt < 200)) return;
+  miniAt = now;
+  const c = $('minimap');
+  worldMap.me = world.me;
+  worldMap.draw(c.getContext('2d'), c.width, c.height, now, { zoom: 3 });
+  $('miniLabel').textContent = placeName(world.me.map);
+}
+function escHtml(s) { return String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
 $('chatForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const text = $('chatInput').value.trim();
@@ -191,6 +274,7 @@ setInterval(() => net.send({ t: 'ping', at: Date.now() }), 20000);
 function frame(now) {
   if (world.me) world.update(input, now);
   renderer.draw(world, now);
+  drawMinimap(false);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

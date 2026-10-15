@@ -357,5 +357,18 @@ await sleep(200);
 game.stop();
 server.close();
 repo.close();
+console.log('\nKlang');
+await test('Musik: jede Melodie passt Takt fuer Takt zu ihren Akkorden', async () => {
+  const { SONGS, JINGLES, musicForMap, _test } = await import('../client/js/audio.js');
+  const { MAPS } = await import('../shared/data/maps.js');
+  for (const [name, song] of Object.entries(SONGS)) {
+    for (const bar of song.lead.split('|')) assert.equal(_test.parseMelody(bar).len, 16, `${name}: Takt "${bar.trim()}"`);
+    assert.equal(_test.parseMelody(song.lead).len, song.chords.split(/\s+/).length * 16, name);
+    song.chords.split(/\s+/).forEach(_test.chordTones);
+  }
+  for (const j of Object.values(JINGLES)) _test.parseMelody(j.lead);
+  for (const [id, m] of Object.entries(MAPS)) assert.ok(SONGS[musicForMap(id, m)], `Musik fuer ${id}`);
+});
+
 console.log(failures ? `\n${failures} Test(s) fehlgeschlagen` : '\nAlle Tests bestanden');
 process.exit(failures ? 1 : 0);

@@ -14,7 +14,7 @@ Voraussetzung: Node.js 22.5 oder neuer (für das eingebaute `node:sqlite`).
 
 Mehrere Spieler: Browserfenster öffnen (oder andere Rechner im Netz auf `http://<IP>:3000`), Namen eingeben und **denselben Run-Code** verwenden. Der erste Spieler mit einem neuen Code legt die Regeln fest.
 
-Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren, T Chat. Kurzes Antippen dreht nur die Blickrichtung.
+Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren, T Chat, M Weltkarte, 1 bis 6 Emotes, N Ton an/aus. Kurzes Antippen dreht nur die Blickrichtung.
 
 ### Online mit Freunden spielen
 
@@ -115,6 +115,15 @@ Alle Grafiken sind selbst erstellt und liegen als Code in `client/js/art/`. Es w
 - Schrift: Pixelify Sans (SIL Open Font License 1.1), siehe `CREDITS.md`.
 
 Eigene Bilder koennen weiterhin ueber `client/assets/sprites/manifest.json` eingebunden werden (Kacheln per `image`, Spieler-Spritesheet per `player.image`, Pokemon per `pokemon.useImages` und `pokemon/{id}.png`). Gesetzte Bilder haben Vorrang vor der eingebauten Grafik.
+
+## Präsentation
+
+- **Vorspann:** Sternenhimmel, Flug über Sinnoh im Morgenrot, die drei Starter rennen durchs Gras, danach der Titelschirm (`client/js/intro.js`). Jede Taste überspringt.
+- **Weltkarte (M):** setzt alle Karten über ihre Randverbindungen zusammen, Höhlen werden passend dazwischen gelegt. Zeigt die eigene Position und alle Spieler online (Server schickt `roster`). Unbesuchte Gebiete bleiben verdeckt. Dazu eine Minikarte in der Seitenleiste (`client/js/worldmap.js`).
+- **Sound:** eigener Chiptune-Synthesizer auf WebAudio mit 15 selbst komponierten Stücken (Orte, Routen, Höhle, Center, Arena, Kämpfe, Sieg), Fanfaren, Effekten und einem eigenen Ruf pro Pokémon, abgeleitet aus der Dex-Nummer (`client/js/audio.js`). Keine Audiodateien, keine Originalmusik.
+- **Kampfanimationen:** Übergang ins Kampfbild, Trainer und Ballwurf beim Einwechseln, Partikel je Attackentyp, Treffer mit Bildschirmwackeln bei sehr effektiv, laufende KP-Balken, Wertänderungen, Ballwurf mit Wackeln beim Fangen (`client/js/battleFx.js`).
+- **Stimmung:** Tageszeit nach der echten Uhr (Morgen, Tag, Abend, Nacht mit Lichtkegel), Wetter pro Gebiet (Regen, Nebel, Laub, Kohlenstaub), für alle Spieler gleich. Gras raschelt, beim Rennen staubt es (`client/js/ambience.js`).
+- **Emotes:** Sprechblasen über der eigenen Figur, für alle auf derselben Karte sichtbar.
 
 ## Story
 

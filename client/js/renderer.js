@@ -8,6 +8,7 @@ import { paintTile, findBuildings, isIndoor } from './art/tileset.js';
 import { paintBuilding } from './art/buildings.js';
 import { paintTallOverlay, paintTree } from './art/tiles.js';
 import { characterSheet, DIR_ROW } from './art/characters.js';
+import { Ambience } from './ambience.js';
 
 const VIEW_W = 15, VIEW_H = 11;
 const S = 3; // Vergroesserung 16 px -> 48 px
@@ -29,6 +30,7 @@ export class Renderer {
     const [fc, fg] = canvas(16, 32);
     paintTree(fg, 0, 3); paintTree(fg, 0, 19);
     this.forest = this.g.createPattern(scaleUp(fc), 'repeat');
+    this.amb = new Ambience();
   }
 
   load(key, src) {
@@ -87,6 +89,8 @@ export class Renderer {
       this.drawMapLayer(conn.map, ox + dx * T, oy + dy * T, frame);
     }
 
+    this.amb.drawGround(g, world.me.map, ox, oy, T, now);
+
     // Figuren nach y sortiert (NPCs, andere Spieler, man selbst)
     const ents = [];
     for (const n of world.visibleNpcs()) ents.push({ kind: 'npc', o: n, p: { x: n.x, y: n.y, hop: 0 } });
@@ -94,6 +98,12 @@ export class Renderer {
     ents.push({ kind: 'self', o: world.me, p: me, anim: world.anim });
     ents.sort((a, b) => a.p.y - b.p.y);
     for (const e of ents) this.drawEntity(e, map, ox, oy, now);
+    this.amb.drawSky(g, map, world.me.map, this.c.width, this.c.height, now, { x: ox + me.x * T + T / 2, y: oy + me.y * T + T / 2 });
+    // Sprechblasen erst nach Licht und Wetter, damit sie gut lesbar bleiben
+    for (const e of ents) if (e.o.emote) {
+      const sx = Math.round(ox + e.p.x * T); const sy = Math.round(oy + (e.p.y - (e.p.hop || 0)) * T);
+      this.drawEmote(sx, sy + T - 20 * S - 6 - (e.kind === 'player' ? 20 : 0), e.o.emote);
+    }
   }
 
   drawMapLayer(mapId, ox, oy, frame) {
@@ -125,7 +135,6 @@ export class Renderer {
     const ty = anim && p.t < 0.5 ? anim.fromY : Math.round(p.y);
     if (!p.hop && map.tiles[ty]?.[tx] === '"') g.drawImage(this.tallOverlay, 0, 8, 16, 8, Math.round(ox + tx * T), Math.round(oy + ty * T) + T / 2, T, T / 2);
 
-    if (o.emote) this.drawEmote(sx, sy + T - 20 * S - 6, o.emote);
     if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, sy + T - 20 * S - 6);
   }
 
@@ -133,7 +142,7 @@ export class Renderer {
     const g = this.g;
     g.fillStyle = '#fff'; g.strokeStyle = '#20202a'; g.lineWidth = 3;
     g.beginPath(); g.roundRect(x + 12, y - 30, 24, 28, 6); g.fill(); g.stroke();
-    g.fillStyle = kind === '!' ? '#e03030' : '#20202a';
+    g.fillStyle = kind === '!' || kind === '♥' ? '#e03030' : '#20202a';
     g.font = 'bold 22px "Pixelify Sans", monospace'; g.textAlign = 'center';
     g.fillText(kind, x + 24, y - 9);
   }

@@ -129,7 +129,7 @@ export class WildBattle {
       ev.push({ type: 'text', text: `Du wirfst einen ${ball.name}!` });
       const w = this.wild.mon;
       const r = catchAttempt({ maxHp: w.stats.hp, hp: w.hp, catchRate: species(w.speciesId).catchRate, ballBonus: ball.bonus, status: w.status });
-      ev.push({ type: 'shake', count: r.shakes, caught: r.caught });
+      ev.push({ type: 'shake', count: r.shakes, caught: r.caught, ball: action.ball });
       if (r.caught) {
         ev.push({ type: 'text', text: `Toll! ${displayName(w)} wurde gefangen!` });
         w.metRoute = this.route;
@@ -285,7 +285,7 @@ export class WildBattle {
       if (slot) slot.pp = Math.max(0, slot.pp - 1);
     }
     ev.push({ type: 'text', text: `${uName} setzt ${move.name} ein!` });
-    ev.push({ type: 'anim', side: this.side(user), move: moveId, moveType: move.type });
+    ev.push({ type: 'anim', side: this.side(user), move: moveId, moveType: move.type, cat: move.cat, power: move.power || 0 });
     if (move.id !== 'fury-cutter') user.vol.furyCutter = 0;
     user.vol.lastMove = moveId;
 
@@ -478,7 +478,7 @@ export class WildBattle {
       b.stages[k] = Math.max(-6, Math.min(6, before + delta));
       const diff = b.stages[k] - before;
       if (diff === 0) ev.push({ type: 'text', text: `${STAT_DE[k]} von ${this.nameDat(b)} kann nicht weiter ${delta > 0 ? 'steigen' : 'sinken'}!` });
-      else ev.push({ type: 'text', text: `${STAT_DE[k]} von ${this.nameDat(b)} ${Math.abs(diff) >= 2 ? (diff > 0 ? 'steigt stark' : 'sinkt stark') : diff > 0 ? 'steigt' : 'sinkt'}!` });
+      else ev.push({ type: 'stat', side: this.side(b), up: diff > 0 }, { type: 'text', text: `${STAT_DE[k]} von ${this.nameDat(b)} ${Math.abs(diff) >= 2 ? (diff > 0 ? 'steigt stark' : 'sinkt stark') : diff > 0 ? 'steigt' : 'sinkt'}!` });
     }
   }
 

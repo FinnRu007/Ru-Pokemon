@@ -21,6 +21,10 @@ export class Input {
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyB') this.running = true;
       if (['KeyZ', 'Enter', 'Space'].includes(e.code)) { e.preventDefault(); this.actionQueued = true; this.emit('action'); }
       if (e.code === 'KeyT') { e.preventDefault(); this.emit('chat'); }
+      if (e.code === 'KeyM') { e.preventDefault(); this.emit('map'); }
+      if (e.code === 'KeyN') { e.preventDefault(); this.emit('mute'); }
+      if (e.code === 'Escape') this.emit('escape');
+      if (/^Digit[1-6]$/.test(e.code)) { e.preventDefault(); this.emote = Number(e.code.slice(5)) - 1; this.emit('emote'); }
     });
     addEventListener('keyup', (e) => {
       const d = KEYMAP[e.code];

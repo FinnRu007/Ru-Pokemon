@@ -1,5 +1,8 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
 import { monsterDataUrl } from './art/monsters.js';
+import { characterSheet } from './art/characters.js';
+import { BattleFx, battleTransition } from './battleFx.js';
+import { audio } from './audio.js';
 const $ = (id) => document.getElementById(id);
 const STATUS = { par: ['PAR', '#c9a400'], slp: ['SLF', '#7a7a7a'], psn: ['GIF', '#a040a0'], tox: ['GIF', '#702070'], brn: ['BRT', '#e05a2a'], frz: ['GFR', '#4bb3d6'] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -15,21 +18,53 @@ export class BattleUI {
     this.busy = false;
     this.skip = false;
     this.root = $('battle');
+    this.fx = new BattleFx(this.root.querySelector('.field'));
+    this.intro = null;
     this.root.addEventListener('click', () => { this.skip = true; });
     addEventListener('keydown', (e) => { if (!this.root.classList.contains('hidden') && ['KeyZ', 'Enter', 'Space'].includes(e.code)) this.skip = true; });
   }
 
-  get active() { return !this.root.classList.contains('hidden'); }
+  get active() { return !!this.shown; }
 
   start(msg) {
     this.state = msg.state;
     this.pendingEnd = null;
-    this.root.classList.remove('hidden');
-    $('foeSprite').classList.remove('fainted');
-    $('allySprite').classList.remove('fainted');
-    this.renderBoxes(this.state);
-    this.renderSprites(this.state);
-    this.menu(null);
+    this.won = false;
+    const s = this.state;
+    const leader = s.kind === 'trainer' && s.trainer?.look === 'leader';
+    audio.sfx('encounter');
+    audio.music(leader ? 'battle_leader' : s.kind === 'trainer' ? 'battle_trainer' : 'battle_wild');
+    this.intro = (async () => {
+      this.shown = true;
+      await battleTransition($('stage'), s.kind);
+      this.fx.clear();
+      for (const id of ['foeSprite', 'allySprite']) $(id).classList.remove('fainted', 'absorb', 'flash', 'lunge', 'hit');
+      $('allySprite').classList.add('waiting');
+      this.root.classList.remove('hidden');
+      this.renderBoxes(s);
+      this.renderSprites(s);
+      this.menu(null);
+      const tr = $('trainerSprite');
+      if (s.kind === 'trainer' && s.trainer) {
+        tr.style.backgroundImage = `url(${trainerUrl(s.trainer.look)})`;
+        tr.classList.remove('hidden', 'leave');
+        $('foeSprite').classList.add('waiting');
+        await this.say(`${s.trainer.name} möchte kämpfen!`, 1300, false);
+        tr.classList.add('leave');
+        await sleep(350);
+        $('foeSprite').classList.remove('waiting');
+        this.fx.burst(this.fx.center('foe'), { c: ['#ffffff', '#fff0b0'], shape: 'star' }, 10);
+        audio.sfx('poof');
+      } else {
+        tr.classList.add('hidden');
+        await sleep(450);
+      }
+      audio.sfx('cry', s.foe.speciesId);
+      await sleep(600);
+      await this.fx.sendOut({ sfx: (n) => audio.sfx(n) });
+      audio.sfx('cry', s.ally.speciesId);
+      tr.classList.add('hidden');
+    })();
     this.enqueue(msg.events, msg.state);
   }
 
@@ -43,9 +78,10 @@ export class BattleUI {
   async play() {
     this.playing = true;
     this.menu(null);
+    if (this.intro) { await this.intro; this.intro = null; }
     while (this.queue.length) {
       const { events, state } = this.queue.shift();
-      for (const ev of events) await this.playEvent(ev);
+      for (let i = 0; i < events.length; i++) await this.playEvent(events[i], events.slice(i + 1, i + 4));
       if (state) { this.state = state; this.renderBoxes(state); this.renderSprites(state); }
     }
     this.playing = false;
@@ -55,36 +91,79 @@ export class BattleUI {
   }
 
   async say(text, ms = 900, log = true) {
-    $('battleText').textContent = text;
+    const el = $('battleText');
     if (log) this.hooks.log(text, 'battle');
+    this.skip = false;
+    // Schreibmaschine wie im Original, Aktionstaste zeigt sofort alles
+    for (let n = 2; n < text.length && !this.skip; n += 2) { el.textContent = text.slice(0, n); await sleep(16); }
+    el.textContent = text;
     this.skip = false;
     const t0 = performance.now();
     while (performance.now() - t0 < ms && !this.skip) await sleep(30);
   }
 
-  async playEvent(ev) {
+  async playEvent(ev, next = []) {
+    const sfx = (n, a) => audio.sfx(n, a);
     switch (ev.type) {
-      case 'text': return this.say(ev.text);
+      case 'text':
+        if (/wurde besiegt|ist besiegt/.test(ev.text) || /^Du hast .* besiegt/.test(ev.text)) this.won = true;
+        return this.say(ev.text);
       case 'death': this.hooks.log(ev.text, 'death'); return this.say(ev.text, 1400, false);
+      case 'anim':
+        sfx('move', ev.moveType);
+        return this.fx.move(ev);
+      case 'stat': sfx(ev.up ? 'statUp' : 'statDown'); this.fx.stat(ev.side, ev.up); return sleep(350);
       case 'hp': {
         const box = ev.side === 'ally' ? this.state.ally : this.state.foe;
+        const before = box.hp;
         box.hp = ev.hp; box.maxHp = ev.maxHp;
-        if (ev.damage > 0) { const el = $(ev.side === 'ally' ? 'allySprite' : 'foeSprite'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
+        if (ev.damage > 0) {
+          const txt = next.filter((e) => e.type === 'text').map((e) => e.text).join(' ');
+          const mult = /sehr effektiv/.test(txt) ? 2 : /nicht sehr effektiv/.test(txt) ? 0.5 : 1;
+          sfx(mult > 1 ? 'hitSuper' : mult < 1 ? 'hitWeak' : 'hit');
+          this.fx.impact(ev.side, mult);
+          const el = $(ev.side === 'ally' ? 'allySprite' : 'foeSprite'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+        } else if (ev.hp > before) {
+          sfx('heal'); this.fx.sparkle(ev.side, '#90f0a0');
+        }
+        await this.animateHp(ev.side, before, ev.hp, ev.maxHp);
         this.renderBoxes(this.state);
-        return sleep(350);
+        return;
       }
-      case 'status': (ev.side === 'ally' ? this.state.ally : this.state.foe).status = ev.status; this.renderBoxes(this.state); return;
-      case 'faint': $(ev.side === 'ally' ? 'allySprite' : 'foeSprite').classList.add('fainted'); return sleep(500);
+      case 'status': {
+        const mon = ev.side === 'ally' ? this.state.ally : this.state.foe;
+        mon.status = ev.status; this.renderBoxes(this.state);
+        if (ev.status && STATUS[ev.status]) { this.fx.sparkle(ev.side, STATUS[ev.status][1]); sfx('statDown'); }
+        return;
+      }
+      case 'faint': {
+        const mon = ev.side === 'ally' ? this.state.ally : this.state.foe;
+        sfx('cry', mon?.speciesId); await sleep(380); sfx('faint');
+        $(ev.side === 'ally' ? 'allySprite' : 'foeSprite').classList.add('fainted');
+        return sleep(600);
+      }
       case 'foeSwitch':
         this.state.foe = { ...ev.mon, stages: {} };
-        $('foeSprite').classList.remove('fainted');
+        $('foeSprite').classList.remove('fainted', 'absorb');
         this.renderBoxes(this.state); this.renderSprites(this.state);
-        return sleep(400);
-      case 'switch': this.state.ally = { ...ev.mon, stages: {} }; $('allySprite').classList.remove('fainted'); this.renderBoxes(this.state); this.renderSprites(this.state); return sleep(300);
-      case 'shake': for (let i = 0; i < ev.count; i++) await this.say('... wackelt ...', 600); return;
-      case 'anim': return sleep(150);
+        this.fx.burst(this.fx.center('foe'), { c: ['#ffffff', '#fff0b0'], shape: 'star' }, 10);
+        sfx('poof'); await sleep(250); sfx('cry', ev.mon.speciesId);
+        return sleep(500);
+      case 'switch':
+        this.state.ally = { ...ev.mon, stages: {} };
+        $('allySprite').classList.add('waiting');
+        $('allySprite').classList.remove('fainted');
+        this.renderBoxes(this.state); this.renderSprites(this.state);
+        await this.fx.sendOut({ sfx });
+        sfx('cry', ev.mon.speciesId);
+        return sleep(300);
+      case 'shake':
+        await this.fx.catchSequence(ev, { sfx });
+        if (ev.caught) { audio.jingle('caught'); this.caught = true; }
+        return;
       case 'learnPrompt': this.hooks.onLearnPrompt(ev); return this.say(ev.text, 1200);
-      case 'levelup': case 'learn': return this.say(ev.text, 1100);
+      case 'levelup': audio.jingle('levelup'); this.fx.sparkle('ally'); return this.say(ev.text, 1400);
+      case 'learn': return this.say(ev.text, 1100);
       case 'needSwitch': case 'exp': case 'end': return;
       default: return;
     }
@@ -94,11 +173,43 @@ export class BattleUI {
     const msg = this.pendingEnd;
     this.pendingEnd = null;
     (async () => {
-      for (const t of msg.messages || []) await this.say(t, 1300);
+      if (this.intro) await this.intro;
+      if (msg.result === 'win' && !this.caught) audio.music('victory');
+      for (const t of msg.messages || []) {
+        if (/Orden/.test(t) && /erhältst/.test(t)) audio.jingle('badge');
+        await this.say(t, 1300);
+      }
+      this.caught = false;
+      await sleep(200);
+      $('fade').classList.remove('on'); void $('fade').offsetWidth; $('fade').classList.add('on');
       this.root.classList.add('hidden');
+      this.fx.clear();
+      this.shown = false;
       this.state = null;
       this.hooks.onEnd(msg);
     })();
+  }
+
+  // KP-Balken laeuft sichtbar herunter, beim eigenen Pokemon zaehlen die Zahlen mit
+  async animateHp(side, from, to, max) {
+    const box = $(side === 'ally' ? 'allyBox' : 'foeBox');
+    const bar = box.querySelector('.hpbar'); const fill = bar?.querySelector('i');
+    const num = box.querySelector('.hpnum');
+    if (!fill) return sleep(300);
+    const ms = Math.min(900, 250 + Math.abs(from - to) / Math.max(1, max) * 900);
+    const t0 = performance.now();
+    while (true) {
+      const t = Math.min(1, (performance.now() - t0) / ms);
+      const v = Math.round(from + (to - from) * t);
+      const pct = Math.max(0, (v / max) * 100);
+      fill.style.transition = 'none';
+      fill.style.width = pct + '%';
+      bar.className = 'hpbar ' + (pct <= 20 ? 'low' : pct <= 50 ? 'mid' : '');
+      if (num) num.textContent = `${v} / ${max}`;
+      if (t >= 1) break;
+      await sleep(16);
+    }
+    await sleep(120);
   }
 
   // -------------------------------------------------------------- Darstellung
@@ -128,7 +239,7 @@ export class BattleUI {
     if (ally) {
       const span = Math.max(1, mon.expNext - mon.expThis);
       const ep = Math.min(100, Math.max(0, Math.round(((mon.exp - mon.expThis) / span) * 100)));
-      html += `<div class="row" style="font-size:12px;margin-top:2px"><span></span><span>${mon.hp} / ${mon.maxHp}</span></div><div class="exp"><i style="width:${ep}%"></i></div>`;
+      html += `<div class="row" style="font-size:12px;margin-top:2px"><span></span><span class="hpnum">${mon.hp} / ${mon.maxHp}</span></div><div class="exp"><i style="width:${ep}%"></i></div>`;
     }
     return html;
   }
@@ -149,7 +260,7 @@ export class BattleUI {
       if (b.cls) btn.className = b.cls;
       if (b.color) btn.style.background = b.color;
       btn.disabled = !!b.disabled;
-      btn.onclick = (e) => { e.stopPropagation(); b.fn(); };
+      btn.onclick = (e) => { e.stopPropagation(); audio.sfx(b.cls === 'back' ? 'back' : 'select'); b.fn(); };
       el.appendChild(btn);
     }
   }
@@ -206,4 +317,14 @@ export class BattleUI {
     if (!forced) btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
     this.menu(btns);
   }
+}
+
+// Trainergrafik aus dem Overworld-Spritesheet, gross fuer den Kampfbildschirm
+const trainerCache = {};
+function trainerUrl(look) {
+  if (trainerCache[look]) return trainerCache[look];
+  const sheet = characterSheet(look || 'youngster');
+  const c = document.createElement('canvas'); c.width = 16; c.height = 20;
+  c.getContext('2d').drawImage(sheet, 0, 0, 16, 20, 0, 0, 16, 20);
+  return (trainerCache[look] = c.toDataURL());
 }

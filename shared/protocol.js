@@ -15,6 +15,7 @@ export const C2S = {
   BUY: 'buy',                     // { item, count }
   SHOP_CLOSE: 'shopClose',        // {}
   USE_ITEM: 'useItem',            // { item, pokemonId }
+  EMOTE: 'emote',                 // { kind } kleine Sprechblase ueber der eigenen Figur
   PING: 'ping'
 };
 
@@ -42,9 +43,14 @@ export const S2C = {
   PROGRESS: 'progress',           // { flags, money }
   NPC_EMOTE: 'npcEmote',          // { id }
   SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }
+  ROSTER: 'roster',               // { players: [{ id, name, map, x, y, color, runId }] } alle online (Weltkarte)
+  PLAYER_EMOTE: 'playerEmote',    // { id, kind }
   PONG: 'pong'
 };
 
 // Timing wie im Original: Gehen ca. 16 Frames pro Kachel, Rennen (Laufschuhe) ca. 8 Frames.
+// Erlaubte Emotes (Taste 1 bis 6)
+export const EMOTES = ['!', '?', '♥', '♪', '…', '☺'];
+
 export const WALK_MS = 250;
 export const RUN_MS = 125;

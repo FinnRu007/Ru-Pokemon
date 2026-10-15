@@ -112,3 +112,48 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .battle-menu button:disabled { opacity: .45; }
 .battle-trainer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 14px; background: rgba(20,24,40,.7); padding: 2px 10px; border-radius: 6px; }
 .foe-team { display: flex; gap: 3px; margin-top: 3px; } .foe-team i { width: 9px; height: 9px; border-radius: 50%; background: #e04040; border: 1px solid #20202a; } .foe-team i.down { background: #777; }
+
+/* Kampfeffekte */
+#fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; image-rendering: pixelated; }
+.mon-sprite { transition: opacity .35s, transform .3s, translate .14s ease-out, scale .3s ease-out, filter .25s; }
+.mon-sprite.ally.lunge { translate: 70px -40px; } .mon-sprite.foe.lunge { translate: -70px 40px; }
+.mon-sprite.waiting { opacity: 0; scale: .1; transition: none; }
+.mon-sprite.flash { filter: brightness(3) saturate(0); }
+.mon-sprite.absorb { opacity: 0; scale: .05; filter: brightness(1.5) sepia(1) hue-rotate(-40deg) saturate(6); transition: opacity .35s, scale .35s ease-in, filter .1s; }
+.mon-sprite.foe { animation: enter-foe .6s ease-out; }
+.trainer-sprite { position: absolute; top: 4px; right: 96px; width: 128px; height: 160px; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; z-index: 2; animation: enter-foe .5s ease-out; transition: translate .35s ease-in, opacity .35s; }
+.trainer-sprite.leave { translate: 320px 0; opacity: 0; }
+#stage.quake { animation: quake .3s; }
+@keyframes quake { 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -1px); } }
+canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; }
+
+/* Vorspann */
+#intro { position: absolute; inset: 0; z-index: 40; background: #05060e; cursor: pointer; transition: opacity .6s; }
+#intro canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+#intro.out { opacity: 0; }
+.intro-press { position: absolute; left: 0; right: 0; bottom: 46%; text-align: center; font-size: 22px; color: #e8ecff; animation: blink 1.1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .15; } }
+
+/* Weltkarte */
+#worldmap { position: absolute; inset: 0; z-index: 25; background: #0c0e1e; display: flex; flex-direction: column; animation: mapin .25s ease-out; cursor: pointer; }
+@keyframes mapin { from { opacity: 0; transform: scale(.96); } }
+#worldmap canvas { flex: 1; min-height: 0; width: 100%; image-rendering: pixelated; }
+.wm-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 14px; background: var(--box); color: var(--boxInk); border-bottom: 4px solid var(--boxLine); font-size: 18px; }
+.wm-head span { font-size: 14px; color: #4a5070; }
+.wm-list { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 14px; font-size: 13px; color: #d8def8; background: #141830; }
+.wm-list i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; border: 2px solid #10121e; vertical-align: -1px; }
+.wm-foot { font-size: 12px; color: var(--muted); padding: 0 14px 6px; background: #141830; }
+.mini { position: relative; border-radius: 8px; overflow: hidden; border: 3px solid #0e1020; }
+.mini canvas { display: block; width: 100%; image-rendering: pixelated; }
+.mini span { position: absolute; left: 6px; bottom: 4px; font-size: 12px; background: rgba(16,18,30,.8); padding: 0 6px; border-radius: 4px; }
+.mini button { position: absolute; right: 4px; top: 4px; padding: 2px 8px; font-size: 12px; }
+
+/* Werkzeugleiste: Emotes und Ton */
+.toolbar { display: flex; gap: 6px; align-items: center; }
+.emotes { display: flex; gap: 4px; flex: 1; } .emotes button { flex: 1; padding: 4px 0; background: var(--panel2); font-size: 15px; }
+#muteBtn { padding: 4px 10px; background: var(--panel2); } #muteBtn.off { background: #7a2327; }
+.volumes { display: flex; gap: 10px; font-size: 12px; color: var(--muted); } .volumes label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; margin: 0; } .volumes input { flex: 1; min-width: 0; width: 60px; accent-color: var(--accent); }
+
+/* Seelenband reisst */
+#stage.soulflash::after { content: ''; position: absolute; inset: 0; z-index: 35; pointer-events: none; background: radial-gradient(circle, rgba(255,40,60,0) 30%, rgba(200,0,30,.75)); animation: soulflash 1.4s ease-out forwards; }
+@keyframes soulflash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }

@@ -18,6 +18,7 @@
       <section id="battle" class="hidden">
         <div class="field">
           <div id="foeBox" class="infobox foe"></div>
+          <div id="trainerSprite" class="trainer-sprite hidden"></div>
           <div id="foeSprite" class="mon-sprite foe"></div>
           <div id="allySprite" class="mon-sprite ally"></div>
           <div id="allyBox" class="infobox ally"></div>
@@ -48,6 +49,13 @@
       </section>
 
       <section id="modal" class="modal hidden"><div class="panel" id="modalPanel"></div></section>
+
+      <section id="worldmap" class="hidden">
+        <div class="wm-head"><b>Karte von Sinnoh</b><span id="wmInfo"></span></div>
+        <canvas id="wmCanvas" width="720" height="440"></canvas>
+        <div id="wmList" class="wm-list"></div>
+        <div class="wm-foot">M, Esc oder Klick: schließen</div>
+      </section>
     </main>
 
     <aside id="hud">
@@ -58,6 +66,7 @@
         <button data-tab="links">Seelenband</button>
         <button data-tab="box">Box</button>
       </div>
+      <div class="mini"><canvas id="minimap" width="306" height="112"></canvas><span id="miniLabel"></span><button id="mapBtn" title="Weltkarte (M)">Karte</button></div>
       <div id="trainerCard" class="trainer-card"></div>
       <div id="tab-party" class="tab"></div>
       <div id="tab-bag" class="tab hidden"></div>
@@ -66,7 +75,12 @@
       <div id="tab-box" class="tab hidden"></div>
       <div id="log" class="log"></div>
       <form id="chatForm"><input id="chatInput" maxlength="200" placeholder="Chat (T)"></form>
-      <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · T: Chat</div>
+      <div class="toolbar">
+        <div id="emoteBar" class="emotes"></div>
+        <button id="muteBtn" title="Ton an/aus (N)">🔊</button>
+      </div>
+      <div class="volumes"><label>Musik <input id="musicVol" type="range" min="0" max="100"></label><label>Effekte <input id="sfxVol" type="range" min="0" max="100"></label></div>
+      <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · T: Chat · M: Karte · 1 bis 6: Emotes · N: Ton · Online: <b id="onlineCount">0</b></div>
     </aside>
   </div>
   <script type="module" src="js/main.js"></script>
