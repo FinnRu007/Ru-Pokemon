@@ -1,6 +1,7 @@
 // Ordnet Kartenzeichen den Kachel-Malfunktionen zu und erkennt Gebaeude in der Karte.
 import {
-  paintGrass, paintPath, paintTall, paintTree, paintWater, paintLedge, paintFlowers, paintFence, paintSign, paintSand
+  paintGrass, paintPath, paintTall, paintTree, paintWater, paintLedge, paintFlowers, paintFence, paintSign, paintSand,
+  paintCrackedRock, paintSmallTree, paintHeavyBoulder, paintClimbWall, paintWaterfall, paintBridge, paintSnow
 } from './tiles.js';
 import { px } from './pixel.js';
 import {
@@ -15,12 +16,22 @@ const BUILDING = new Set(['H', 'D', 'C']);
 
 export function isIndoor(map) { return !!map.indoor; }
 
-export function paintTile(g, map, x, y, frame, pass) {
-  const t = map.tiles[y][x];
+// Eigene Farbpaletten pro Karte (map.palette ueberschreibt die Themenfarben, z. B. Arenen)
+const PALETTES = new WeakMap();
+function themeOf(map, theme) {
+  if (!map.palette) return THEMES[theme] || THEMES.house;
+  if (!PALETTES.has(map)) PALETTES.set(map, { ...(THEMES[theme] || THEMES.house), ...map.palette });
+  return PALETTES.get(map);
+}
+
+// open: Menge von Hinderniszeichen, die der Spieler schon beseitigt hat (gemalt als Boden)
+export function paintTile(g, map, x, y, frame, pass, open) {
+  let t = map.tiles[y][x];
+  if (open && open.has(t)) t = map.indoor ? ':' : (map.tint === 'snow' ? 'n' : ',');
   const ox = x * 16; const oy = y * 16;
   const n = (dx, dy) => map.tiles[y + dy]?.[x + dx] ?? null;
   const theme = map.theme || 'house';
-  const th = THEMES[theme] || THEMES.house;
+  const th = themeOf(map, theme);
   if (pass === 'object') {
     if (t === '#') paintTree(g, ox, oy);
     else if (t === 'B') paintShelf(g, ox, oy, x, y, theme);
@@ -42,13 +53,21 @@ export function paintTile(g, map, x, y, frame, pass) {
       default: return;
     }
   }
-  const rockPal = map.indoor ? (THEMES[theme].rock ? THEMES[theme] : THEMES.cave) : OUTDOOR_ROCK;
+  const rockPal = map.indoor ? (th.rock ? th : THEMES.cave) : OUTDOOR_ROCK;
+  const ground = () => (map.indoor ? paintFloor(g, ox, oy, x, y, th.rock ? th : THEMES.cave, 'cave') : map.tint === 'snow' ? paintSnow(g, ox, oy, x, y) : paintGrass(g, ox, oy, x, y));
   switch (t) {
+    case 'Q': ground(); return paintCrackedRock(g, ox, oy);
+    case 'Z': ground(); return paintSmallTree(g, ox, oy);
+    case 'M': ground(); return paintHeavyBoulder(g, ox, oy);
+    case 'N': return paintClimbWall(g, ox, oy, x, y, n, rockPal);
+    case 'J': return paintWaterfall(g, ox, oy, x, y, frame);
+    case 'b': return paintBridge(g, ox, oy, x, y, n);
+    case 'n': return paintSnow(g, ox, oy, x, y);
     case 'X': return paintRock(g, ox, oy, x, y, n, rockPal);
     case 'G': return paintCaveMouth(g, ox, oy, x, y, n, rockPal);
     case ';': return paintCoal(g, ox, oy, x, y);
-    case 'O': paintGrass(g, ox, oy, x, y); return paintBoulder(g, ox, oy);
-    case ',': return paintGrass(g, ox, oy, x, y);
+    case 'O': ground(); return paintBoulder(g, ox, oy);
+    case ',': return map.tint === 'snow' ? paintSnow(g, ox, oy, x, y) : paintGrass(g, ox, oy, x, y);
     case '.': return paintPath(g, ox, oy, x, y, n);
     case '"': return paintTall(g, ox, oy, x, y, frame);
     case '~': return paintWater(g, ox, oy, x, y, n, frame);

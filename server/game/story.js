@@ -33,7 +33,7 @@ export class StoryRunner {
       if (frame.i >= frame.steps.length) { sc.stack.pop(); continue; }
       const step = frame.steps[frame.i];
       if (Array.isArray(step)) { lines.push({ speaker: step[0], text: step[1] }); frame.i++; continue; }
-      if (step.ask) { frame.i++; return this.dialog(s, lines, step); }
+      if (step.ask || step.choose) { frame.i++; return this.dialog(s, lines, step); }
       // Alle anderen Schritte wirken erst, wenn die Zeilen davor gelesen wurden
       if (lines.length) return this.dialog(s, lines);
       frame.i++;
@@ -58,6 +58,13 @@ export class StoryRunner {
     if (step.heal) { g.healParty(s, step.heal === 'center'); return; }
     if (step.emote) { g.send(s.ws, { t: S2C.NPC_EMOTE, id: step.emote }); return; }
     if (step.back) { g.pushBack(s); return; }
+    if (step.warp) { g.teleport(s, step.warp[0], step.warp[1], step.warp[2], step.warp[3] || 'down'); return; }
+    if (step.legend) {
+      // Legendaeres Pokemon: echter Wildkampf (fangbar, zaehlt fuer Nuzlocke auf dieser Karte)
+      if (!g.startWildBattle(s, step.legend, step.level || 50, p.map, { script: true })) return;
+      sc.waiting = 'battle';
+      return 'wait';
+    }
     if (step.if) { sc.stack.push({ steps: (cond(flags, step.if) ? step.then : step.else) || [], i: 0 }); return; }
     if (step.starter) {
       if (p.starterChosen) return;
@@ -84,7 +91,7 @@ export class StoryRunner {
     sc.ask = ask || null;
     this.game.send(s.ws, {
       t: S2C.DIALOG, token: sc.token, lines,
-      choices: ask ? ask.ask.map((label, value) => ({ label, value })) : null,
+      choices: ask ? (ask.ask || ask.choose).map((label, value) => ({ label, value })) : null,
       face: sc.ctx.face || null
     });
   }
@@ -94,7 +101,8 @@ export class StoryRunner {
     if (!sc || sc.waiting !== 'dialog' || Number(msg.token) !== sc.token) return;
     sc.waiting = null;
     if (sc.ask) {
-      const branch = Number(msg.choice) === 0 ? sc.ask.yes : sc.ask.no;
+      const c = Number(msg.choice);
+      const branch = sc.ask.branches ? sc.ask.branches[c] : c === 0 ? sc.ask.yes : sc.ask.no;
       sc.ask = null;
       sc.stack.push({ steps: branch || [], i: 0 });
     }

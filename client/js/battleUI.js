@@ -31,7 +31,7 @@ export class BattleUI {
     this.pendingEnd = null;
     this.won = false;
     const s = this.state;
-    const leader = s.kind === 'trainer' && s.trainer?.look === 'leader';
+    const leader = s.kind === 'trainer' && (s.trainer?.leader || s.trainer?.look === 'leader');
     audio.sfx('encounter');
     audio.music(leader ? 'battle_leader' : s.kind === 'trainer' ? 'battle_trainer' : 'battle_wild');
     this.intro = (async () => {

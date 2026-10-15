@@ -215,6 +215,7 @@ input.on('chat', () => $('chatInput').focus());
 input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
 input.on('escape', () => { if (mapOpen) toggleMap(false); });
 input.on('mute', () => toggleMute());
+input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
 $('worldmap').onclick = () => toggleMap(false);

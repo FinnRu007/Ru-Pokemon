@@ -8,6 +8,11 @@ import { paintTile, findBuildings, isIndoor } from './art/tileset.js';
 import { paintBuilding } from './art/buildings.js';
 import { paintTallOverlay, paintTree } from './art/tiles.js';
 import { characterSheet, DIR_ROW } from './art/characters.js';
+import { FIELD } from '/shared/world.js';
+
+// Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
+const CLEARABLE = ['Q', 'Z', 'M'];
+function openSet(flags) { return new Set(CLEARABLE.filter((t) => flags?.[FIELD[t]])); }
 import { Ambience } from './ambience.js';
 
 const VIEW_W = 15, VIEW_H = 11;
@@ -41,14 +46,16 @@ export class Renderer {
 
   // Karte einmalig in drei Animationsbildern vorrendern
   bake(mapId) {
-    if (this.baked.has(mapId)) return this.baked.get(mapId);
+    const open = openSet(this.flags);
+    const key = mapId + '|' + [...open].join('');
+    if (this.baked.has(key)) return this.baked.get(key);
     const map = MAPS[mapId];
     const buildings = findBuildings(map);
     const frames = [0, 1, 2].map((frame) => {
       const [c, g] = canvas(map.width * 16, map.height * 16);
-      for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) paintTile(g, map, x, y, frame, 'ground');
+      for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) paintTile(g, map, x, y, frame, 'ground', open);
       for (let y = 0; y < map.height; y++) {
-        for (let x = 0; x < map.width; x++) paintTile(g, map, x, y, frame, 'object');
+        for (let x = 0; x < map.width; x++) paintTile(g, map, x, y, frame, 'object', open);
         buildings.forEach((b, i) => { if (b.y + b.h - 1 === y) paintBuilding(g, b, i); });
       }
       // Eigene Kachelbilder aus dem Manifest haben Vorrang
@@ -56,15 +63,17 @@ export class Renderer {
         const img = this.images['tile:' + map.tiles[y][x]];
         if (img) g.drawImage(img, x * 16, y * 16, 16, 16);
       }
+      tint(g, map);
       return c;
     });
     const out = { frames, map };
-    this.baked.set(mapId, out);
+    this.baked.set(key, out);
     return out;
   }
 
   draw(world, now) {
     const g = this.g; const T = this.T;
+    this.flags = world.flags;
     if (!world.me) { g.fillStyle = '#000'; g.fillRect(0, 0, this.c.width, this.c.height); return; }
     const map = MAPS[world.me.map];
     const me = world.selfPos(now);
@@ -117,9 +126,13 @@ export class Renderer {
     const g = this.g; const T = this.T;
     const { o, p, anim } = e;
     const sx = Math.round(ox + p.x * T); const sy = Math.round(oy + (p.y - (p.hop || 0)) * T);
-    // Schatten
-    g.fillStyle = 'rgba(0,0,0,.22)';
-    g.beginPath(); g.ellipse(sx + T / 2, Math.round(oy + p.y * T) + T - 5, T * 0.3, 5, 0, 0, Math.PI * 2); g.fill();
+    // Auf dem Wasser: Spieler reitet auf seinem Pokemon (Surfer), sonst Schatten
+    const fx = Math.round(p.x); const fy = Math.round(p.y);
+    if (e.kind !== 'npc' && map.tiles[fy]?.[fx] === '~') this.drawSurfer(sx, Math.round(oy + p.y * T), now);
+    else {
+      g.fillStyle = 'rgba(0,0,0,.22)';
+      g.beginPath(); g.ellipse(sx + T / 2, Math.round(oy + p.y * T) + T - 5, T * 0.3, 5, 0, 0, Math.PI * 2); g.fill();
+    }
 
     let frameIdx = 0;
     if (anim && p.t !== undefined && p.t < 1) {
@@ -138,6 +151,15 @@ export class Renderer {
     if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, sy + T - 20 * S - 6);
   }
 
+  drawSurfer(x, y, now) {
+    const g = this.g; const T = this.T; const bob = Math.sin(now / 220) * 2;
+    const cy = y + T - 10 + bob;
+    g.fillStyle = '#20304a'; g.beginPath(); g.ellipse(x + T / 2, cy, T * 0.46, 11, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#4a7ad0'; g.beginPath(); g.ellipse(x + T / 2, cy - 1, T * 0.42, 8, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#9cc4f4'; g.fillRect(x + 10, cy - 6, 14, 3);
+    g.fillStyle = '#fff'; g.fillRect(x + T - 12, cy - 6, 5, 5); g.fillStyle = '#20304a'; g.fillRect(x + T - 10, cy - 5, 2, 3);
+  }
+
   drawEmote(x, y, kind) {
     const g = this.g;
     g.fillStyle = '#fff'; g.strokeStyle = '#20202a'; g.lineWidth = 3;
@@ -154,6 +176,23 @@ export class Renderer {
     g.fillStyle = 'rgba(20,24,40,.75)'; g.fillRect(Math.round(cx - w / 2), y - 18, Math.round(w), 17);
     g.fillStyle = '#fff'; g.fillText(label, cx, y - 5);
   }
+}
+
+// Stimmung ganzer Karten: Schnee (hell, entsaettigt) oder Zerrwelt (violett, unwirklich)
+function tint(g, map) {
+  if (!map.tint || map.tint === 'none') return;
+  const { width: w, height: h } = g.canvas;
+  g.save();
+  if (map.tint === 'snow') {
+    g.globalCompositeOperation = 'saturation'; g.fillStyle = 'rgba(128,128,128,.55)'; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'screen'; g.fillStyle = '#3a4250'; g.fillRect(0, 0, w, h);
+  } else if (map.tint === 'distortion') {
+    g.globalCompositeOperation = 'hue'; g.fillStyle = 'rgba(140,60,200,.8)'; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = '#9a88c8'; g.fillRect(0, 0, w, h);
+  } else if (map.tint === 'dusk') {
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = '#c8b0a0'; g.fillRect(0, 0, w, h);
+  }
+  g.restore();
 }
 
 function scaleUp(src) {

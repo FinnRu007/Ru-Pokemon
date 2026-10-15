@@ -87,7 +87,7 @@ export class World {
       return;
     }
     if (now < (this.turnUntil || 0)) return;
-    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked);
+    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked, this.flags);
     if (!r.ok) {
       if (!this.bumpAt || now - this.bumpAt > 300) { this.bumpAt = now; this.net.send({ t: 'face', dir }); this.onBump(); }
       return;

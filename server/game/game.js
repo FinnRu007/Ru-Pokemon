@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { MAPS, SPAWN } from '../../shared/data/maps.js';
 import { POKEMON, STARTERS } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
-import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, DIRS, isStandable } from '../../shared/world.js';
+import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, WATER, DIRS, isStandable } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
@@ -76,6 +76,7 @@ export class GameServer {
       case C2S.SHOP_CLOSE: s.shop = false; return;
       case C2S.USE_ITEM: return this.useItem(s, msg);
       case C2S.EMOTE: return this.emote(s, msg);
+      case C2S.FLY: return this.fly(s);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -122,9 +123,9 @@ export class GameServer {
     if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
-    if (!isStandable(MAPS, player.map, player.x, player.y)) {
+    if (!isStandable(MAPS, player.map, player.x, player.y, player.flags)) {
       const h = player.lastHeal;
-      Object.assign(player, h && isStandable(MAPS, h.map, h.x, h.y) ? { map: h.map, x: h.x, y: h.y } : { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y });
+      Object.assign(player, h && isStandable(MAPS, h.map, h.x, h.y, player.flags) ? { map: h.map, x: h.x, y: h.y } : { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y });
     }
     if (player.lastHeal && !isStandable(MAPS, player.lastHeal.map, player.lastHeal.x, player.lastHeal.y)) player.lastHeal = { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y };
 
@@ -253,7 +254,7 @@ export class GameServer {
     const minGap = (msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
     p.dir = msg.dir;
-    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined);
+    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined, this.storyOn ? p.flags : undefined);
     if (!r.ok) { ack(false); return this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id); }
     s.lastMoveAt = now;
     s.prev = { map: p.map, x: p.x, y: p.y };
@@ -264,6 +265,7 @@ export class GameServer {
     ack(true);
 
     if (oldMap !== p.map) {
+      if (MAPS[p.map].fly && !p.flags['visit_' + p.map]) { p.flags['visit_' + p.map] = true; this.sendProgress(s); }
       this.broadcastMap(oldMap, { t: S2C.PLAYER_LEFT, id: p.id });
       this.broadcastMap(p.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(p) }, p.id);
       this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
@@ -387,15 +389,34 @@ export class GameServer {
     this.send(s.ws, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text });
   }
 
+  // Spieler direkt an einen Ort versetzen (Fliegen, Skripte, Testbefehl)
+  teleport(s, map, x, y, dir = 'down') {
+    const p = s.player; const old = p.map;
+    Object.assign(p, { map, x, y, dir });
+    s.posDirty = true; s.prev = null;
+    if (MAPS[map].fly) p.flags['visit_' + map] = true;
+    this.broadcastMap(old, { t: S2C.PLAYER_LEFT, id: p.id });
+    this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
+    this.broadcastMap(p.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(p) }, p.id);
+  }
+
+  // Fliegen: Auswahl aller besuchten Orte (nur draussen und mit der VM Fliegen)
+  fly(s) {
+    if (s.battle || s.script || !this.storyOn) return;
+    const p = s.player;
+    if (!p.flags.hm_fly) return this.notice(s, 'Du beherrschst Fliegen noch nicht.', 'error');
+    if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
+    const spots = Object.entries(MAPS).filter(([id, m]) => m.fly && p.flags['visit_' + id] && id !== p.map);
+    if (!spots.length) return this.notice(s, 'Du kennst noch keine anderen Orte.', 'error');
+    const labels = [...spots.map(([, m]) => m.name), 'Abbrechen'];
+    const branches = spots.map(([id, m]) => [{ warp: [id, m.fly[0], m.fly[1]] }]);
+    this.story.start(s, [[null, 'Wohin möchtest du fliegen?'], { choose: labels, branches }]);
+  }
+
   // Nur zum Testen (DEV=1): /tp karte x y, /flag name, /lv n
   devCommand(s, [cmd, a, b, c]) {
     const p = s.player;
-    if (cmd === '/tp' && MAPS[a]) {
-      const old = p.map;
-      Object.assign(p, { map: a, x: Number(b), y: Number(c) });
-      this.broadcastMap(old, { t: S2C.PLAYER_LEFT, id: p.id });
-      this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
-    }
+    if (cmd === '/tp' && MAPS[a]) this.teleport(s, a, Number(b), Number(c));
     if (cmd === '/flag') { p.flags[a] = true; this.sendProgress(s); }
     if (cmd === '/lv') { for (const m of s.party) { m.level = Number(a); m.moves = defaultMoves(species(m.speciesId), m.level); recalc(m); m.hp = m.stats.hp; } this.saveMons(s); this.sendParty(s); }
     this.savePlayerNow(s);
@@ -406,10 +427,10 @@ export class GameServer {
     const map = MAPS[s.player.map];
     const table = map.encounters;
     if (!table) return;
-    const list = tile === GRASS ? table.grass : tile === CAVE_FLOOR ? table.cave : null;
+    const list = tile === GRASS ? table.grass : tile === CAVE_FLOOR ? table.cave : tile === WATER ? table.water : null;
     if (!list?.length) return;
     if (!s.party.some((m) => m.alive && m.hp > 0)) return;
-    if (!encounterRoll(tile === GRASS ? table.grassRate : table.caveRate)) return;
+    if (!encounterRoll(tile === GRASS ? table.grassRate : tile === WATER ? (table.waterRate || 10) : table.caveRate)) return;
     const total = list.reduce((a, e) => a + e.weight, 0);
     let r = Math.random() * total;
     const slot = list.find((e) => (r -= e.weight) < 0) || list[0];
@@ -417,7 +438,8 @@ export class GameServer {
     this.startWildBattle(s, slot.species, level, s.player.map);
   }
 
-  startWildBattle(s, speciesId, level, route) {
+  startWildBattle(s, speciesId, level, route, meta = null) {
+    if (!s.party.some((m) => m.alive !== false && m.hp > 0)) return false;
     const wild = createPokemon(speciesId, level, { metRoute: route });
     const families = new Set([...s.party, ...s.box].map((m) => species(m.speciesId).family));
     // Vor den ersten Pokebaellen zaehlt keine Begegnung fuer Nuzlocke (wie die gaengige Regel)
@@ -425,7 +447,7 @@ export class GameServer {
       ? { counted: false, catchable: false, reason: 'Du hast noch keine Pokébälle. Diese Begegnung zählt nicht.' }
       : this.rules.onEncounterStart(s.player, route, wild, families);
     s.encounter = { route, counted: gate.counted };
-    s.battleMeta = null;
+    s.battleMeta = meta;
     s.battle = new WildBattle({
       id: crypto.randomUUID(), party: s.party, wild, route, items: s.player.items,
       catchable: gate.catchable, catchBlockReason: gate.reason, nuzlocke: this.rules.rulesFor(s.player).nuzlocke,
@@ -435,6 +457,7 @@ export class GameServer {
     this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
     if (gate.counted) this.sendNuzlocke(s);
+    return true;
   }
 
   // Geskripteter Wildkampf: zaehlt nicht fuer Nuzlocke, niemand stirbt, Niederlage ohne Folgen.
@@ -455,13 +478,15 @@ export class GameServer {
     const tr = TRAINERS[trainerId];
     if (!tr || !s.party.some((m) => m.alive !== false && m.hp > 0)) return false;
     const starter = s.player.starterSpecies || s.party.concat(s.box).find((m) => m.metRoute === 'starter')?.speciesId || 387;
-    const foeParty = tr.party.map(([sp, lv]) => createPokemon(sp === 'rival' ? (RIVAL_STARTER[species(starter).family] || RIVAL_STARTER[starter] || 390) : sp, lv, { metRoute: 'trainer' }));
+    // Der Starter des Rivalen entwickelt sich mit seinem Level mit
+    const rivalSp = (lv) => (RIVAL_STARTER[species(starter).family] || RIVAL_STARTER[starter] || 390) + (lv >= 34 ? 2 : lv >= 16 ? 1 : 0);
+    const foeParty = tr.party.map(([sp, lv]) => createPokemon(sp === 'rival' ? rivalSp(lv) : sp, lv, { metRoute: 'trainer' }));
     const nuz = this.rules.rulesFor(s.player).nuzlocke;
     s.encounter = { route: 'trainer', counted: false };
     s.battleMeta = { trainerId, safe: !!tr.safe };
     s.battle = new TrainerBattle({
       id: crypto.randomUUID(), party: s.party, foeParty, route: 'trainer', items: s.player.items,
-      trainer: { name: tr.name, cls: tr.cls, look: tr.look }, nuzlocke: nuz && !tr.safe,
+      trainer: { name: tr.name, cls: tr.cls, look: tr.look, leader: !!tr.leader }, nuzlocke: nuz && !tr.safe,
       onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon)
     });
     this.beginBattle(s);

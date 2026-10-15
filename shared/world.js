@@ -3,10 +3,18 @@ export const DIRS = {
   up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 }, left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 }
 };
 const EDGE = { up: 'north', down: 'south', left: 'west', right: 'east' };
-export const SOLID = new Set(['#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O']);
+export const SOLID = new Set(['#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O', 'Q', 'Z', 'M', 'N', 'J']);
 // Tueren, Treppen und Hoehleneingaenge sind nur mit Warp begehbar
 const PORTAL = new Set(['D', 'C', 'G', 'U']);
 export const GRASS = '"';
+export const WATER = '~';
+// Feldhindernisse: blockieren, bis der Spieler die passende Feldattacke beherrscht (Story-Flag).
+//   Q  Felsbrocken (Zertruemmerer)   Z  Duenner Baum (Zerschneider)   M  Schwerer Felsblock (Staerke)
+//   N  Felswand (Kraxler)            J  Wasserfall (Kaskade)          ~  Wasser (Surfer)
+export const FIELD = { Q: 'hm_rocksmash', Z: 'hm_cut', M: 'hm_strength', N: 'hm_rockclimb', J: 'hm_waterfall', '~': 'hm_surf' };
+export const FIELD_NAMES = { hm_rocksmash: 'Zertrümmerer', hm_cut: 'Zerschneider', hm_strength: 'Stärke', hm_rockclimb: 'Kraxler', hm_waterfall: 'Kaskade', hm_surf: 'Surfer', hm_fly: 'Fliegen' };
+export function fieldOpen(t, flags) { const need = FIELD[t]; return !!(need && flags && flags[need]); }
+const passable = (t, flags) => t !== null && (!SOLID.has(t) || fieldOpen(t, flags));
 export const CAVE_FLOOR = ':';
 
 export function tileAt(map, x, y) {
@@ -30,7 +38,8 @@ const warpResult = (w) => ({ ok: true, map: w.to, x: w.tx, y: w.ty, dir: w.dir, 
 
 // Berechnet das Ergebnis eines Schrittes. Liefert { ok, map, x, y, jump, warp?, dir? } oder { ok:false }.
 // blocked(mapId, x, y) optional: z. B. NPCs. Spieler blockieren sich nicht (wie im Union-Raum).
-export function resolveStep(maps, mapId, x, y, dir, blocked) {
+// flags optional: Story-Flags des Spielers fuer Feldattacken.
+export function resolveStep(maps, mapId, x, y, dir, blocked, flags) {
   const map = maps[mapId];
   const d = DIRS[dir];
   if (!map || !d) return { ok: false };
@@ -58,7 +67,7 @@ export function resolveStep(maps, mapId, x, y, dir, blocked) {
 
   const target = maps[nMapId];
   const t = tileAt(target, nx, ny);
-  if (t === null || SOLID.has(t)) return { ok: false };
+  if (!passable(t, flags)) return { ok: false };
   if (PORTAL.has(t)) {
     const w = warpAt(target, nx, ny);
     return w ? warpResult(w) : { ok: false };
@@ -66,7 +75,7 @@ export function resolveStep(maps, mapId, x, y, dir, blocked) {
   if (t === 'L') {
     if (dir !== 'down') return { ok: false };
     const landing = tileAt(target, nx, ny + 1);
-    if (landing === null || SOLID.has(landing) || landing === 'L') return { ok: false };
+    if (!passable(landing, flags) || landing === 'L') return { ok: false };
     if (blocked && blocked(nMapId, nx, ny + 1)) return { ok: false };
     return { ok: true, map: nMapId, x: nx, y: ny + 1, jump: true };
   }
@@ -80,9 +89,9 @@ export function facingTile(x, y, dir) {
 }
 
 // Steht der Spieler auf einem gueltigen Feld? (Alte Spielstaende nach Kartenumbau absichern)
-export function isStandable(maps, mapId, x, y) {
+export function isStandable(maps, mapId, x, y, flags) {
   const map = maps[mapId];
   if (!map) return false;
   const t = tileAt(map, x, y);
-  return t !== null && !SOLID.has(t) && !PORTAL.has(t) && t !== 'L';
+  return passable(t, flags) && !PORTAL.has(t) && t !== 'L';
 }

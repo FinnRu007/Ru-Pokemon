@@ -17,6 +17,8 @@
 //   { heal: 'center' }          Heilen und Heilpunkt setzen (Pokemon-Center)
 // Trainer: flag = zusaetzliches Flag nach dem Sieg, badge = Ordenname. Jeder Sieg setzt beat_<id>.
 
+import { TRAINERS2, NPCS2, TRIGGERS2, SCRIPTS2, BADGES2 } from './story2.js';
+
 export function cond(flags, c) {
   if (!c) return true;
   if (Array.isArray(c)) return c.every((x) => cond(flags, x));
@@ -347,6 +349,13 @@ export const NEW_PLAYER_SPAWN = { map: 'twinleaf_home_2f', x: 3, y: 4, dir: 'up'
 export const LEGACY_FLAGS = ['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done'];
 
 export const BADGES = [{ flag: 'badge_coal', name: 'Kohleorden', color: '#7a6a58' }];
+
+// Story ab dem Kohleorden (story2.js) einhaengen
+Object.assign(TRAINERS, TRAINERS2);
+Object.assign(SCRIPTS, SCRIPTS2);
+for (const [m, list] of Object.entries(NPCS2)) NPCS[m] = [...(NPCS[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS2)) TRIGGERS[m] = [...(TRIGGERS[m] || []), ...list];
+BADGES.push(...BADGES2);
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

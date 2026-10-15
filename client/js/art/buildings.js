@@ -15,7 +15,18 @@ const STYLES = {
   school: { roof: '#d0a040', wall: '#f6eed8', sign: 'SCHULE', signBg: '#8a6420' },
   tv: { roof: '#7a5ac8', wall: '#eeeaf6', sign: 'TV', signBg: '#5a3aa8', glassDoor: true },
   corp: { roof: '#5a6a80', wall: '#dde4ee', sign: 'POKECOM', signBg: '#3a4a60', glassDoor: true, tall: true },
-  mine: { roof: '#6a5a4a', wall: '#a8988a', sign: 'MINE', signBg: '#4a3a2a' }
+  mine: { roof: '#6a5a4a', wall: '#a8988a', sign: 'MINE', signBg: '#4a3a2a' },
+  galactic: { roof: '#3f8f9c', wall: '#d6dee6', sign: 'GALAKTIK', signBg: '#2a5866', glassDoor: true, tall: true },
+  plant: { roof: '#8a9aa8', wall: '#e6ecf0', sign: 'KRAFTWERK', signBg: '#5a6a7a', glassDoor: true },
+  shop: { roof: '#e07890', wall: '#fbf2ee', sign: 'BLUMEN', signBg: '#c04868' },
+  bike: { roof: '#f0a030', wall: '#fbf2e6', sign: 'RAD', signBg: '#c07010' },
+  contest: { roof: '#d86aa8', wall: '#fbeef6', sign: 'SHOW', signBg: '#a8407a', glassDoor: true },
+  store: { roof: '#4a9a7a', wall: '#eef6f2', sign: 'KAUFHAUS', signBg: '#2a6a50', glassDoor: true, tall: true },
+  library: { roof: '#7a5a3a', wall: '#efe4d0', sign: 'BIBLIOTHEK', signBg: '#5a3a1a' },
+  lighthouse: { roof: '#e85a3a', wall: '#f6f6f6', sign: 'TURM', signBg: '#a83a2a', tall: true },
+  league: { roof: '#4858b8', wall: '#eef0fa', sign: 'LIGA', signBg: '#2a3488', glassDoor: true, tall: true },
+  temple: { roof: '#8a7a9a', wall: '#e6e0ea', sign: 'TEMPEL', signBg: '#5a4a6a' },
+  gate: { roof: '#6a8a5a', wall: '#eef0e6', sign: 'TOR', signBg: '#4a6a3a', glassDoor: true }
 };
 const HOUSE_STYLES = ['house', 'house2', 'house3', 'house4', 'house5'];
 

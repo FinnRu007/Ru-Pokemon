@@ -145,6 +145,67 @@ export function paintSand(g, ox, oy, x, y) {
   for (let i = 0; i < 4; i++) px(g, C.sandDark, ox + Math.floor(hash(x, y, i) * 16), oy + Math.floor(hash(x, y, i + 4) * 16));
 }
 
+// ------------------------------------------------------------------ Feldhindernisse und Extras
+// Rissiger Felsbrocken (Zertruemmerer)
+export function paintCrackedRock(g, ox, oy) {
+  px(g, 'rgba(0,0,0,.2)', ox + 2, oy + 13, 12, 2);
+  px(g, '#3a3028', ox + 2, oy + 4, 12, 10); px(g, '#3a3028', ox + 3, oy + 3, 10, 12);
+  px(g, '#b0a088', ox + 3, oy + 4, 10, 9); px(g, '#d0c4ac', ox + 4, oy + 5, 4, 2); px(g, '#8a7c66', ox + 8, oy + 10, 5, 3);
+  px(g, '#3a3028', ox + 7, oy + 4, 1, 3); px(g, '#3a3028', ox + 8, oy + 7, 1, 2); px(g, '#3a3028', ox + 6, oy + 9, 2, 1); px(g, '#3a3028', ox + 9, oy + 9, 1, 3);
+}
+// Duenner Baum (Zerschneider)
+const SMALL_TREE = ['....oo....', '..oollo...', '.olllggo..', '.olggggdo.', 'olgggggddo', 'ogggggdddo', '.oggdddo..', '..oodddo..', '....ot....', '....ot....', '...ooto...'];
+export function paintSmallTree(g, ox, oy) {
+  px(g, 'rgba(0,0,0,.2)', ox + 4, oy + 14, 8, 1);
+  drawRows(g, SMALL_TREE, { o: C.treeLine, l: C.canopyLight, g: '#5aae4e', d: C.canopyDark, t: C.trunk }, ox + 3, oy + 3);
+}
+// Schwerer Felsblock (Staerke)
+export function paintHeavyBoulder(g, ox, oy) {
+  px(g, 'rgba(0,0,0,.25)', ox + 1, oy + 13, 14, 3);
+  px(g, '#2a241e', ox + 1, oy + 2, 14, 12); px(g, '#2a241e', ox + 2, oy + 1, 12, 14);
+  px(g, '#6e665c', ox + 2, oy + 2, 12, 11); px(g, '#8e867a', ox + 3, oy + 3, 6, 4); px(g, '#4e4840', ox + 5, oy + 10, 9, 3);
+  px(g, '#4e4840', ox + 9, oy + 4, 2, 2);
+}
+// Felswand mit Griffen (Kraxler)
+export function paintClimbWall(g, ox, oy, x, y, n, palette) {
+  px(g, palette.rock, ox, oy, 16, 16);
+  px(g, shade(palette.rock, 0.2), ox, oy, 16, 2);
+  for (let i = 0; i < 4; i++) {
+    const hx = 2 + ((i * 5 + y * 3) % 11); const hy = 2 + i * 4;
+    px(g, shade(palette.rock, -0.45), ox + hx, oy + hy, 3, 2); px(g, shade(palette.rock, 0.35), ox + hx, oy + hy, 3, 1);
+  }
+}
+// Wasserfall (Kaskade)
+export function paintWaterfall(g, ox, oy, x, y, frame = 0) {
+  px(g, C.waterDark, ox, oy, 16, 16);
+  for (let i = 0; i < 5; i++) {
+    const sx = (i * 3 + x * 7) % 15; const sy = (frame * 5 + i * 7 + y * 3) % 16;
+    px(g, C.waterLight, ox + sx, oy, 1, 16); px(g, C.foam, ox + sx, oy + sy, 1, 4);
+  }
+}
+// Holzbruecke
+export function paintBridge(g, ox, oy, x, y, n) {
+  const ground = (t) => t === '.' || t === ',' || t === '"' || t === '=';
+  const horiz = ground(n(-1, 0)) || ground(n(1, 0)) || (n(-1, 0) === 'b' && n(1, 0) === 'b');
+  if (horiz) {
+    // Planken quer zur Laufrichtung, Gelaender nur am Rand der Bruecke
+    px(g, C.woodDark, ox, oy, 16, 16);
+    for (let i = 0; i < 16; i += 4) { px(g, C.wood, ox + i, oy, 3, 16); px(g, C.woodLight, ox + i, oy, 1, 16); }
+    if (n(0, -1) !== 'b') { px(g, C.woodDark, ox, oy, 16, 3); px(g, C.woodLight, ox, oy, 16, 1); }
+    if (n(0, 1) !== 'b') { px(g, C.woodDark, ox, oy + 13, 16, 3); px(g, 'rgba(0,0,0,.25)', ox, oy + 15, 16, 1); }
+  } else {
+    px(g, C.woodDark, ox, oy, 16, 16);
+    for (let i = 0; i < 16; i += 4) { px(g, C.wood, ox, oy + i, 16, 3); px(g, C.woodLight, ox, oy + i, 16, 1); }
+    if (n(-1, 0) !== 'b') { px(g, C.woodDark, ox, oy, 3, 16); px(g, C.woodLight, ox, oy, 1, 16); }
+    if (n(1, 0) !== 'b') { px(g, C.woodDark, ox + 13, oy, 3, 16); }
+  }
+}
+// Schneedecke
+export function paintSnow(g, ox, oy, x, y) {
+  px(g, '#eef4fa', ox, oy, 16, 16);
+  for (let i = 0; i < 4; i++) px(g, hash(x, y, i) > 0.5 ? '#d4e0ee' : '#ffffff', ox + Math.floor(hash(x, y, i + 2) * 15), oy + Math.floor(hash(x, y, i + 5) * 15), 2, 1);
+}
+
 // Gemeinsamer Helfer: dunklerer Schattenwurf unter Objekten
 export function dropShadow(g, ox, oy, w) { px(g, 'rgba(0,0,0,.18)', ox, oy, w, 1); }
 export { shade };

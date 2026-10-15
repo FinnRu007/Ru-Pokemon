@@ -278,6 +278,33 @@ await test('Tuer fuehrt serverseitig ins Haus und wieder hinaus', async () => {
 });
 
 // ------------------------------------------------------------ Story
+console.log('\nWelt und Story-Blockaden');
+const world = await import('./world.js');
+await test('Welt: Raender, Warps, Ausloeser und Erreichbarkeit aller Karten', () => {
+  const errors = world.checkWorld();
+  assert.deepEqual(errors, []);
+});
+await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschritt', () => {
+  const steps = (await_ => await_);
+  const base = Object.fromEntries(['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done', 'lucia_tip', 'rival2', 'roark_mine'].map((f) => [f, true]));
+  const stages = [
+    [{}, ['jubilife_city', 'route_204', 'lake_verity'], ['route_203', 'oreburgh_city', 'floaroma_town']],
+    [{ grunts_jub: true }, ['oreburgh_city', 'oreburgh_mine', 'route_207'], ['floaroma_town', 'mt_coronet']],
+    [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'floaroma_meadow', 'valley_windworks'], ['eterna_forest', 'windworks_inside']],
+    [{ windworks_key: true }, ['windworks_inside'], ['eterna_forest']],
+    [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet']],
+    [{ badge_forest: true }, ['eterna_galactic'], ['route_206']],
+    [{ eterna_done: true, bike: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208'], []]
+  ];
+  let flags = { ...base };
+  for (const [add, yes, no] of stages) {
+    flags = { ...flags, ...add };
+    const { maps } = world.reachable(flags);
+    for (const m of yes) assert.ok(maps.has(m), `${m} sollte mit ${Object.keys(add).join(', ') || 'Start'} erreichbar sein`);
+    for (const m of no) assert.ok(!maps.has(m), `${m} darf mit ${Object.keys(add).join(', ') || 'Start'} noch nicht erreichbar sein`);
+  }
+});
+
 console.log('\nStory');
 const story = await import('../shared/data/story.js');
 await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {

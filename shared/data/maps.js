@@ -37,6 +37,8 @@ function grid(rows) {
   return { tiles: rows, width: w, height: rows.length };
 }
 
+import { MAPS2, LINKS2 } from './maps2.js';
+
 const house = (x, y, w, h, doorX, door = 'D') => [['rect', x, y, w, h, 'H'], ['tile', doorX, y + h - 1, door]];
 
 const HEAL_TEXT = 'Willkommen im Pokémon-Center! Wir pflegen deine Pokémon wieder gesund. ... Fertig! Wir hoffen, dich bald wiederzusehen.';
@@ -44,7 +46,7 @@ const HEAL_TEXT = 'Willkommen im Pokémon-Center! Wir pflegen deine Pokémon wie
 export const MAPS = {
   // ------------------------------------------------------------------ Zweiblattdorf
   twinleaf_town: {
-    name: 'Zweiblattdorf', width: 20, height: 16, music: 'twinleaf',
+    fly: [10, 8], name: 'Zweiblattdorf', width: 20, height: 16, music: 'twinleaf',
     tiles: build(20, 16, [
       ['rect', 1, 1, 18, 13, ','],
       ['rect', 8, 0, 5, 13, '.'],
@@ -116,7 +118,7 @@ export const MAPS = {
   },
   // ------------------------------------------------------------------ Sandgemme
   sandgem_town: {
-    name: 'Sandgemme', width: 24, height: 18,
+    fly: [17, 12], name: 'Sandgemme', width: 24, height: 18,
     tiles: build(24, 18, [
       ['rect', 1, 1, 22, 14, ','],
       ['rect', 1, 14, 22, 1, '='],
@@ -163,7 +165,7 @@ export const MAPS = {
   },
   // ------------------------------------------------------------------ Jubelstadt
   jubilife_city: {
-    name: 'Jubelstadt', width: 32, height: 26,
+    fly: [5, 20], name: 'Jubelstadt', width: 32, height: 26,
     tiles: build(32, 26, [
       ['rect', 1, 1, 30, 24, ','],
       ['rect', 14, 0, 5, 26, '.'],
@@ -231,8 +233,7 @@ export const MAPS = {
     ]),
     connections: { south: { map: 'jubilife_city', offset: 9 } },
     events: [
-      { x: 4, y: 2, type: 'text', text: 'Route 204  Nord: Felsige Schneise' },
-      { x: 7, y: 0, type: 'text', text: 'Riesige Felsbrocken versperren den Weg. Ohne Zertrümmerer geht es hier nicht weiter.' }
+      { x: 4, y: 2, type: 'text', text: 'Route 204  Nord: Felsige Schneise, dahinter Flori' }
     ],
     encounters: {
       grassRate: 30,
@@ -276,12 +277,12 @@ export const MAPS = {
   },
   // ------------------------------------------------------------------ Erzelingen
   oreburgh_city: {
-    name: 'Erzelingen', width: 30, height: 26,
+    fly: [5, 7], name: 'Erzelingen', width: 30, height: 26,
     tiles: build(30, 26, [
       ['rect', 2, 1, 27, 24, ','],
       ['rect', 0, 0, 2, 26, 'X'],
       ['tile', 1, 9, 'G'],
-      ['rect', 2, 9, 26, 2, '.'],
+      ['rect', 2, 9, 28, 2, '.'],
       ['rect', 14, 2, 2, 21, '.'],
       ['rect', 2, 17, 12, 7, ';'],
       ['rect', 2, 24, 12, 1, 'X'],
@@ -304,7 +305,7 @@ export const MAPS = {
     events: [
       { x: 13, y: 8, type: 'text', text: 'Erzelingen: Die Stadt, die die Energie der Erde antreibt.' },
       { x: 24, y: 7, type: 'text', text: 'Pokémon-Arena Erzelingen. Arenaleiter Veit, der felsenfeste Kumpel.' },
-      { x: 27, y: 8, type: 'text', text: 'Route 207. Der Hang ist steil und schlammig. Ohne Fahrrad kommst du hier nicht hoch.' },
+      { x: 27, y: 8, type: 'text', text: 'Route 207  Osten: Kraterberg. Der Hang dahinter ist steil und schlammig. Ohne Fahrrad kommst du nicht hinauf.' },
       { x: 8, y: 16, type: 'text', text: 'Erzelingen-Mine. Vorsicht, Bergbaubetrieb!' },
       { x: 23, y: 21, type: 'text', text: 'Kohle-Museum. Wegen Umbau geschlossen.' }
     ],
@@ -457,6 +458,8 @@ export const MAPS = {
   }
 };
 
+Object.assign(MAPS, MAPS2);
+
 // ------------------------------------------------------------------ Verbindungen
 for (const m of Object.values(MAPS)) { m.warps = m.warps || []; m.events = m.events || []; }
 
@@ -493,5 +496,16 @@ pass('oreburgh_gate', 23, 5, 'oreburgh_city', 2, 9, 'right');
 pass('oreburgh_city', 1, 9, 'oreburgh_gate', 22, 5, 'left');
 pass('oreburgh_city', 7, 24, 'oreburgh_mine', 3, 2, 'down');
 pass('oreburgh_mine', 3, 1, 'oreburgh_city', 7, 23, 'up');
+
+const OPPOSITE_EDGE = { north: 'south', south: 'north', east: 'west', west: 'east' };
+for (const [kind, ...a] of LINKS2) {
+  if (kind === 'door') door(...a);
+  else if (kind === 'pass') pass(...a);
+  else if (kind === 'conn') {
+    const [aId, edge, bId, off] = a;
+    (MAPS[aId].connections ||= {})[edge] = { map: bId, offset: off };
+    (MAPS[bId].connections ||= {})[OPPOSITE_EDGE[edge]] = { map: aId, offset: -off };
+  }
+}
 
 export const SPAWN = { map: 'twinleaf_town', x: 10, y: 7, dir: 'down' };

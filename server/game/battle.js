@@ -634,7 +634,7 @@ export class TrainerBattle extends WildBattle {
     return {
       ...super.snapshot(),
       kind: 'trainer',
-      trainer: { name: this.trainerName, look: this.trainer.look },
+      trainer: { name: this.trainerName, look: this.trainer.look, leader: !!this.trainer.leader },
       foeTeam: this.foeParty.map((m) => (m.hp > 0 ? 'ok' : 'down'))
     };
   }
