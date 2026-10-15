@@ -11,7 +11,8 @@
     "build-dex": "node scripts/build-dex.js",
     "test": "node --no-warnings test/smoke.js",
     "sprites": "node scripts/fetch-sprites.js",
-    "sounds": "node scripts/fetch-sounds.js"
+    "sounds": "node scripts/fetch-sounds.js",
+    "texts": "node scripts/fetch-texts.js"
   },
   "engines": {
     "node": ">=22.5"
