@@ -67,6 +67,15 @@ for (const t of TERRAINS) {
   fs.mkdirSync(path.join(OUT, 'terrain', t), { recursive: true });
   for (const side of ['enemy', 'player']) jobs.push({ url: `${TERRAIN_BASE}/${t}/${side}.png`, file: path.join(OUT, 'terrain', t, `${side}.png`) });
 }
+// Bodentexturen (NSBTX, entpackt der Browser selbst) und Feldobjekte fuer die Weltgrafik
+const FIELD_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res';
+const FIELD_SETS = ['map_texture_set_006', 'map_texture_set_014'];
+const FIELD_OBJECTS = ['rock_smash', 'cut_tree', 'strength_boulder'];
+fs.mkdirSync(path.join(OUT, 'field'), { recursive: true });
+for (const f of FIELD_SETS) jobs.push({ url: `${FIELD_BASE}/field/maps/texture_sets/${f}.nsbtx`, file: path.join(OUT, 'field', `${f}.nsbtx`) });
+// Gebaeude im Stil der 4. Generation (Kachelsatz aus Pokemon Essentials)
+jobs.push({ url: 'https://raw.githubusercontent.com/Manurocker95/Pokemon-Essentials-21-With-Unofficial-EBDX/main/Graphics/Tilesets/Outside.png', file: path.join(OUT, 'field', 'Outside.png') });
+for (const f of FIELD_OBJECTS) jobs.push({ url: `${FIELD_BASE}/graphics/field_sprites/objects/${f}.png`, file: path.join(OUT, 'field', `${f}.png`) });
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -90,7 +99,8 @@ for (const kind of Object.keys(KINDS)) {
 }
 for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 index.terrain = TERRAINS.filter((t) => ['enemy', 'player'].every((s) => fs.existsSync(path.join(OUT, 'terrain', t, `${s}.png`))));
+index.field = [...FIELD_SETS, ...FIELD_OBJECTS, 'Outside'].filter((f) => fs.existsSync(path.join(OUT, 'field', `${f}.${f.startsWith('map_') ? 'nsbtx' : 'png'}`)));
 index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, field: index.field })) console.log(`  ${k}: ${ids.length}`);

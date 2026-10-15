@@ -4,6 +4,7 @@ import {
   paintCrackedRock, paintSmallTree, paintHeavyBoulder, paintClimbWall, paintWaterfall, paintBridge, paintSnow
 } from './tiles.js';
 import { px } from './pixel.js';
+import { paintRealTile } from './realTiles.js';
 import {
   THEMES, paintFloor, paintWall, paintCounter, paintShelf, paintTable, paintPlant, paintMachine, paintTv, paintBed,
   paintStairs, paintMat, paintBoulder, paintRock, paintCaveMouth, paintCoal
@@ -32,6 +33,7 @@ export function paintTile(g, map, x, y, frame, pass, open) {
   const n = (dx, dy) => map.tiles[y + dy]?.[x + dx] ?? null;
   const theme = map.theme || 'house';
   const th = themeOf(map, theme);
+  if (paintRealTile(g, map, x, y, frame, pass, t, n)) return;
   if (pass === 'object') {
     if (t === '#') paintTree(g, ox, oy);
     else if (t === 'B') paintShelf(g, ox, oy, x, y, theme);

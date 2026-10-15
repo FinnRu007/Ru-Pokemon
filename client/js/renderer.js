@@ -9,6 +9,8 @@ import { paintBuilding } from './art/buildings.js';
 import { paintTallOverlay, paintTree } from './art/tiles.js';
 import { characterSheet, DIR_ROW } from './art/characters.js';
 import { overworldSheet } from './art/realSheets.js';
+import { fieldReady } from './art/realField.js';
+import { forestTile } from './art/realTiles.js';
 import { FIELD } from '/shared/world.js';
 
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
@@ -83,8 +85,13 @@ export class Renderer {
     const ox = Math.round(-camX * T); const oy = Math.round(-camY * T);
 
     if (isIndoor(map)) { g.fillStyle = '#000'; g.fillRect(0, 0, this.c.width, this.c.height); } else {
-      g.save(); g.translate(ox % (T), oy % (T * 2)); g.fillStyle = this.forest;
-      g.fillRect(-T, -T * 2, this.c.width + T * 2, this.c.height + T * 4); g.restore();
+      const snow = map.tint === 'snow';
+      if (fieldReady() && this.realForestKey !== snow) {
+        const f = forestTile(snow);
+        if (f) { this.forest = this.g.createPattern(scaleUp(f), 'repeat'); this.realForestKey = snow; }
+      }
+      g.save(); g.translate(ox % (T * 2), oy % (T * 2)); g.fillStyle = this.forest;
+      g.fillRect(-T * 2, -T * 2, this.c.width + T * 4, this.c.height + T * 4); g.restore();
     }
     const frame = Math.floor(now / 420) % 3;
     this.drawMapLayer(world.me.map, ox, oy, frame);
@@ -212,6 +219,7 @@ function tint(g, map) {
   if (!map.tint || map.tint === 'none') return;
   const { width: w, height: h } = g.canvas;
   g.save();
+  if (map.tint === 'snow' && fieldReady() && !map.indoor) { g.restore(); return; }
   if (map.tint === 'snow') {
     g.globalCompositeOperation = 'saturation'; g.fillStyle = 'rgba(128,128,128,.55)'; g.fillRect(0, 0, w, h);
     g.globalCompositeOperation = 'screen'; g.fillStyle = '#3a4250'; g.fillRect(0, 0, w, h);

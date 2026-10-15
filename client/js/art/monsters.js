@@ -21,13 +21,17 @@ const ARCH = {
 // Originalbilder aus `npm run sprites` (client/sprites/, nicht im Repo). Sind sie vorhanden,
 // haben sie Vorrang, sonst bleibt es bei der prozeduralen Grafik.
 let REAL = null;
+let SPRITE_INDEX = null;
+export const spriteIndex = () => SPRITE_INDEX;
 let NAMED = { types: new Set(), items: new Set(), trainers: new Set(), overworld: new Set(), terrain: new Set() };
 export const hasReal = (kind, name) => NAMED[kind]?.has(name) || false;
 export async function loadRealSprites() {
   try {
     const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
     if (!res.ok) return false;
-    const { kinds, types = [], items = [], trainers = [], overworld = [], terrain = [] } = await res.json();
+    const index = await res.json();
+    const { kinds, types = [], items = [], trainers = [], overworld = [], terrain = [] } = index;
+    SPRITE_INDEX = index;
     REAL = Object.fromEntries(Object.entries(kinds).map(([k, ids]) => [k, new Set(ids)]));
     NAMED = { types: new Set(types), items: new Set(items), trainers: new Set(trainers), overworld: new Set(overworld), terrain: new Set(terrain) };
     return true;

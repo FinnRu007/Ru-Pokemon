@@ -1,6 +1,7 @@
 // Gebaeude werden als Ganzes gemalt (Dach, Wand, Fenster, Tuer, Schild), passend zur Groesse
 // des Rechtecks aus der Karte. Stile: house, center, mart, lab, gym, school, tower, big.
 import { px, shade, text3x5, textWidth3x5 } from './pixel.js';
+import { paintRealBuilding } from './realBuildings.js';
 
 const STYLES = {
   house: { roof: '#c8583e', wall: '#f4ead2' },
@@ -37,6 +38,8 @@ export function styleFor(b, index) {
 }
 
 export function paintBuilding(g, b, index = 0) {
+  const key = b.style && STYLES[b.style] ? b.style : b.doors.some((d) => d.kind === 'C') ? 'center' : HOUSE_STYLES[index % HOUSE_STYLES.length];
+  if (paintRealBuilding(g, b, key)) return;
   const st = styleFor(b, index);
   const X = b.x * 16; const Y = b.y * 16; const W = b.w * 16; const H = b.h * 16;
   const wallH = b.h >= 5 ? 30 : b.h >= 4 ? 26 : 19;
