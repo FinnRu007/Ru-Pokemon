@@ -14,7 +14,8 @@ export class Net {
     this.ws = new WebSocket(`${proto}://${location.host}/ws`);
     this.ws.onopen = () => {
       this.retry = 0;
-      this.ws.send(JSON.stringify(this.helloMsg));
+      // Eigene Uhrzeit des Spielers (Nacht, Rotom, Finsterball) wie die DS-Uhr
+      this.ws.send(JSON.stringify({ ...this.helloMsg, tz: new Date().getTimezoneOffset() }));
       for (const m of this.queue.splice(0)) this.ws.send(JSON.stringify(m));
     };
     this.ws.onmessage = (e) => {

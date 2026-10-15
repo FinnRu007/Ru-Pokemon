@@ -7,7 +7,7 @@ import {
   catchAttempt, BALLS, ballBonus, expGain, escapeAttempt
 } from '../../shared/formulas.js';
 import { species, displayName, addExp, gainEvs, publicPokemon } from './pokemonFactory.js';
-import { ITEMS, applyItem } from '../../shared/data/items.js';
+import { ITEMS, applyItem, heldOf } from '../../shared/data/items.js';
 
 const rnd = (n) => Math.floor(Math.random() * n);
 const chance = (pct) => Math.random() * 100 < pct;
@@ -114,11 +114,12 @@ export class WildBattle {
   }
 
   side(b) { return b === this.ally ? 'ally' : 'foe'; }
+  isAlly(b) { return b === this.ally; }
   other(b) { return b === this.ally ? this.wild : this.ally; }
   name(b) { return b === this.ally ? displayName(b.mon) : `Das wilde ${displayName(b.mon)}`; }
   // Dativ und Akkusativ fuer Saetze wie "Verteidigung von dem wilden X" oder "Wirkung auf das wilde X"
-  nameDat(b) { return b === this.ally ? displayName(b.mon) : `dem ${this.foeAdj}en ${displayName(b.mon)}`; }
-  nameAcc(b) { return b === this.ally ? displayName(b.mon) : `das ${this.foeAdj}e ${displayName(b.mon)}`; }
+  nameDat(b) { return this.isAlly(b) ? displayName(b.mon) : `dem ${this.foeAdj}en ${displayName(b.mon)}`; }
+  nameAcc(b) { return this.isAlly(b) ? displayName(b.mon) : `das ${this.foeAdj}e ${displayName(b.mon)}`; }
   get foeAdj() { return 'wild'; }
 
   // ---------------------------------------------------------------- Aktionen
@@ -155,7 +156,7 @@ export class WildBattle {
         ev.push({ type: 'text', text: 'Du kannst nicht fliehen!' });
       } else {
         this.escapeAttempts++;
-        const ok = this.ally.mon.ability === 'run-away' || escapeAttempt(this.effSpeed(this.ally), this.effSpeed(this.wild), this.escapeAttempts);
+        const ok = this.ally.mon.ability === 'run-away' || heldOf(this.ally.mon)?.flee || escapeAttempt(this.effSpeed(this.ally), this.effSpeed(this.wild), this.escapeAttempts);
         if (ok) {
           ev.push({ type: 'text', text: 'Du bist entkommen!' });
           return { events: this.end('fled', ev) };
@@ -217,6 +218,8 @@ export class WildBattle {
       if (!usable) allyMove = 'struggle';
       else if (!slot || slot.pp <= 0) return { events: [], error: 'Keine AP mehr fuer diese Attacke' };
       else allyMove = slot.id;
+      const lock = this.choiceLock(this.ally);
+      if (lock && allyMove !== lock && allyMove !== 'struggle') return { events: [], error: `Wegen ${this.itemName(this.ally)} geht nur ${MOVES[lock].name}!` };
       const order = this.turnOrder(allyMove, foeMove);
       for (let i = 0; i < order.length; i++) {
         const [b, mv] = order[i];
@@ -238,6 +241,12 @@ export class WildBattle {
     return { events: ev };
   }
 
+  // Wahlband, Wahlglas, Wahlschal: nur die zuerst gewählte Attacke, solange sie AP hat
+  choiceLock(b) {
+    const id = b.vol.choiceMove;
+    return id && heldOf(b.mon)?.choice && b.mon.moves.some((m) => m.id === id && m.pp > 0) ? id : null;
+  }
+
   pickWildMove() {
     if (this.roamer && !this.wild.vol.trap) return 'flee';
     const usable = this.wild.mon.moves.filter((m) => m.pp > 0);
@@ -248,6 +257,9 @@ export class WildBattle {
   effSpeed(b) {
     let s = b.mon.stats.spe * stageMultiplier(b.stages.spe);
     if (b.mon.status === 'par') s /= 4;
+    const h = heldOf(b.mon);
+    if (h?.choice === 'spe') s *= 1.5;
+    if (h?.slow) s *= h.slow;
     return Math.floor(s);
   }
 
@@ -257,10 +269,62 @@ export class WildBattle {
     const pa = MOVES[allyMove]?.prio || 0;
     const pf = MOVES[foeMove]?.prio || 0;
     if (pa !== pf) return pa > pf ? [a, f] : [f, a];
+    const qa = this.quickRoll(this.ally); const qf = this.quickRoll(this.wild);
+    if (qa !== qf) return qa > qf ? [a, f] : [f, a];
     const sa = this.effSpeed(this.ally);
     const sf = this.effSpeed(this.wild);
     if (sa !== sf) return sa > sf ? [a, f] : [f, a];
     return Math.random() < 0.5 ? [a, f] : [f, a];
+  }
+
+  // Flinkklaue (manchmal zuerst) und Schwerschweif (immer zuletzt) innerhalb derselben Priorität
+  quickRoll(b) {
+    const h = heldOf(b.mon);
+    if (h?.last) return -1;
+    return h?.quick && chance(h.quick) ? 1 : 0;
+  }
+
+  // Getragenes Item wird verbraucht (Beeren, Kräuter, Fokusgurt): wie in Platin auch nach dem Kampf weg
+  consumeItem(b) { b.mon.item = null; }
+  itemName(b) { return ITEMS[b.mon.item]?.name || b.mon.item; }
+
+  // Beeren lösen aus, sobald ihr Anlass eintritt
+  checkBerry(b, ev) {
+    const h = heldOf(b.mon)?.berry;
+    if (!h || b.mon.hp <= 0) return;
+    const max = b.mon.stats.hp;
+    const name = this.itemName(b);
+    if ((h.hp || h.hpPct) && b.mon.hp <= Math.floor(max / 2)) {
+      this.consumeItem(b);
+      this.heal(b, h.hp || Math.floor(max * h.hpPct), ev, `${this.name(b)} isst seine ${name} und füllt KP auf!`);
+      return;
+    }
+    if (h.cure && h.cure.includes(b.mon.status)) {
+      this.consumeItem(b);
+      b.mon.status = null;
+      ev.push({ type: 'text', text: `${this.name(b)} isst seine ${name} und ist wieder gesund!` }, this.statusEvent(b));
+      return;
+    }
+    if (h.confuse && b.vol.confused > 0) {
+      this.consumeItem(b);
+      b.vol.confused = 0;
+      ev.push({ type: 'text', text: `${this.name(b)} isst seine ${name} und ist nicht mehr verwirrt!` });
+      return;
+    }
+    const empty = h.pp && b.mon.moves.find((m) => m.pp <= 0);
+    if (empty) {
+      this.consumeItem(b);
+      empty.pp = Math.min(empty.maxPp, h.pp);
+      ev.push({ type: 'text', text: `${this.name(b)} isst seine ${name} und füllt die AP von ${MOVES[empty.id]?.name || empty.id} auf!` });
+    }
+  }
+
+  // Schlohkraut setzt gesenkte Werte zurück
+  checkHerb(b, ev) {
+    if (!heldOf(b.mon)?.white || !Object.values(b.stages).some((v) => v < 0)) return;
+    for (const k of Object.keys(b.stages)) if (b.stages[k] < 0) b.stages[k] = 0;
+    ev.push({ type: 'text', text: `${this.name(b)} setzt mit ${this.itemName(b)} seine Werte zurück!` });
+    this.consumeItem(b);
   }
 
   doSwitch(index, ev) {
@@ -299,6 +363,12 @@ export class WildBattle {
     }
     const target = this.other(user);
     const move = MOVES[moveId];
+    if (!this.beforeMove(user, moveId, move, ev, target)) return;
+    this.hitTarget(user, target, move, ev, movedFirst);
+  }
+
+  // Statusprobleme, AP und Ansage. Liefert false, wenn der Anwender nicht angreifen kann.
+  beforeMove(user, moveId, move, ev, target) {
     const uName = this.name(user);
 
     // Statusprobleme vor dem Angriff
@@ -307,7 +377,7 @@ export class WildBattle {
         user.vol.sleep--;
         ev.push({ type: 'text', text: `${uName} schläft tief und fest.` });
         user.vol.furyCutter = 0;
-        return;
+        return false;
       }
       user.mon.status = null;
       ev.push({ type: 'text', text: `${uName} ist aufgewacht!` }, this.statusEvent(user));
@@ -318,13 +388,13 @@ export class WildBattle {
         ev.push({ type: 'text', text: `${uName} ist wieder aufgetaut!` }, this.statusEvent(user));
       } else {
         ev.push({ type: 'text', text: `${uName} ist eingefroren!` });
-        return;
+        return false;
       }
     }
     if (user.vol.flinch) {
       ev.push({ type: 'text', text: `${uName} schreckt zurück!` });
       user.vol.flinch = false;
-      return;
+      return false;
     }
     if (user.vol.confused > 0) {
       user.vol.confused--;
@@ -336,13 +406,13 @@ export class WildBattle {
           const dmg = calcDamage({ level: user.mon.level, power: 40, attack: this.statFor(user, 'atk', false), defense: this.statFor(user, 'def', false), stab: false, typeMult: 1, crit: false, burned: false, physical: true });
           ev.push({ type: 'text', text: 'Es hat sich vor Verwirrung selbst verletzt!' });
           this.applyDamage(user, dmg, ev);
-          return;
+          return false;
         }
       }
     }
     if (user.mon.status === 'par' && chance(25)) {
       ev.push({ type: 'text', text: `${uName} ist paralysiert! Es kann nicht angreifen!` });
-      return;
+      return false;
     }
 
     // AP verbrauchen
@@ -351,14 +421,25 @@ export class WildBattle {
       if (slot) slot.pp = Math.max(0, slot.pp - 1);
     }
     ev.push({ type: 'text', text: `${uName} setzt ${move.name} ein!` });
-    ev.push({ type: 'anim', side: this.side(user), move: moveId, moveType: move.type, cat: move.cat, power: move.power || 0 });
+    ev.push({ type: 'anim', side: this.side(user), target: this.side(target), move: moveId, moveType: move.type, cat: move.cat, power: move.power || 0 });
     if (move.id !== 'fury-cutter') user.vol.furyCutter = 0;
     user.vol.lastMove = moveId;
+    if (heldOf(user.mon)?.choice && !user.vol.choiceMove && moveId !== 'struggle') user.vol.choiceMove = moveId;
+    return true;
+  }
+
+  // Trifft ein Ziel: Genauigkeit, Statusattacke oder Schaden mit Zusatzeffekten
+  hitTarget(user, target, move, ev, movedFirst) {
+    const uName = this.name(user);
 
     // Genauigkeit
     if (move.acc !== null && !(move.cat === 'status' && move.effect?.target === 'self')) {
       const stage = Math.max(-6, Math.min(6, user.stages.acc - target.stages.eva));
-      const hitChance = move.acc * accStageMultiplier(stage);
+      let hitChance = move.acc * accStageMultiplier(stage);
+      const hu = heldOf(user.mon); const ht = heldOf(target.mon);
+      if (hu?.acc) hitChance *= hu.acc;
+      if (hu?.zoom && target.moved) hitChance *= hu.zoom;
+      if (ht?.evade) hitChance *= ht.evade;
       if (Math.random() * 100 >= hitChance) {
         ev.push({ type: 'text', text: `Die Attacke von ${uName} ging daneben!` });
         user.vol.furyCutter = 0;
@@ -395,6 +476,12 @@ export class WildBattle {
       this.contactAbility(user, target, move, ev);
     }
     if (hits > 1) ev.push({ type: 'text', text: `${landed}-mal getroffen!` });
+    const hu = heldOf(user.mon);
+    if (total > 0 && user.mon.hp > 0) {
+      if (hu?.shell) this.heal(user, Math.max(1, Math.floor(total * hu.shell)), ev, `${this.name(user)} füllt mit der Muschelglocke KP auf!`);
+      if (hu?.orb && user.mon.ability !== 'magic-guard') { ev.push({ type: 'text', text: `${this.name(user)} verliert durch den Leben-Orb KP!` }); this.applyDamage(user, Math.max(1, Math.floor(user.mon.stats.hp / 10)), ev); }
+      if (hu?.flinch && movedFirst && target.mon.hp > 0 && !e.flinch && e.kind !== 'flinch' && chance(hu.flinch) && target.mon.ability !== 'inner-focus') target.vol.flinch = true;
+    }
     if (e.kind !== 'fixed' && e.kind !== 'endeavor') {
       if (typeMult > 1) ev.push({ type: 'text', text: 'Das ist sehr effektiv!' });
       if (typeMult < 1) ev.push({ type: 'text', text: 'Das ist nicht sehr effektiv...' });
@@ -402,7 +489,7 @@ export class WildBattle {
     if (user.vol.charged && move.type === 'electric') user.vol.charged = false;
 
     // Zusatzeffekte
-    if (e.kind === 'drain' && total > 0) this.heal(user, Math.max(1, Math.floor(total * e.ratio)), ev, `${target === this.ally ? this.name(target) : this.nameDat(target).replace(/^d/, 'D')} wurde Energie abgesaugt!`);
+    if (e.kind === 'drain' && total > 0) this.heal(user, Math.max(1, Math.floor(total * e.ratio)), ev, `${this.isAlly(target) ? this.name(target) : this.nameDat(target).replace(/^d/, 'D')} wurde Energie abgesaugt!`);
     if (e.kind === 'recoil' && total > 0) {
       const rec = e.ofMaxHp ? Math.floor(user.mon.stats.hp * e.ratio) : Math.floor(total * e.ratio);
       ev.push({ type: 'text', text: `${uName} wird durch den Rückstoß getroffen!` });
@@ -452,26 +539,41 @@ export class WildBattle {
     if (pinch === move.type && user.mon.hp <= Math.floor(user.mon.stats.hp / 3)) power = Math.floor(power * 1.5);
 
     const physical = move.cat === 'physical';
-    const critStage = (move.highCrit ? 1 : 0) + (user.vol.focus ? 2 : 0);
+    const hu = heldOf(user.mon);
+    if (hu?.boost === move.type) power = Math.floor(power * 1.2);
+    if (physical && hu?.physical) power = Math.floor(power * hu.physical);
+    if (!physical && hu?.special) power = Math.floor(power * hu.special);
+    const critStage = (move.highCrit ? 1 : 0) + (user.vol.focus ? 2 : 0) + (hu?.crit || 0);
     const crit = Math.random() < critChance(critStage);
     let attack = this.statFor(user, physical ? 'atk' : 'spa', crit, true);
     const defense = this.statFor(target, physical ? 'def' : 'spd', crit, false);
     const guts = user.mon.ability === 'guts' && user.mon.status;
     if (guts && physical) attack = Math.floor(attack * 1.5);
+    if (hu?.choice === (physical ? 'atk' : 'spa')) attack = Math.floor(attack * 1.5);
     const stab = species(user.mon.speciesId).types.includes(move.type);
-    const damage = calcDamage({ level: user.mon.level, power, attack, defense, stab, typeMult, crit, burned: user.mon.status === 'brn' && !guts, physical });
+    let damage = calcDamage({ level: user.mon.level, power, attack, defense, stab, typeMult, crit, burned: user.mon.status === 'brn' && !guts, physical });
+    // Doppelkampf: Attacken gegen mehrere Ziele richten je drei Viertel Schaden an
+    if (this.spreadHit) damage = Math.max(1, Math.floor(damage * 0.75));
+    if (hu?.expert && typeMult > 1) damage = Math.floor(damage * hu.expert);
+    if (hu?.orb) damage = Math.floor(damage * hu.orb);
     return { damage, crit };
   }
 
   applyDamage(b, dmg, ev) {
     if (this._pendingText) { ev.push({ type: 'text', text: this._pendingText }); this._pendingText = null; }
     let d = Math.min(dmg, b.mon.hp);
+    const h = heldOf(b.mon);
     if (b.vol.endure && d >= b.mon.hp) {
       d = b.mon.hp - 1;
       ev.push({ type: 'text', text: `${this.name(b)} übersteht den Angriff!` });
+    } else if (d >= b.mon.hp && b.mon.hp > 1 && ((h?.sash && b.mon.hp === b.mon.stats.hp) || (h?.band && chance(h.band)))) {
+      d = b.mon.hp - 1;
+      ev.push({ type: 'text', text: `${this.name(b)} hält sich mit ${this.itemName(b)} auf den Beinen!` });
+      if (h.sash) this.consumeItem(b);
     }
     b.mon.hp -= d;
     ev.push({ type: 'hp', side: this.side(b), hp: b.mon.hp, maxHp: b.mon.stats.hp, damage: d });
+    if (b.mon.hp > 0) this.checkBerry(b, ev);
     return d;
   }
 
@@ -547,6 +649,7 @@ export class WildBattle {
       if (diff === 0) ev.push({ type: 'text', text: `${STAT_DE[k]} von ${this.nameDat(b)} kann nicht weiter ${delta > 0 ? 'steigen' : 'sinken'}!` });
       else ev.push({ type: 'stat', side: this.side(b), up: diff > 0 }, { type: 'text', text: `${STAT_DE[k]} von ${this.nameDat(b)} ${Math.abs(diff) >= 2 ? (diff > 0 ? 'steigt stark' : 'sinkt stark') : diff > 0 ? 'steigt' : 'sinkt'}!` });
     }
+    this.checkHerb(b, ev);
   }
 
   inflictStatus(b, status, ev, primary) {
@@ -563,6 +666,7 @@ export class WildBattle {
     if (status === 'slp') b.vol.sleep = 1 + rnd(4);
     if (status === 'tox') b.vol.toxic = 1;
     ev.push({ type: 'text', text: `${this.name(b)} wurde ${STATUS_DE[status]}!` }, this.statusEvent(b));
+    this.checkBerry(b, ev);
     return true;
   }
 
@@ -570,6 +674,7 @@ export class WildBattle {
     if (b.vol.confused > 0) { if (primary) ev.push({ type: 'text', text: `${this.name(b)} ist bereits verwirrt!` }); return; }
     b.vol.confused = 2 + rnd(4);
     ev.push({ type: 'text', text: `${this.name(b)} wurde verwirrt!` });
+    this.checkBerry(b, ev);
   }
 
   statusEvent(b) { return { type: 'status', side: this.side(b), status: b.mon.status }; }
@@ -597,7 +702,19 @@ export class WildBattle {
         b.mon.status = null;
         ev.push({ type: 'text', text: `${this.name(b)} heilt sich durch Expidermis!` }, this.statusEvent(b));
       }
+      this.heldEndOfTurn(b, ev);
     }
+  }
+
+  // Überreste, Giftschleim, Toxik-Orb und Heiß-Orb am Rundenende
+  heldEndOfTurn(b, ev) {
+    const h = heldOf(b.mon);
+    if (!h || this.state === 'ended' || b.mon.hp <= 0) return;
+    const max = b.mon.stats.hp;
+    const poison = species(b.mon.speciesId).types.includes('poison');
+    if ((h.heal || (h.sludge && poison)) && b.mon.hp < max) this.heal(b, Math.max(1, Math.floor(max / 16)), ev, `${this.name(b)} füllt mit ${this.itemName(b)} ein wenig KP auf!`);
+    else if (h.sludge && !poison) { ev.push({ type: 'text', text: `${this.name(b)} wird durch den Giftschleim verletzt!` }); this.applyDamage(b, Math.max(1, Math.floor(max / 8)), ev); }
+    if (h.inflict && !b.mon.status && b.mon.hp > 0) this.inflictStatus(b, h.inflict, ev, false);
   }
 
   // Liefert true, wenn der Zug durch K.O. unterbrochen werden muss.
@@ -652,17 +769,26 @@ export class WildBattle {
   }
 
   awardExp(ev) {
-    const sp = species(this.wild.mon.speciesId);
     const parts = this.party.filter((p) => this.participants.has(p.id) && p.alive !== false && p.hp > 0);
-    for (const p of parts) {
-      const amount = Math.floor(expGain({ baseExp: sp.baseExp, level: this.wild.mon.level, participants: parts.length }) * (this.expBonus || 1));
+    this.giveExp(parts, this.wild.mon, ev);
+  }
+
+  // EP für Teilnehmer, Glücks-Ei mal 1,5, EP-Teiler gibt Trägern außerhalb des Kampfes die Hälfte
+  giveExp(parts, foe, ev) {
+    const sp = species(foe.speciesId);
+    const sharers = this.party.filter((p) => !parts.includes(p) && !p.egg && p.alive !== false && p.hp > 0 && heldOf(p)?.share);
+    for (const p of [...parts, ...sharers]) {
+      const share = parts.includes(p) ? 1 : 0.5;
+      const amount = Math.floor(expGain({ baseExp: sp.baseExp, level: foe.level, participants: Math.max(1, parts.length) }) * (this.expBonus || 1) * (heldOf(p)?.exp || 1) * share);
       ev.push({ type: 'text', text: `${displayName(p)} erhält ${amount} Erfahrungspunkte!` });
-      gainEvs(p, this.wild.mon.speciesId);
+      gainEvs(p, foe.speciesId);
       const lv = addExp(p, amount);
       ev.push({ type: 'exp', pokemonId: p.id, exp: p.exp }, ...lv);
-      if (p === this.ally.mon) ev.push({ type: 'hp', side: 'ally', hp: p.hp, maxHp: p.stats.hp, damage: 0 });
+      const b = this.battlerOfMon(p);
+      if (b) ev.push({ type: 'hp', side: this.side(b), hp: p.hp, maxHp: p.stats.hp, damage: 0 });
     }
   }
+  battlerOfMon(p) { return p === this.ally.mon ? this.ally : null; }
 
   end(result, ev) {
     if (this.state === 'ended') return ev;
@@ -721,6 +847,8 @@ export class TrainerBattle extends WildBattle {
   pickWildMove() {
     const usable = this.wild.mon.moves.filter((m) => m.pp > 0);
     if (!usable.length) return 'struggle';
+    const lock = this.choiceLock(this.wild);
+    if (lock) return lock;
     const target = species(this.ally.mon.speciesId).types;
     const own = species(this.wild.mon.speciesId).types;
     const scored = usable.map((m) => {

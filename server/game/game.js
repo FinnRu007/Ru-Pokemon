@@ -8,6 +8,7 @@ import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
 import { WildBattle, TrainerBattle } from './battle.js';
+import { DoubleBattle } from './double.js';
 import { RulesEngine, sanitizeRules } from './rules.js';
 import { StoryRunner } from './story.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
@@ -148,7 +149,8 @@ export class GameServer {
     const old = this.sessions.get(player.id);
     if (old) { this.send(old.ws, { t: S2C.ERROR, message: 'Du hast dich an anderer Stelle angemeldet.' }); old.ws.close(); this.disconnect({ session: old }); }
 
-    const s = { ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [], script: null, shop: false, prev: null, playTick: Date.now() };
+    const tz = Number(msg.tz);
+    const s = { tz: Number.isFinite(tz) && Math.abs(tz) <= 840 ? tz : null, ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [], script: null, shop: false, prev: null, playTick: Date.now() };
     this.loadMons(s);
     // Pokedex: aeltere Spielstaende kennen mindestens ihre eigenen Pokemon
     if (!player.dex) {
@@ -671,7 +673,8 @@ export class GameServer {
     const level = slot.min + Math.floor(Math.random() * (slot.max - slot.min + 1));
     const lead = s.party.find((m) => m.alive !== false && m.hp > 0);
     if (s.player.repel > 0 && lead && level < lead.level) return;
-    this.startWildBattle(s, slot.species, level, s.player.map);
+    const roll = () => { let r2 = Math.random() * total; const e = list.find((x) => (r2 -= x.weight) < 0) || list[0]; return [e.species, e.min + Math.floor(Math.random() * (e.max - e.min + 1))]; };
+    this.startWildBattle(s, slot.species, level, s.player.map, this.storyOn && this.partnerFor(s) ? { pair: roll() } : null);
   }
 
   startWildBattle(s, speciesId, level, route, meta = null) {
@@ -684,14 +687,21 @@ export class GameServer {
       : this.rules.onEncounterStart(s.player, route, wild, families);
     s.encounter = { route, counted: gate.counted };
     s.battleMeta = meta;
-    s.battle = new WildBattle({
-      id: crypto.randomUUID(), party: s.party, wild, route, items: s.player.items,
+    const partner = this.storyOn && !meta?.roamer ? this.partnerFor(s) : null;
+    const common = {
+      id: crypto.randomUUID(), party: s.party, route, items: s.player.items,
       catchable: gate.catchable, catchBlockReason: gate.reason, nuzlocke: this.rules.rulesFor(s.player).nuzlocke,
-      ballCtx: { caught: s.player.dex?.caught || {}, cave: MAPS[s.player.map]?.theme === 'cave', water: tileAt(MAPS[s.player.map], s.player.x, s.player.y) === WATER, night: ((h) => h >= 20 || h < 6)(new Date().getHours()) },
-      onFaint: (mon) => this.onAllyFaint(s, mon), partner: this.storyOn ? this.partnerFor(s) : null, roamer: !!meta?.roamer
-    });
+      ballCtx: { caught: s.player.dex?.caught || {}, cave: MAPS[s.player.map]?.theme === 'cave', water: tileAt(MAPS[s.player.map], s.player.x, s.player.y) === WATER, night: this.hourFor(s) >= 20 || this.hourFor(s) < 6 },
+      onFaint: (mon) => this.onAllyFaint(s, mon)
+    };
+    // Mit Begleiter wie in Platin: zwei wilde Pokémon auf einmal
+    const second = partner && meta?.pair ? this.applyForm(createPokemon(meta.pair[0], meta.pair[1], { metRoute: route }), s.player.flags) : null;
+    s.battle = partner
+      ? new DoubleBattle({ ...common, kind: 'wild', wilds: [wild, second].filter(Boolean), partner })
+      : new WildBattle({ ...common, wild, roamer: !!meta?.roamer });
     const events = s.battle.intro();
     this.dexMark(s, speciesId);
+    if (second) this.dexMark(s, second.speciesId);
     this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
     if (gate.counted) this.sendNuzlocke(s);
@@ -704,10 +714,9 @@ export class GameServer {
     const wild = createPokemon(speciesId, level, { metRoute: 'story' });
     s.encounter = { route: 'story', counted: false };
     s.battleMeta = { safe: true, script: true };
-    s.battle = new WildBattle({
-      id: crypto.randomUUID(), party: s.party, wild, route: 'story', items: s.player.items,
-      catchable: false, catchBlockReason: 'Jetzt ist keine Zeit zum Fangen!', nuzlocke: false, onFaint: () => [], partner: this.partnerFor(s)
-    });
+    const o = { id: crypto.randomUUID(), party: s.party, wild, route: 'story', items: s.player.items, catchable: false, catchBlockReason: 'Jetzt ist keine Zeit zum Fangen!', nuzlocke: false, onFaint: () => [] };
+    const partner = this.partnerFor(s);
+    s.battle = partner ? new DoubleBattle({ ...o, kind: 'wild', wilds: [wild], partner }) : new WildBattle(o);
     this.beginBattle(s);
     return true;
   }
@@ -724,18 +733,27 @@ export class GameServer {
     const nuz = this.rules.rulesFor(s.player).nuzlocke;
     s.encounter = { route: 'trainer', counted: false };
     s.battleMeta = { trainerId, safe: !!tr.safe };
-    s.battle = new TrainerBattle({
+    const o = {
       id: crypto.randomUUID(), party: s.party, foeParty, route: 'trainer', items: s.player.items,
       trainer: { name: tr.name, cls: tr.cls, look: tr.look, leader: !!tr.leader }, nuzlocke: nuz && !tr.safe,
-      onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon), partner: this.partnerFor(s, tr)
-    });
+      onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon)
+    };
+    const partner = this.partnerFor(s, tr);
+    // Doppelkampf: mit Begleiter, gegen ein Trainerpaar (Namen mit „und“) oder als Doppel-Trainer
+    if (partner || tr.double) {
+      const names = tr.name.split(' und ');
+      const foes = names.length === 2 && foeParty.length > 1
+        ? names.map((name, i) => ({ name, cls: tr.cls, look: tr.looks?.[i] || tr.look, party: i === 0 ? foeParty.slice(0, Math.ceil(foeParty.length / 2)) : foeParty.slice(Math.ceil(foeParty.length / 2)) }))
+        : [{ name: tr.name, cls: tr.cls, look: tr.look, leader: !!tr.leader, party: foeParty }];
+      s.battle = new DoubleBattle({ ...o, kind: 'trainer', foes, partner });
+    } else s.battle = new TrainerBattle(o);
     this.beginBattle(s);
     return true;
   }
 
   beginBattle(s) {
     const events = s.battle.intro();
-    this.dexMark(s, s.battle.wild.mon.speciesId);
+    for (const b of s.battle.double ? s.battle.active('foe') : [s.battle.wild]) this.dexMark(s, b.mon.speciesId);
     this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
   }
@@ -743,7 +761,9 @@ export class GameServer {
   battleAction(s, msg) {
     const b = s.battle;
     if (!b) return this.notice(s, 'Kein aktiver Kampf', 'error');
-    const action = { type: msg.type, index: Number(msg.index), ball: msg.ball, item: msg.item, moveIndex: msg.moveIndex == null ? undefined : Number(msg.moveIndex), free: !!msg.free };
+    const one = (m) => ({ type: m?.type, index: Number(m?.index), ball: m?.ball, item: m?.item, moveIndex: m?.moveIndex == null ? undefined : Number(m.moveIndex), free: !!m?.free, slot: m?.slot == null ? undefined : Number(m.slot), target: typeof m?.target === 'string' ? m.target : undefined });
+    const action = one(msg);
+    if (msg.type === 'multi' && Array.isArray(msg.actions)) action.actions = msg.actions.slice(0, 2).map(one);
     const { events, error } = b.act(action);
     if (error) return this.send(s.ws, { t: S2C.BATTLE_EVENTS, events: [{ type: 'text', text: error }], state: b.snapshot(), error: true });
     for (const e of events) if (e.type === 'foeSwitch') this.dexMark(s, e.mon.speciesId);
@@ -825,7 +845,8 @@ export class GameServer {
     if (result === 'win' && tr) {
       const flags = s.player.flags;
       for (const [who, text] of tr.win || []) extra.push(who ? `${who}: ${text}` : text);
-      const prize = tr.prize * Math.max(...b.foeParty.map((m) => m.level));
+      // Münzamulett und Glücksrauch verdoppeln das Preisgeld
+      const prize = tr.prize * Math.max(...b.foeParty.map((m) => m.level)) * (s.party.some((m) => m.alive !== false && ITEMS[m.item]?.held?.coin) ? 2 : 1);
       if (prize) { s.player.money += prize; extra.push(`Du erhältst ${prize} ¥ als Preisgeld.`); }
       flags['beat_' + meta.trainerId] = true;
       if (tr.flag) flags[tr.flag] = true;

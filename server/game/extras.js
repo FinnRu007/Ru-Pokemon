@@ -30,6 +30,15 @@ function towerTier(n) {
 }
 
 export const Extras = {
+  // ---------------------------------------------------------------- Uhrzeit des Spielers
+  // Wie die Uhr im DS: Tag und Nacht richten sich nach der Uhrzeit auf dem Gerät des Spielers
+  localDate(s) {
+    if (s?.tz == null) return new Date();
+    const d = new Date(Date.now() - s.tz * 60000);
+    return { getHours: () => d.getUTCHours(), getMinutes: () => d.getUTCMinutes(), getDay: () => d.getUTCDay(), getDate: () => d.getUTCDate(), getMonth: () => d.getUTCMonth(), getFullYear: () => d.getUTCFullYear() };
+  },
+  hourFor(s) { return this.localDate(s).getHours(); },
+
   // ---------------------------------------------------------------- Begleiter
   setPartner(s, id) {
     s.player.partner = id && PARTNERS[id] ? id : null;
@@ -40,8 +49,8 @@ export const Extras = {
     const id = tr?.partner || (p.partner && PARTNERS[p.partner]?.maps.includes(p.map) ? p.partner : null);
     const d = id && PARTNERS[id];
     if (!d) return null;
-    const [sp, lv] = d.party[0];
-    return { id, name: d.name, mon: createPokemon(sp, lv, { metRoute: 'partner', shiny: false }) };
+    const party = d.party.map(([sp, lv]) => createPokemon(sp, lv, { metRoute: 'partner', shiny: false }));
+    return { id, name: d.name, party, mon: party[0] };
   },
   onMapChange(s, oldMap) {
     const p = s.player;

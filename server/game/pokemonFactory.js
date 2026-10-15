@@ -6,6 +6,8 @@ import { MOVES } from '../../shared/data/moves.js';
 import { NATURES } from '../../shared/data/natures.js';
 import { calcStats, STAT_KEYS, SHINY_ODDS } from '../../shared/formulas.js';
 import { expForLevel, levelForExp } from '../../shared/data/growth.js';
+import { heldOf } from '../../shared/data/items.js';
+import { isSpread, isSelfMove } from '../../shared/data/targets.js';
 
 const rnd = (n) => Math.floor(Math.random() * n);
 
@@ -92,8 +94,14 @@ export function gainEvs(p, defeatedSpeciesId) {
   const sp = species(defeatedSpeciesId);
   const maxIdx = sp.base.indexOf(Math.max(...sp.base));
   const key = STAT_KEYS[maxIdx];
-  const total = Object.values(p.evs).reduce((a, b) => a + b, 0);
-  if (total < 510 && p.evs[key] < 255) p.evs[key] += 1;
+  // Machtitems geben 4 Punkte auf ihren Wert dazu, das Machoband verdoppelt
+  const h = heldOf(p);
+  const add = (k, n) => {
+    const total = Object.values(p.evs).reduce((a, b) => a + b, 0);
+    p.evs[k] = Math.min(255, (p.evs[k] || 0) + Math.max(0, Math.min(n, 510 - total)));
+  };
+  add(key, h?.evx || 1);
+  if (h?.ev) add(h.ev, 4);
 }
 
 // Liefert Ereignisse fuer den Kampflog: Levelaufstiege und neue Attacken.
@@ -124,6 +132,7 @@ export function addExp(p, amount) {
 // Entwicklungen: evos aus dem Pokedex (Level oder Ersatzlevel fuer Tausch, Steine, Freundschaft).
 export function evoOptions(sp) { return sp.evos || (sp.evo ? [sp.evo] : []); }
 export function canEvolve(p) {
+  if (heldOf(p)?.noEvo) return null;
   const opts = evoOptions(species(p.speciesId)).filter((e) => POKEMON[e.to] && p.level >= e.level && (!e.gender || e.gender === p.gender));
   if (!opts.length) return null;
   // Mehrere Moeglichkeiten (z. B. Evoli, Waumpel): fest pro Pokemon gewaehlt
@@ -157,8 +166,8 @@ export function publicPokemon(p) {
     level: p.level, hp: p.hp, maxHp: p.stats.hp, status: p.status, alive: p.alive !== false, deathCause: p.deathCause ?? null,
     shiny: p.shiny, gender: p.gender, nature: NATURES[p.nature].name, ability: p.ability, stats: p.stats,
     exp: p.exp, expThis: expForLevel(sp.growth, p.level), expNext: expForLevel(sp.growth, Math.min(100, p.level + 1)),
-    moves: p.moves.map((m) => ({ ...m, name: MOVES[m.id].name, type: MOVES[m.id].type, cat: MOVES[m.id].cat, power: MOVES[m.id].power })),
-    location: p.location, slot: p.slot, metRoute: p.metRoute, form: p.form || null,
+    moves: p.moves.map((m) => ({ ...m, name: MOVES[m.id].name, type: MOVES[m.id].type, cat: MOVES[m.id].cat, power: MOVES[m.id].power, ...(isSpread(m.id) ? { spread: true } : {}), ...(isSelfMove(MOVES[m.id]) ? { self: true } : {}) })),
+    location: p.location, slot: p.slot, metRoute: p.metRoute, form: p.form || null, item: p.item || null, ribbons: p.ribbons || [],
     ...(p.egg ? { egg: true, species: 'Ei', eggHint: p.eggSteps > 2560 ? 'Es scheint noch eine Weile zu dauern.' : p.eggSteps > 1280 ? 'Manchmal bewegt es sich. Bald ist es so weit.' : 'Man hört Geräusche von innen. Es schlüpft gleich!' } : {})
   };
 }

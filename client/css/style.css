@@ -102,6 +102,18 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .battle-menu button { font-weight: 700; font-size: 16px; border: 2px solid rgba(0,0,0,.35); text-shadow: 1px 1px 0 rgba(0,0,0,.35); }
 .battle-menu .mv { text-align: left; line-height: 1.1; } .battle-menu .mv small { display: block; font-weight: 400; opacity: .9; font-size: 12px; }
 .battle-menu .back { background: #5a5f78; }
+/* Doppelkampf: zwei Pokémon je Seite, kleinere Infoboxen */
+#battle .dbl { display: none; } #battle.double .dbl { display: block; }
+#battle.double .infobox { width: 232px; font-size: 14px; padding: 4px 10px 6px; }
+#battle.double #foeBox { top: 6px; left: 12px; } #battle.double #foeBox2 { top: 70px; left: 44px; }
+#battle.double #allyBox { bottom: 74px; right: 44px; } #battle.double #allyBox2 { bottom: 6px; right: 12px; }
+#battle.double .mon-sprite.foe { width: 140px; height: 140px; } #battle.double .mon-sprite.ally { width: 190px; height: 190px; }
+#battle.double #foeSprite { right: 150px; top: 22px; } #battle.double #foeSprite2 { right: 24px; top: 6px; }
+#battle.double #allySprite { left: 0; bottom: 0; } #battle.double #allySprite2 { left: 160px; bottom: 10px; }
+#battle.double .mon-sprite.real { background-size: 136px; } #battle.double .mon-sprite.ally.real { background-size: 196px; }
+#battle.double #trainerSprite { right: 170px; } #battle.double #trainerSprite2 { right: 20px; }
+#battle.double .mon-sprite.empty { visibility: hidden; }
+.infobox .owner { font-size: 10px; opacity: .7; font-weight: 400; }
 
 /* Trainerkarte, Beutel und Markt */
 .trainer-card { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; padding: 6px 8px; background: var(--panel2); border-radius: 8px; }

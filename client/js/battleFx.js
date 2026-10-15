@@ -25,6 +25,9 @@ const STYLE = {
   steel: { c: ['#e0e0f0', '#a8a8c0', '#ffffff'], shape: 'star' }
 };
 
+// Sprite zu einem Platz im Kampf: ally, ally2 (Doppelkampf), foe, foe2
+export const spriteEl = (key) => document.getElementById(key.startsWith('ally') ? 'allySprite' + (key === 'ally2' ? '2' : '') : 'foeSprite' + (key === 'foe2' ? '2' : ''));
+
 export class BattleFx {
   constructor(field) {
     this.field = field;
@@ -48,9 +51,9 @@ export class BattleFx {
   // Mittelpunkt eines Sprites in Canvas-Koordinaten
   center(side) {
     this.resize();
-    const el = document.getElementById(side === 'ally' ? 'allySprite' : 'foeSprite');
+    const el = spriteEl(side);
     const fr = this.field.getBoundingClientRect(); const r = el.getBoundingClientRect();
-    if (!r.width) return side === 'ally' ? { x: 170, y: 280 } : { x: 550, y: 100 };
+    if (!r.width) return side.startsWith('ally') ? { x: 170, y: 280 } : { x: 550, y: 100 };
     return { x: (r.left - fr.left + r.width / 2) * this.scale, y: (r.top - fr.top + r.height * 0.6) * this.scale, r: r.width * this.scale / 2 };
   }
 
@@ -118,7 +121,7 @@ export class BattleFx {
 
   // ---------------------------------------------------------------- Attacken
   async move(ev) {
-    const from = this.center(ev.side); const to = this.center(ev.side === 'ally' ? 'foe' : 'ally');
+    const from = this.center(ev.side); const to = this.center(ev.target && ev.target !== ev.side ? ev.target : ev.side.startsWith('ally') ? 'foe' : 'ally');
     const st = STYLE[ev.moveType] || STYLE.normal;
     const pick = () => st.c[Math.floor(Math.random() * st.c.length)];
     if (ev.cat === 'status') {
@@ -131,7 +134,7 @@ export class BattleFx {
       return;
     }
     if (ev.cat === 'physical') {
-      const el = document.getElementById(ev.side === 'ally' ? 'allySprite' : 'foeSprite');
+      const el = spriteEl(ev.side);
       el.classList.remove('lunge'); void el.offsetWidth; el.classList.add('lunge');
       await sleep(180);
       this.burst(to, st, 14);
@@ -200,13 +203,13 @@ export class BattleFx {
 
   // Wurf, Einsaugen, Wackeln, Ergebnis. hooks.sfx(name) fuer die Klaenge.
   async catchSequence(ev, hooks) {
-    const to = this.center('foe');
+    const to = this.center(ev.side || 'foe');
     const ground = { x: to.x, y: to.y + 46 };
     const b = { kind: ev.ball || 'poke-ball', x: 40, y: 330, rot: 0 };
     this.balls.push(b); this.loop();
     hooks.sfx('throw');
     await this.tween(420, (t) => { b.x = 40 + (to.x - 40) * t; b.y = 330 + (to.y - 40 - 330) * t - Math.sin(t * Math.PI) * 140; b.rot = t * 12; });
-    const foe = document.getElementById('foeSprite');
+    const foe = spriteEl(ev.side || 'foe');
     foe.classList.add('absorb');
     this.flashUntil = performance.now() + 200;
     for (let i = 0; i < 10; i++) this.add({ x: to.x + rand(-60, 60), y: to.y + rand(-60, 30), target: { x: to.x, y: to.y - 40 }, x0: to.x + rand(-70, 70), y0: to.y + rand(-70, 30), color: '#ff6060', shape: 'star', size: 5, max: 14, delay: i });
@@ -239,9 +242,9 @@ export class BattleFx {
   }
 
   // Eigenes Pokemon wird aus dem Ball geschickt
-  async sendOut(hooks) {
-    const at = this.center('ally');
-    const el = document.getElementById('allySprite');
+  async sendOut(hooks, key = 'ally') {
+    const at = this.center(key);
+    const el = spriteEl(key);
     el.classList.add('waiting');
     const b = { kind: 'poke-ball', x: at.x - 140, y: at.y, rot: 0 };
     this.balls.push(b); this.loop();

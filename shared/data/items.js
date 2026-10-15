@@ -95,7 +95,7 @@ export const ITEMS = {
   'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false }
 };
 
-// Items zum Tragen: im Spiel sammel- und verkaufbar, Trage-Effekte gibt es (noch) nicht
+// Items zum Tragen (Wirkung im Kampf: HELD weiter unten und server/game/held.js)
 const HOLD = {
   'adamant-orb': 'Adamant-Orb', 'lustrous-orb': 'Weiß-Orb', 'griseous-orb': 'Platinum-Orb', 'amulet-coin': 'Münzamulett',
   'big-root': 'Großwurzel', 'charcoal': 'Holzkohle', 'destiny-knot': 'Fatumknoten', 'dragon-fang': 'Drachenzahn',
@@ -109,6 +109,48 @@ const HOLD = {
   'dread-plate': 'Furchttafel', 'splash-plate': 'Wassertafel', 'spooky-plate': 'Spuktafel'
 };
 for (const [id, name] of Object.entries(HOLD)) ITEMS[id] = { name, price: 200, kind: 'item', hold: true, buy: false };
+
+// Wirkung getragener Items wie in Platin. boost: Typ +20 %, Werte als Faktor, Beeren mit Auslöser.
+export const HELD = {
+  leftovers: { heal: 1 / 16 }, 'black-sludge': { name: 'Giftschleim', sludge: true }, 'shell-bell': { name: 'Muschelglocke', shell: 1 / 8 },
+  'life-orb': { orb: 1.3 }, 'expert-belt': { name: 'Expertengurt', expert: 1.2 },
+  'choice-band': { name: 'Wahlband', choice: 'atk' }, 'choice-specs': { name: 'Wahlglas', choice: 'spa' }, 'choice-scarf': { name: 'Wahlschal', choice: 'spe' },
+  'muscle-band': { name: 'Muskelband', physical: 1.1 }, 'wise-glasses': { name: 'Schlauglas', special: 1.1 },
+  'focus-sash': { name: 'Fokusgurt', sash: true }, 'focus-band': { name: 'Fokusband', band: 10 },
+  'scope-lens': { name: 'Scope-Linse', crit: 1 }, 'razor-claw': { crit: 1 }, 'kings-rock': { flinch: 10 }, 'razor-fang': { flinch: 10 },
+  'quick-claw': { name: 'Flinkklaue', quick: 20 }, 'lagging-tail': { last: true }, 'full-incense': { last: true },
+  'bright-powder': { name: 'Blendpuder', evade: 0.9 }, 'lax-incense': { evade: 0.9 }, 'wide-lens': { name: 'Großlinse', acc: 1.1 }, 'zoom-lens': { name: 'Zoomlinse', zoom: 1.2 },
+  'white-herb': { name: 'Schlohkraut', white: true }, 'toxic-orb': { name: 'Toxik-Orb', inflict: 'tox' }, 'flame-orb': { name: 'Heiß-Orb', inflict: 'brn' },
+  'iron-ball': { slow: 0.5 }, 'macho-brace': { name: 'Machoband', slow: 0.5, evx: 2 },
+  'power-weight': { name: 'Machtgewicht', slow: 0.5, ev: 'hp' }, 'power-bracer': { name: 'Machtreif', slow: 0.5, ev: 'atk' }, 'power-belt': { name: 'Machtgurt', slow: 0.5, ev: 'def' },
+  'power-lens': { name: 'Machtlinse', slow: 0.5, ev: 'spa' }, 'power-band': { name: 'Machtband', slow: 0.5, ev: 'spd' }, 'power-anklet': { name: 'Machtkette', slow: 0.5, ev: 'spe' },
+  'exp-share': { name: 'EP-Teiler', share: true, price: 3000 }, 'lucky-egg': { name: 'Glücks-Ei', exp: 1.5 }, 'amulet-coin': { coin: 2 }, 'luck-incense': { coin: 2 },
+  'smoke-ball': { flee: true }, everstone: { name: 'Ewigstein', noEvo: true }, 'soothe-bell': { name: 'Sanftglocke' },
+  // Typverstärker und Tafeln
+  'silk-scarf': { name: 'Seidenschal', boost: 'normal' }, charcoal: { boost: 'fire' }, 'mystic-water': { boost: 'water' }, 'sea-incense': { boost: 'water' }, 'wave-incense': { boost: 'water' },
+  'miracle-seed': { boost: 'grass' }, 'rose-incense': { boost: 'grass' }, magnet: { boost: 'electric' }, 'never-melt-ice': { boost: 'ice' }, 'black-belt': { name: 'Schwarzgurt', boost: 'fighting' },
+  'poison-barb': { boost: 'poison' }, 'soft-sand': { boost: 'ground' }, 'sharp-beak': { name: 'Hackattack', boost: 'flying' }, 'twisted-spoon': { name: 'Krummlöffel', boost: 'psychic' }, 'odd-incense': { boost: 'psychic' },
+  'silver-powder': { boost: 'bug' }, 'hard-stone': { boost: 'rock' }, 'rock-incense': { boost: 'rock' }, 'spell-tag': { name: 'Bannsticker', boost: 'ghost' }, 'dragon-fang': { boost: 'dragon' },
+  'black-glasses': { name: 'Schattenglas', boost: 'dark' }, 'metal-coat': { boost: 'steel' },
+  'flame-plate': { name: 'Feuertafel', boost: 'fire' }, 'splash-plate': { boost: 'water' }, 'meadow-plate': { name: 'Wiesentafel', boost: 'grass' }, 'zap-plate': { name: 'Blitztafel', boost: 'electric' },
+  'icicle-plate': { name: 'Frosttafel', boost: 'ice' }, 'fist-plate': { boost: 'fighting' }, 'toxic-plate': { name: 'Gifttafel', boost: 'poison' }, 'earth-plate': { boost: 'ground' },
+  'sky-plate': { name: 'Wolkentafel', boost: 'flying' }, 'mind-plate': { boost: 'psychic' }, 'insect-plate': { name: 'Insektentafel', boost: 'bug' }, 'stone-plate': { name: 'Steintafel', boost: 'rock' },
+  'spooky-plate': { boost: 'ghost' }, 'draco-plate': { name: 'Dracotafel', boost: 'dragon' }, 'dread-plate': { boost: 'dark' }, 'iron-plate': { name: 'Eisentafel', boost: 'steel' },
+  // Beeren: wirken einmal, wenn ihr Auslöser eintritt
+  'oran-berry': { name: 'Sinelbeere', berry: { hp: 10 } }, 'sitrus-berry': { name: 'Tsitrubeere', berry: { hpPct: 0.25 } },
+  'cheri-berry': { name: 'Amrenabeere', berry: { cure: ['par'] } }, 'chesto-berry': { name: 'Maronbeere', berry: { cure: ['slp'] } },
+  'pecha-berry': { name: 'Pirsifbeere', berry: { cure: ['psn', 'tox'] } }, 'rawst-berry': { name: 'Fragiabeere', berry: { cure: ['brn'] } },
+  'aspear-berry': { name: 'Wilbirbeere', berry: { cure: ['frz'] } }, 'persim-berry': { name: 'Persimbeere', berry: { confuse: true } },
+  'lum-berry': { name: 'Prunusbeere', berry: { cure: ['par', 'slp', 'psn', 'tox', 'brn', 'frz'], confuse: true } }, 'leppa-berry': { name: 'Jonagobeere', berry: { pp: 10 } }
+};
+for (const [id, h] of Object.entries(HELD)) {
+  const { name, price, ...effect } = h;
+  if (ITEMS[id]) { ITEMS[id].hold = true; ITEMS[id].held = effect; if (name && ITEMS[id].kind === 'item' && !ITEMS[id].evo) ITEMS[id].name = name; continue; }
+  ITEMS[id] = { name: name || id, price: price || (effect.berry ? 20 : 1000), kind: effect.berry ? 'berry' : 'item', hold: true, held: effect, buy: false };
+}
+// Tafeln und Räucherwerk aus HOLD bekommen ihre Wirkung, Beeren lassen sich auch tragen
+for (const [id, it] of Object.entries(ITEMS)) if (it.hold && !it.held) it.held = {};
+export const heldOf = (mon) => (mon?.item && ITEMS[mon.item]?.held) || null;
 
 // TM01 bis TM92 und VM01 bis VM08 wie in Platin. TMs verschwinden nach Gebrauch (4. Generation), VMs nicht.
 export const TM_MOVES = ['focus-punch', 'dragon-claw', 'water-pulse', 'calm-mind', 'roar', 'toxic', 'hail', 'bulk-up', 'bullet-seed', 'hidden-power',

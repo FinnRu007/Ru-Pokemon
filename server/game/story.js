@@ -57,7 +57,7 @@ export class StoryRunner {
     if ('partner' in step) { g.setPartner(s, step.partner); return; }
     if (step.roam) { g.startRoaming(s, step.roam); return; }
     if (step.egg) { lines.push({ speaker: null, text: g.giftEgg(s, step.egg) }); return; }
-    if (step.ifNight) { sc.stack.push({ steps: (isNight() ? step.then : step.else) || [], i: 0 }); return; }
+    if (step.ifNight) { sc.stack.push({ steps: (isNight(g.localDate(s)) ? step.then : step.else) || [], i: 0 }); return; }
     if (step.ifParty) {
       const have = step.ifParty.every((id) => s.party.some((m) => m.speciesId === id && !m.egg));
       sc.stack.push({ steps: (have ? step.then : step.else) || [], i: 0 });
