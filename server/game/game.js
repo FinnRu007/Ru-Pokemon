@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { MAPS, SPAWN } from '../../shared/data/maps.js';
 import { POKEMON, STARTERS } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
-import { resolveStep, tileAt, facingTile, GRASS, DIRS } from '../../shared/world.js';
+import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, DIRS, isStandable } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species } from './pokemonFactory.js';
@@ -97,6 +97,13 @@ export class GameServer {
       this.repo.savePlayer(player);
       this.repo.log(runId, 'player_created', { playerId: player.id, name });
     }
+
+    // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
+    if (!isStandable(MAPS, player.map, player.x, player.y)) {
+      const h = player.lastHeal;
+      Object.assign(player, h && isStandable(MAPS, h.map, h.x, h.y) ? { map: h.map, x: h.x, y: h.y } : { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y });
+    }
+    if (player.lastHeal && !isStandable(MAPS, player.lastHeal.map, player.lastHeal.x, player.lastHeal.y)) player.lastHeal = { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y };
 
     const old = this.sessions.get(player.id);
     if (old) { this.send(old.ws, { t: S2C.ERROR, message: 'Du hast dich an anderer Stelle angemeldet.' }); old.ws.close(); this.disconnect({ session: old }); }
@@ -215,6 +222,7 @@ export class GameServer {
     s.lastMoveAt = now;
     const oldMap = p.map;
     p.map = r.map; p.x = r.x; p.y = r.y;
+    if (r.dir) p.dir = r.dir;
     s.posDirty = true;
     ack(true);
 
@@ -226,9 +234,7 @@ export class GameServer {
       this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir, running: !!msg.running, jump: r.jump }, p.id);
     }
 
-    const tile = tileAt(MAPS[p.map], p.x, p.y);
-    if (tile === 'C') return this.healAt(s, MAPS[p.map].events.find((e) => e.x === p.x && e.y === p.y));
-    if (tile === GRASS) this.tryEncounter(s);
+    if (!r.warp) this.tryEncounter(s, tileAt(MAPS[p.map], p.x, p.y));
   }
 
   interact(s) {
@@ -260,15 +266,17 @@ export class GameServer {
   }
 
   // ------------------------------------------------------------------ Encounter
-  tryEncounter(s) {
+  tryEncounter(s, tile) {
     const map = MAPS[s.player.map];
     const table = map.encounters;
-    if (!table || !table.grass?.length) return;
+    if (!table) return;
+    const list = tile === GRASS ? table.grass : tile === CAVE_FLOOR ? table.cave : null;
+    if (!list?.length) return;
     if (!s.party.some((m) => m.alive && m.hp > 0)) return;
-    if (!encounterRoll(table.grassRate)) return;
-    const total = table.grass.reduce((a, e) => a + e.weight, 0);
+    if (!encounterRoll(tile === GRASS ? table.grassRate : table.caveRate)) return;
+    const total = list.reduce((a, e) => a + e.weight, 0);
     let r = Math.random() * total;
-    const slot = table.grass.find((e) => (r -= e.weight) < 0) || table.grass[0];
+    const slot = list.find((e) => (r -= e.weight) < 0) || list[0];
     const level = slot.min + Math.floor(Math.random() * (slot.max - slot.min + 1));
     this.startWildBattle(s, slot.species, level, s.player.map);
   }

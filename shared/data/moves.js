@@ -46,6 +46,8 @@ export const MOVES = Object.fromEntries([
   M('sonic-boom', 'Ultraschall', 'normal', 'special', 0, 90, 20, { effect: { kind: 'fixed', damage: 20 } }),
   M('constrict', 'Umklammerung', 'normal', 'physical', 10, 100, 35, { ...C, effect: { kind: 'stat', target: 'foe', stats: { spe: -1 }, chance: 10 } }),
   M('wrap', 'Wickel', 'normal', 'physical', 15, 85, 20, { ...C, effect: { kind: 'trap' } }),
+  M('bind', 'Klammer', 'normal', 'physical', 15, 75, 20, { ...C, effect: { kind: 'trap' } }),
+  M('slam', 'Slam', 'normal', 'physical', 80, 75, 20, C),
   M('bide', 'Geduld', 'normal', 'status', 0, null, 10, { effect: { kind: 'nothing' }, simplified: true }),
   M('foresight', 'Gesichte', 'normal', 'status', 0, null, 40, { effect: { kind: 'nothing' }, simplified: true }),
   M('disable', 'Aussetzer', 'normal', 'status', 0, 80, 20, { effect: { kind: 'nothing' }, simplified: true }),
@@ -125,6 +127,9 @@ export const MOVES = Object.fromEntries([
   M('x-scissor', 'Kreuzschere', 'bug', 'physical', 80, 100, 15, C),
   // Gestein
   M('rock-throw', 'Steinwurf', 'rock', 'physical', 50, 90, 15),
+  M('rock-tomb', 'Felsgrab', 'rock', 'physical', 50, 80, 10, { effect: { kind: 'stat', target: 'foe', stats: { spe: -1 }, chance: 100 } }),
+  M('stealth-rock', 'Tarnsteine', 'rock', 'status', 0, null, 20, { simplified: true }),
+  M('head-smash', 'Kopfstoss', 'rock', 'physical', 150, 80, 5, { ...C, effect: { kind: 'recoil', ratio: 1 / 2 } }),
   M('rock-polish', 'Steinpolitur', 'rock', 'status', 0, null, 20, { effect: { kind: 'stat', target: 'self', stats: { spe: 2 } } }),
   M('rollout', 'Walzer', 'rock', 'physical', 30, 90, 20, { ...C, simplified: true }),
   // Geist

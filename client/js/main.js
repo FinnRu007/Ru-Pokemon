@@ -74,7 +74,7 @@ net.on('mapChange', (m) => {
   world.setOthers(m.players);
   showMapName(m.map);
 });
-world.onMapChange = (mapId) => showMapName(mapId);
+world.onMapChange = (mapId, warp) => { if (warp) fade(); showMapName(mapId); };
 net.on('playerJoined', (m) => { if (m.player.map === world.me?.map) { world.addOther(m.player); hud.log(`${m.player.name} ist hier.`); } });
 net.on('playerLeft', (m) => world.removeOther(m.id));
 net.on('playerMoved', (m) => world.moveOther(m));
@@ -107,10 +107,17 @@ net.on('gameOver', (m) => {
 // ------------------------------------------------------------------ UI-Helfer
 function openModal(html) { $('modalPanel').innerHTML = html; $('modal').classList.remove('hidden'); }
 function closeModal() { $('modal').classList.add('hidden'); }
-let bannerTimer;
+let bannerTimer; let lastBanner = null;
+function fade() {
+  const el = $('fade');
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+}
 function showMapName(id) {
   const el = $('mapName');
-  el.textContent = MAPS[id]?.name || id;
+  const name = MAPS[id]?.name || id;
+  if (name === lastBanner) return;
+  lastBanner = name;
+  el.textContent = name;
   el.classList.remove('hidden');
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => el.classList.add('hidden'), 2200);

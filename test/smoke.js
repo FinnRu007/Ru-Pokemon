@@ -110,6 +110,37 @@ await test('Nuzlocke-Sperre verhindert Ballwurf', () => {
   assert.notEqual(b.result, 'caught');
 });
 
+console.log('\nWelt und Warps');
+const { MAPS } = await import('../shared/data/maps.js');
+const { resolveStep, isStandable, SOLID } = await import('../shared/world.js');
+await test('Tueren, Treppen und Hoehlen fuehren hin und zurueck', () => {
+  const go = (map, x, y, dir) => resolveStep(MAPS, map, x, y, dir);
+  let r = go('twinleaf_town', 3, 5, 'up');
+  assert.deepEqual([r.warp, r.map, r.x, r.y], [true, 'twinleaf_home_1f', 4, 7]);
+  r = go('twinleaf_home_1f', 4, 7, 'down');
+  assert.deepEqual([r.map, r.x, r.y, r.dir], ['twinleaf_town', 3, 5, 'down']);
+  r = go('twinleaf_home_1f', 8, 3, 'up');
+  assert.equal(r.map, 'twinleaf_home_2f');
+  r = go('route_203', 37, 7, 'right');
+  assert.deepEqual([r.map, r.x, r.y], ['oreburgh_gate', 1, 5]);
+  r = go('oreburgh_gate', 22, 5, 'right');
+  assert.deepEqual([r.map, r.x, r.y], ['oreburgh_city', 2, 9]);
+  r = go('oreburgh_city', 7, 23, 'down');
+  assert.deepEqual([r.map, r.x, r.y], ['oreburgh_mine', 3, 2]);
+  assert.equal(go('jubilife_city', 25, 7, 'up').ok, false, 'geschlossene Tuer muss blockieren');
+});
+await test('Alle Warp-Ziele sind begehbar und alle Karten rechteckig', () => {
+  for (const [id, m] of Object.entries(MAPS)) {
+    assert.equal(m.tiles.length, m.height, id);
+    for (const row of m.tiles) assert.equal(row.length, m.width, id);
+    for (const w of m.warps) assert.ok(isStandable(MAPS, w.to, w.tx, w.ty), `${id} -> ${w.to} ${w.tx},${w.ty}`);
+    for (const e of m.encounters?.grass || []) assert.ok(e.species);
+  }
+});
+await test('Jede Karte mit Pokemon-Center ist erreichbar und heilt', () => {
+  for (const id of ['sandgem_center', 'jubilife_center', 'oreburgh_center']) assert.ok(MAPS[id].events.some((e) => e.type === 'heal'));
+});
+
 // ------------------------------------------------------------ Netzwerk
 console.log('\nMultiplayer ueber WebSocket');
 process.env.STORAGE = 'sqlite';
@@ -205,6 +236,26 @@ await test('Encounter im hohen Gras startet serverseitigen Kampf', async () => {
   }
   assert.ok(end, 'Kampf endete nicht');
   console.log('        Ergebnis:', end.result);
+  a.ws.close();
+});
+
+await test('Tuer fuehrt serverseitig ins Haus und wieder hinaus', async () => {
+  const a = client('D');
+  await a.open;
+  a.send({ t: 'hello', name: 'Dawn', runCode: 'NET3' });
+  await a.wait((m) => m.t === 'welcome');
+  a.send({ t: 'chooseStarter', speciesId: 393 });
+  await a.wait((m) => m.t === 'party' && m.party.length === 1);
+  let seq = 0;
+  const step = async (dir) => { a.send({ t: 'move', dir, seq: ++seq, running: true }); await sleep(110); };
+  for (let i = 0; i < 2; i++) await step('up');
+  for (let i = 0; i < 7; i++) await step('left');
+  await step('up');
+  const inside = await a.wait((m) => m.t === 'mapChange');
+  assert.deepEqual([inside.map, inside.x, inside.y], ['twinleaf_home_1f', 4, 7]);
+  await step('down');
+  const out = await a.wait((m) => m.t === 'mapChange');
+  assert.deepEqual([out.map, out.x, out.y, out.dir], ['twinleaf_town', 3, 5, 'down']);
   a.ws.close();
 });
 

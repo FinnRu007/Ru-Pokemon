@@ -77,6 +77,11 @@ export const POKEMON = Object.fromEntries([
     learnset: [[1, 'sweet-scent'], [1, 'gust']] }),
   P(72, 'Tentacha', ['water', 'poison'], [40, 40, 35, 50, 100, 70], { catchRate: 190, baseExp: 105, growth: 'slow', ability: 'clear-body', genderRatio: 0.5, family: 72,
     learnset: [[1, 'poison-sting'], [6, 'supersonic'], [8, 'constrict'], [12, 'acid'], [15, 'toxic-spikes'], [19, 'bubble-beam'], [22, 'wrap']] })
+  ,
+  P(95, 'Onix', ['rock', 'ground'], [35, 45, 160, 30, 45, 70], { catchRate: 45, baseExp: 108, growth: 'medium_fast', ability: 'sturdy', genderRatio: 0.5, family: 95,
+    learnset: [[1, 'tackle'], [1, 'harden'], [1, 'bind'], [6, 'screech'], [9, 'rock-throw'], [17, 'rock-tomb'], [25, 'slam'], [30, 'rock-polish'], [38, 'curse']] }),
+  P(408, 'Koknodon', ['rock'], [67, 125, 40, 30, 30, 58], { catchRate: 45, baseExp: 99, growth: 'erratic', ability: 'mold-breaker', genderRatio: 0.875, family: 408, evo: { level: 30, to: 409 },
+    learnset: [[1, 'headbutt'], [1, 'leer'], [6, 'focus-energy'], [10, 'pursuit'], [15, 'take-down'], [19, 'scary-face']] })
 ].map((p) => [p.id, p]));
 
 export const STARTERS = [387, 390, 393];

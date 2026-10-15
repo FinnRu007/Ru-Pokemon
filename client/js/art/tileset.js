@@ -3,6 +3,13 @@ import {
   paintGrass, paintPath, paintTall, paintTree, paintWater, paintLedge, paintFlowers, paintFence, paintSign, paintSand
 } from './tiles.js';
 import { px } from './pixel.js';
+import {
+  THEMES, paintFloor, paintWall, paintCounter, paintShelf, paintTable, paintPlant, paintMachine, paintTv, paintBed,
+  paintStairs, paintMat, paintBoulder, paintRock, paintCaveMouth, paintCoal
+} from './interior.js';
+
+const OUTDOOR_ROCK = { rock: '#a08c70', top: '#6a5a46' };
+const INDOOR = new Set(['_', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'U', 'E', ':']);
 
 const BUILDING = new Set(['H', 'D', 'C']);
 
@@ -12,11 +19,35 @@ export function paintTile(g, map, x, y, frame, pass) {
   const t = map.tiles[y][x];
   const ox = x * 16; const oy = y * 16;
   const n = (dx, dy) => map.tiles[y + dy]?.[x + dx] ?? null;
+  const theme = map.theme || 'house';
+  const th = THEMES[theme] || THEMES.house;
   if (pass === 'object') {
     if (t === '#') paintTree(g, ox, oy);
+    else if (t === 'B') paintShelf(g, ox, oy, x, y, theme);
+    else if (t === 'P') paintMachine(g, ox, oy, x, y, theme);
+    else if (t === 'Y') paintPlant(g, ox, oy);
     return;
   }
+  if (INDOOR.has(t) || (map.indoor && t === 'O')) {
+    if (t === 'W') return paintWall(g, ox, oy, x, y, n, th);
+    paintFloor(g, ox, oy, x, y, th, theme === 'cave' || t === ':' ? (theme === 'gym' ? 'gym' : 'cave') : theme);
+    switch (t) {
+      case 'K': return paintCounter(g, ox, oy, x, y, n, th);
+      case 'T': return paintTable(g, ox, oy, x, y, n);
+      case 'V': return paintTv(g, ox, oy, x, y, n, theme);
+      case 'R': return paintBed(g, ox, oy, x, y, n);
+      case 'U': return paintStairs(g, ox, oy);
+      case 'E': return paintMat(g, ox, oy);
+      case 'O': return paintBoulder(g, ox, oy);
+      default: return;
+    }
+  }
+  const rockPal = map.indoor ? (THEMES[theme].rock ? THEMES[theme] : THEMES.cave) : OUTDOOR_ROCK;
   switch (t) {
+    case 'X': return paintRock(g, ox, oy, x, y, n, rockPal);
+    case 'G': return paintCaveMouth(g, ox, oy, x, y, n, rockPal);
+    case ';': return paintCoal(g, ox, oy, x, y);
+    case 'O': paintGrass(g, ox, oy, x, y); return paintBoulder(g, ox, oy);
     case ',': return paintGrass(g, ox, oy, x, y);
     case '.': return paintPath(g, ox, oy, x, y, n);
     case '"': return paintTall(g, ox, oy, x, y, frame);

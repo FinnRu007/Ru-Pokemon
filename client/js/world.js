@@ -51,7 +51,7 @@ export class World {
       const t = (now - this.anim.start) / this.anim.dur;
       if (t >= 1) this.anim = null; else return;
     }
-    if (this.locked) return;
+    if (this.locked || now < (this.warpUntil || 0)) return;
     const dir = input.currentDir();
     if (!dir) return;
     if (this.me.dir !== dir) {
@@ -69,6 +69,16 @@ export class World {
     }
     const running = input.running;
     const dur = (running ? this.runMs : this.walkMs) * (r.jump ? 2 : 1);
+    if (r.warp) {
+      // Tuer, Treppe oder Hoehle: harter Wechsel mit Abblende
+      Object.assign(this.me, { map: r.map, x: r.x, y: r.y, dir: r.dir || dir });
+      this.anim = null;
+      this.others.clear();
+      this.warpUntil = now + 260;
+      this.onMapChange(r.map, true);
+      this.net.send({ t: 'move', dir, seq: ++this.seq, running });
+      return;
+    }
     let fromX = this.me.x; let fromY = this.me.y;
     if (r.map !== this.me.map) {
       // Nahtloser Kartenwechsel: Startpunkt in Koordinaten der neuen Karte umrechnen

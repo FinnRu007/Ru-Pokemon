@@ -68,7 +68,7 @@ platin-multiplayer/
 
 **Sichtbarkeit.** Jeder Spieler erhält nur Ereignisse seiner aktuellen Karte (`playerJoined`, `playerMoved`, `playerLeft`, `playerState`). Beim Kartenwechsel bekommt er die Liste der dort anwesenden Spieler. Andere Spieler werden zwischen Kacheln interpoliert, ein ⚔ zeigt, wer gerade kämpft.
 
-**Karten.** Zweiblattdorf, Route 201, Kraterberg-See, Sandgemme, Route 202, Jubelstadt, Route 203 und Route 204 mit nahtlosen Übergängen wie im Original, hohem Gras, Vorsprüngen (nur nach Süden), Schildern und Heilpunkten. Neue Karten werden in `shared/data/maps.js` aus Rechtecken und Einzelkacheln gebaut.
+**Karten.** Zweiblattdorf, Route 201, Kraterberg-See, Sandgemme, Route 202, Jubelstadt, Route 203, Erzelingen-Tor (Höhle), Erzelingen mit Arena, Erzelingen-Mine und Route 204 mit nahtlosen Übergängen wie im Original. Dazu alle betretbaren Innenräume: Zuhause mit eigenem Zimmer, Haus des Rivalen, Forschungslabor, Pokémon-Center, Pokémon-Märkte, Trainerschule, Arena und Wohnhäuser. Türen, Treppen und Höhleneingänge sind Warps (`warps` in `shared/data/maps.js`), Höhlen haben eigene Begegnungstabellen (`cave`). Neue Außenkarten entstehen aus Rechtecken, Höhlen und Räume aus ASCII-Rastern.
 
 ## Kampf (Generation 4)
 

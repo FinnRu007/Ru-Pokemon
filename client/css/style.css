@@ -18,6 +18,11 @@ button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; 
 button:hover { filter: brightness(1.12); } button:disabled { opacity: .45; cursor: default; filter: none; }
 button:focus-visible { outline: 3px solid #ffe066; outline-offset: 1px; }
 
+/* Abblende bei Tueren */
+#fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 5; }
+#fade.on { animation: fade .45s ease-out; }
+@keyframes fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+
 /* Ortsschild beim Kartenwechsel */
 .banner { position: absolute; top: 14px; left: 14px; background: var(--box); color: var(--boxInk); padding: 6px 18px 6px 14px; border: 3px solid var(--boxLine); border-radius: 4px 14px 14px 4px; font-weight: 700; font-size: 18px; box-shadow: 0 3px 0 rgba(0,0,0,.35); animation: slidein .35s ease-out; }
 @keyframes slidein { from { transform: translateY(-60px); } to { transform: none; } }
