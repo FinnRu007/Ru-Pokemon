@@ -89,7 +89,10 @@ export const ITEMS = {
   // Wertsachen (nur zum Verkaufen)
   nugget: { name: 'Nugget', price: 10000, kind: 'item', buy: false },
   'big-pearl': { name: 'Riesenperle', price: 7500, kind: 'item', buy: false },
-  'star-piece': { name: 'Sternenstück', price: 9800, kind: 'item', buy: false }
+  'star-piece': { name: 'Sternenstück', price: 9800, kind: 'item', buy: false },
+  'adamant-orb': { name: 'Diamantkugel', price: 0, kind: 'key', sell: false },
+  'lustrous-orb': { name: 'Weißkugel', price: 0, kind: 'key', sell: false },
+  'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false }
 };
 
 // Items zum Tragen: im Spiel sammel- und verkaufbar, Trage-Effekte gibt es (noch) nicht
@@ -140,6 +143,7 @@ const EV_NAMES = { hp: 'KP', atk: 'Angriff', def: 'Verteidigung', spa: 'Spezial-
 export function applyItem(itemId, mon, monName, { nuzlocke = false, moveIndex = 0, moveBasePp = null, moveName = null } = {}) {
   const it = ITEMS[itemId];
   if (!it || it.kind !== 'med') return { ok: false, text: 'Das kann man hier nicht benutzen.' };
+  if (mon.egg) return { ok: false, text: 'Das kann man bei einem Ei nicht benutzen.' };
   if (mon.alive === false) return { ok: false, text: `${monName} ist tot. Nichts kann es zurückholen.` };
   if (it.revive) {
     if (mon.hp > 0) return { ok: false, text: 'Es hätte keine Wirkung.' };

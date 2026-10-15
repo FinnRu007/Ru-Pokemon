@@ -38,6 +38,7 @@ function grid(rows) {
 }
 
 import { MAPS2, LINKS2 } from './maps2.js';
+import { TILES8, EVENTS8 } from './maps8.js';
 
 const house = (x, y, w, h, doorX, door = 'D') => [['rect', x, y, w, h, 'H'], ['tile', doorX, y + h - 1, door]];
 
@@ -460,6 +461,12 @@ export const MAPS = {
 };
 
 Object.assign(MAPS, MAPS2);
+// Kleine Umbauten an bestehenden Karten (maps8.js)
+for (const [id, x, y, t] of TILES8) { const r = MAPS[id].tiles[y]; MAPS[id].tiles[y] = r.slice(0, x) + t + r.slice(x + 1); }
+for (const [id, x, y, script] of EVENTS8) {
+  const m = MAPS[id]; m.events = (m.events || []).filter((e) => e.x !== x || e.y !== y);
+  m.events.push({ x, y, type: 'script', script });
+}
 
 // ------------------------------------------------------------------ Verbindungen
 for (const m of Object.values(MAPS)) { m.warps = m.warps || []; m.events = m.events || []; }

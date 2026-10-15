@@ -68,7 +68,7 @@ export const MAPS7 = {
       ['tile', 10, 7, 'S']
     ]),
     buildings: [{ x: 3, y: 2, style: 'center' }, { x: 9, y: 2, style: 'mart' }, { x: 18, y: 12, style: 'house5' }],
-    events: [{ x: 10, y: 7, type: 'text', text: 'Überlebensareal: Für Trainer, die immer weiter wollen. Osten: Route 227 zum Kahlberg' }],
+    events: [{ x: 10, y: 7, type: 'text', text: 'Überlebensareal: Für Trainer, die immer weiter wollen. Osten: Route 226 zum Kahlberg' }],
     encounters: null
   },
   survival_center: centerRoom(),
@@ -145,7 +145,6 @@ export const LINKS7 = [
   ['conn', 'north_sea', 'east', 'fight_area', 10],
   ['conn', 'fight_area', 'north', 'route_225', -8],
   ['conn', 'route_225', 'north', 'survival_area', 5],
-  ['conn', 'survival_area', 'east', 'route_227', -2],
   ['door', 'fight_area', 6, 5, 'fight_center'],
   ['door', 'fight_area', 10, 5, 'fight_mart'],
   ['door', 'fight_area', 23, 7, 'battle_tower'],
@@ -163,3 +162,8 @@ export const LINKS7 = [
   ['pass', 'route_214', 2, 42, 'turnback_cave', 7, 10, 'up'],
   ['pass', 'turnback_cave', 7, 11, 'route_214', 2, 43, 'down']
 ];
+
+// Restliche Kampfzone und Ruinen der Titanen
+import { MAPS8, LINKS8 } from './maps8.js';
+Object.assign(MAPS7, MAPS8);
+LINKS7.push(...LINKS8);
