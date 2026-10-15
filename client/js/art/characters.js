@@ -69,7 +69,12 @@ export const LOOKS = {
   skier: { hat: '#3ab0e0', band: '#ffffff', hair: '#3a2a1a', shirt: '#e05050', pants: '#3a3a6a', shoes: '#2a2a2a' },
   giratina: { hat: '#2a2a32', band: '#d8b040', hair: '#2a2a32', shirt: '#4a4a58', pants: '#a02a2a', shoes: '#1a1a1a' },
   psychic: { hat: '#c8a0e0', band: '#c8a0e0', hair: '#c8a0e0', shirt: '#6a4a9a', pants: '#4a3a7a', shoes: '#2a2a3a' },
-  jasmine: { hat: '#6a4a2a', band: '#e8e8f0', hair: '#6a4a2a', shirt: '#f0f0f4', pants: '#4a9a8a', shoes: '#3a3a3a' }
+  jasmine: { hat: '#6a4a2a', band: '#e8e8f0', hair: '#6a4a2a', shirt: '#f0f0f4', pants: '#4a9a8a', shoes: '#3a3a3a' },
+  riley: { hat: '#2a2a3a', band: '#4a7ad8', hair: '#3a3a4a', shirt: '#2e3a5a', pants: '#2a2a3a', shoes: '#1a1a1a' },
+  uxie: { hat: '#e8d060', band: '#e8d060', hair: '#e8d060', shirt: '#f0e8c8', pants: '#e8d060', shoes: '#c03a3a' },
+  mesprit: { hat: '#e890b8', band: '#e890b8', hair: '#e890b8', shirt: '#f0e8c8', pants: '#e890b8', shoes: '#c03a3a' },
+  azelf: { hat: '#5aa0e0', band: '#5aa0e0', hair: '#5aa0e0', shirt: '#f0e8c8', pants: '#5aa0e0', shoes: '#c03a3a' },
+  rotom: { hat: '#f08a30', band: '#8ad8f8', hair: '#f08a30', shirt: '#f0a050', pants: '#8ad8f8', shoes: '#f08a30' }
 };
 
 function palette(l) {

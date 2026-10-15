@@ -281,6 +281,17 @@ export class GameServer {
     this.story.starterChosen(s);
   }
 
+  // Geschenktes Pokemon aus der Story (zum Beispiel Riolu von Urs): ins Team oder in die Box.
+  giftPokemon(s, speciesId, level) {
+    const mon = createPokemon(speciesId, level, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'gift' });
+    const full = s.party.length >= 6;
+    if (full) s.box.push(mon); else s.party.push(mon);
+    this.reslot(s);
+    this.repo.savePokemon(mon);
+    this.sendParty(s);
+    return `Du erhältst ${displayName(mon)}!` + (full ? ` ${displayName(mon)} wurde in die Box geschickt.` : '');
+  }
+
   // ------------------------------------------------------------------ Bewegung
   face(s, msg) {
     if (!DIRS[msg.dir] || s.battle || s.script) return;

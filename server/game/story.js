@@ -54,6 +54,7 @@ export class StoryRunner {
       g.sendParty(s);
       return;
     }
+    if (step.pokemon) { lines.push({ speaker: null, text: g.giftPokemon(s, step.pokemon, step.level || 5) }); return; }
     if (step.money) { p.money = (p.money || 0) + step.money; lines.push({ speaker: null, text: `Du erhältst ${step.money} ¥.` }); g.sendProgress(s); return; }
     if (step.heal) { g.healParty(s, step.heal === 'center'); return; }
     if (step.emote) { g.send(s.ws, { t: S2C.NPC_EMOTE, id: step.emote }); return; }

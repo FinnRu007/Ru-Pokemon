@@ -151,6 +151,14 @@ Die Handlung reicht von Zweiblattdorf bis zur Ruhmeshalle der Pokémon Liga und 
 12. Route 222 und Sonnewik: Ignaz vor der Arena, Volkner im Leuchtturm, der Leuchtorden, Kaskade von Jasmin.
 13. Route 223, die Ordenskontrolle, die Siegesstraße, Barrys letzter Kampf, die Top Vier (Herbaro, Teresa, Ignaz, Lucian), Champ Cynthia und die Ruhmeshalle. Wer in der Liga verliert, beginnt wieder bei Herbaro.
 
+Nebengebiete wie im Original:
+
+- Seehöhlen: Nach der Speersäule warten Selfe, Vesprit und Tobutz in den Höhlen auf den Inseln der drei Seen (mit Surfer erreichbar).
+- Eiseninsel: Ab dem Mineralorden fährt der Kapitän im Hafenhaus von Fleetburg hinüber. Wer Urs gegen die Rüpel hilft, bekommt ein Riolu.
+- Alte Villa im Ewigwald (hinter einem dünnen Baum) mit Rotom im alten Fernseher.
+- Irrweg: Höhle im Fels am Radweg, mit Mira und wilden Kaumalat.
+- Trostu-Ruinen mit Icognito.
+
 Technik: `shared/data/story.js` enthält NPCs, Trainer, Bodenausloeser und Skripte als Daten. Der Server (`server/game/story.js`) fuehrt die Skripte aus und merkt sich den Fortschritt als Flags im Spielstand. Der Client zeigt NPCs passend zu den Flags an. Trainer, die dich sehen, fordern dich von selbst heraus. Kaempfe gegen Trainer bringen Preisgeld, eine Niederlage kostet die Haelfte des Geldes. Die beiden Story-Kaempfe am See sind ohne Risiko. Pokemon-Center heilen, im Markt gibt es Baelle und Heilmittel, Heilmittel lassen sich im Kampf und im Beutel benutzen.
 
 ## Pokédex

@@ -295,16 +295,16 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ grunts_jub: true }, ['oreburgh_city', 'oreburgh_mine', 'route_207'], ['floaroma_town', 'mt_coronet']],
     [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'floaroma_meadow', 'valley_windworks'], ['eterna_forest', 'windworks_inside']],
     [{ windworks_key: true }, ['windworks_inside'], ['eterna_forest']],
-    [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet']],
+    [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
     [{ badge_forest: true }, ['eterna_galactic'], ['route_206']],
-    [{ eterna_done: true, bike: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym'], ['route_209', 'route_212']],
-    [{ rival3: true, badge_relic: true }, ['solaceon_town', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
+    [{ eterna_done: true, bike: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
+    [{ rival3: true, badge_relic: true }, ['solaceon_town', 'solaceon_ruins', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
     [{ badge_cobble: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
     [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
     [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, ['celestic_town'], ['celestic_ruins', 'lake_valor', 'canalave_city']],
-    [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym'], ['lake_valor', 'route_216']],
-    [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'route_216', 'route_217'], ['snowpoint_city', 'galactic_hq']],
-    [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity'], ['galactic_hq']],
+    [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym', 'canalave_dock', 'verity_cavern'], ['lake_valor', 'route_216', 'iron_island']],
+    [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'valor_cavern', 'route_216', 'route_217', 'iron_island', 'iron_island_deep'], ['snowpoint_city', 'galactic_hq']],
+    [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity', 'acuity_cavern'], ['galactic_hq']],
     [{ badge_icicle: true, acuity_done: true }, ['galactic_hq'], ['spear_pillar']],
     [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']],
     [{ spear_done: true }, ['route_222', 'sunyshore_city', 'sunyshore_lighthouse', 'route_223'], ['sunyshore_gym', 'pokemon_league_south']],
@@ -434,6 +434,15 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt und Pokémon Lig
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 487, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.spear_done, 30000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'spear_pillar', 8000);
+  // Eiseninsel: Urs schenkt nach beiden Rüpeln ein Riolu
+  Object.assign(s.player.flags, { beat_iron_grunt1: true, beat_iron_grunt2: true });
+  await sleep(100); tp('iron_island_deep', 4, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'party' && m.party.some((p) => p.speciesId === 447), 8000);
+  await a.wait((m) => m.t === 'progress' && m.flags.riolu_gift, 8000);
+  // Seehöhle: nach der Speersäule wartet Selfe
+  await sleep(100); tp('acuity_cavern', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 480, 8000);
+  await a.wait((m) => m.t === 'progress' && m.flags.met_uxie, 30000);
   // Liga: Eingang setzt die Top Vier zurueck, die Ruhmeshalle macht zum Champ
   Object.assign(s.player.flags, { beat_e4_aaron: true, beat_e4_lucian: true });
   await sleep(100); tp('league_lobby', 7, 3); await step('up');

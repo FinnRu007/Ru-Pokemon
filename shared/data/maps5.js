@@ -185,3 +185,8 @@ export const LINKS5 = [
   ['pass', 'e4_lucian', 5, 1, 'champion_room', 5, 10, 'up'],
   ['pass', 'champion_room', 5, 1, 'hall_of_fame', 5, 7, 'up']
 ];
+
+// Nebengebiete einhaengen
+import { MAPS6, LINKS6 } from './maps6.js';
+Object.assign(MAPS5, MAPS6);
+LINKS5.push(...LINKS6);

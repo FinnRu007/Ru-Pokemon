@@ -205,3 +205,10 @@ export const SCRIPTS5 = {
 export const BADGES5 = [
   { flag: 'badge_beacon', name: 'Leuchtorden', color: '#f0d040' }
 ];
+
+// Nebengeschichten einhaengen
+import { TRAINERS6, NPCS6, TRIGGERS6, SCRIPTS6 } from './story6.js';
+Object.assign(TRAINERS5, TRAINERS6);
+Object.assign(SCRIPTS5, SCRIPTS6);
+for (const [m, list] of Object.entries(NPCS6)) NPCS5[m] = [...(NPCS5[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS6)) TRIGGERS5[m] = [...(TRIGGERS5[m] || []), ...list];

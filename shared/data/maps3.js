@@ -45,6 +45,7 @@ export const MAPS3 = {
       ['rect', 20, 15, 4, 4, '*'], ['rect', 1, 19, 8, 2, '*'],
       ['rect', 0, 10, 21, 2, '.'], ['rect', 11, 0, 3, 12, '.'],
       ...house(3, 3, 5, 4, 5, 'C'), ...house(16, 3, 4, 3, 17), ...house(3, 14, 5, 3, 5), ...house(16, 14, 5, 3, 18),
+      ['rect', 20, 4, 4, 3, 'X'], ['tile', 21, 6, 'G'],
       ['tile', 10, 9, 'S']
     ]),
     buildings: [{ x: 3, y: 3, style: 'center' }, { x: 16, y: 3, style: 'mart' }, { x: 3, y: 14, style: 'house3' }, { x: 16, y: 14, style: 'house' }],

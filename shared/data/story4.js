@@ -102,7 +102,7 @@ export const NPCS4 = {
   canalave_city: [
     { id: 'barry_cv', x: 30, y: 11, dir: 'left', look: 'rival', name: 'Barry', show: '!rival4' },
     { id: 'adam_out', x: 7, y: 22, dir: 'up', look: 'byron', name: 'Adam', show: ['badge_mine', '!hm_strength'], talk: 'adamStrength' },
-    { id: 'cv_sailor', x: 26, y: 15, dir: 'down', look: 'worker', name: 'Seemann', talk: [['Seemann', 'Draußen auf dem Meer liegt die Eiseninsel. Aber heute fährt kein Schiff, der Wind ist zu stark.']] }
+    { id: 'cv_sailor', x: 26, y: 15, dir: 'down', look: 'worker', name: 'Seemann', talk: [['Seemann', 'Draußen auf dem Meer liegt die Eiseninsel. Der Kapitän im Hafenhaus bringt Trainer mit dem Mineralorden hinüber.']] }
   ],
   canalave_center: [CENTER('canalave_center')],
   canalave_mart: [CLERK('canalave_mart')],

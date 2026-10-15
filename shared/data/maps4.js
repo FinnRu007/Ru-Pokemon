@@ -56,8 +56,7 @@ export const MAPS4 = {
     ]),
     buildings: [{ x: 2, y: 3, style: 'center' }, { x: 8, y: 3, style: 'mart' }, { x: 20, y: 2, style: 'library' }, { x: 2, y: 17, style: 'gym' }, { x: 20, y: 17, style: 'house2' }, { x: 27, y: 17, style: 'house' }],
     events: [
-      { x: 14, y: 11, type: 'text', text: 'Fleetburg: Die Hafenstadt am Ende des Kanals.' },
-      { x: 29, y: 19, type: 'text', text: 'Das Haus eines Seemanns. Er ist gerade auf See.' }
+      { x: 14, y: 11, type: 'text', text: 'Fleetburg: Die Hafenstadt am Ende des Kanals. Vom Hafenhaus fährt ein Schiff zur Eiseninsel.' }
     ],
     encounters: { waterRate: 10, water: slots([[72, 34, 38, 50], [279, 36, 40, 25], [130, 34, 38, 25]]) }
   },
@@ -80,7 +79,7 @@ export const MAPS4 = {
     name: 'See der Kühnheit', width: 28, height: 18, music: 'lake',
     tiles: build(28, 18, [
       ['rect', 1, 1, 26, 16, ','],
-      ['rect', 3, 3, 14, 11, '='], ['rect', 5, 5, 10, 7, '~'], ['rect', 9, 7, 2, 3, '='],
+      ['rect', 3, 3, 14, 11, '='], ['rect', 5, 5, 10, 7, '~'], ['rect', 9, 7, 2, 3, '='], ['rect', 9, 7, 2, 1, 'X'], ['tile', 9, 7, 'G'],
       ['rect', 20, 2, 6, 4, '"'], ['rect', 20, 12, 6, 4, '"'],
       ['rect', 16, 8, 12, 2, '.'],
       ['tile', 19, 7, 'S']
@@ -141,7 +140,7 @@ export const MAPS4 = {
     name: 'See der Willenskraft', width: 24, height: 16, tint: 'snow', music: 'lake',
     tiles: build(24, 16, [
       ['rect', 1, 1, 22, 14, ','],
-      ['rect', 8, 3, 13, 9, '~'], ['rect', 2, 2, 4, 4, '"'], ['rect', 2, 11, 5, 3, '"'],
+      ['rect', 8, 3, 13, 9, '~'], ['rect', 13, 6, 3, 3, '='], ['rect', 13, 6, 3, 1, 'X'], ['tile', 14, 6, 'G'], ['rect', 2, 2, 4, 4, '"'], ['rect', 2, 11, 5, 3, '"'],
       ['rect', 0, 8, 8, 2, '.'],
       ['tile', 4, 7, 'S']
     ]),
