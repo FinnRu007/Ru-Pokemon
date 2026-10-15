@@ -5,9 +5,15 @@
 // Der Ordner ist gitignored: Die Klaenge gehoeren Nintendo und werden nicht mit dem Code verteilt.
 // Fehlen sie, spielt der Client die eigenen WebAudio-Klaenge (client/js/audio.js).
 // Aufruf: npm run sounds   (bereits vorhandene Dateien werden uebersprungen)
+// Blockt The Sounds Resource den automatischen Download, reicht es, das ZIP einmal im Browser ueber
+// "Download" zu laden: Das Skript findet es im Ordner Downloads (oder in client/sounds/) und entpackt es.
+
+// Ein Netzfehler soll den Lauf nicht stumm beenden
+process.on('unhandledRejection', (e) => console.log(`\n  Fehler: ${e?.message || e}`));
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { soundKey, ALL_TRACKS } from '../client/js/realAudio.js';
@@ -18,8 +24,8 @@ const CRY_BASE = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pok
 const MAX_ID = 493;
 // Pakete von sounds.spriters-resource.com (Seite fuer Platin selbst ist leer, die Klaenge sind in Gen 4 gleich)
 const PACKS = [
-  { dir: 'moves', page: 'https://sounds.spriters-resource.com/ds_dsi/pokemonheartgoldsoulsilver/asset/417934/', url: 'https://sounds.spriters-resource.com/media/assets/415/417934.zip' },
-  { dir: 'misc', page: 'https://sounds.spriters-resource.com/ds_dsi/pokemonheartgoldsoulsilver/asset/393812/', url: 'https://sounds.spriters-resource.com/media/assets/391/393812.zip' }
+  { dir: 'moves', name: 'Attack Move Sound Effects', id: '417934', page: 'https://sounds.spriters-resource.com/ds_dsi/pokemonheartgoldsoulsilver/asset/417934/', url: 'https://sounds.spriters-resource.com/media/assets/415/417934.zip' },
+  { dir: 'misc', name: 'Miscellaneous Sound Effects', id: '393812', page: 'https://sounds.spriters-resource.com/ds_dsi/pokemonheartgoldsoulsilver/asset/393812/', url: 'https://sounds.spriters-resource.com/media/assets/391/393812.zip' }
 ];
 const ARCHIVE = 'https://archive.org/details/pokemon-dp-sound-library-87200';
 const AUDIO = /\.(mp3|wav|ogg)$/i;
@@ -65,6 +71,18 @@ function unzip(buf) {
   return files;
 }
 
+// Von Hand geladenes ZIP suchen (Downloads oder client/sounds/), erkannt an Nummer oder Titel
+function localZip(pack) {
+  for (const dir of [OUT, path.join(os.homedir(), 'Downloads')]) {
+    let names = [];
+    try { names = fs.readdirSync(dir); } catch { continue; }
+    const hit = names.filter((f) => /\.zip$/i.test(f) && (f.includes(pack.id) || soundKey(f).includes(soundKey(pack.name))))
+      .map((f) => path.join(dir, f)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+    if (hit) return { file: hit, data: fs.readFileSync(hit) };
+  }
+  return null;
+}
+
 const list = (dir) => fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => AUDIO.test(f)) : [];
 
 // ---------------------------------------------------------------- Rufe
@@ -100,7 +118,8 @@ if (missing.length) {
     const want = soundKey(title);
     const name = files.find((f) => soundKey(path.basename(f).replace(/\.mp3$/i, '')) === want);
     if (!name) { console.log(`  nicht gefunden: ${title}`); continue; }
-    const data = await download(ARCHIVE.replace('/details/', '/download/') + '/' + name.split('/').map(encodeURIComponent).join('/'));
+    let data = null;
+    try { data = await download(ARCHIVE.replace('/details/', '/download/') + '/' + name.split('/').map(encodeURIComponent).join('/')); } catch { /* unten gemeldet */ }
     if (data && data.length) { fs.writeFileSync(path.join(MUSIC, want + '.mp3'), data); process.stdout.write(`\r  ${++n} / ${missing.length}`); }
     else console.log(`  Fehler beim Laden: ${title}`);
   }
@@ -112,11 +131,21 @@ for (const pack of PACKS) {
   const dir = path.join(OUT, pack.dir);
   if (list(dir).length) { console.log(`${pack.dir}: schon vorhanden (${list(dir).length} Dateien)`); continue; }
   console.log(`Lade ${pack.dir} von ${pack.page} ...`);
-  const zip = await download(pack.url);
-  if (!zip) { console.log(`  nicht erreichbar, es bleibt bei den eigenen Klaengen. Seite im Browser: ${pack.page}`); continue; }
+  let zip = localZip(pack);
+  if (zip) console.log(`  gefunden: ${zip.file}`);
+  else {
+    const data = await download(pack.url);
+    if (data && data.readUInt32LE(0) === 0x04034b50) zip = { data };
+  }
+  if (!zip) {
+    console.log(`  Die Seite blockt automatische Downloads. Einmal im Browser oeffnen, auf "Download" klicken und danach npm run sounds erneut starten:\n  ${pack.page}`);
+    continue;
+  }
+  let files;
+  try { files = unzip(zip.data); } catch (e) { console.log(`  ZIP unlesbar: ${e.message}`); continue; }
   fs.mkdirSync(dir, { recursive: true });
   let n = 0;
-  for (const f of unzip(zip)) {
+  for (const f of files) {
     const base = path.basename(f.name);
     if (!AUDIO.test(base)) continue;
     fs.writeFileSync(path.join(dir, base), f.data); n++;
