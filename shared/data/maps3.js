@@ -1,6 +1,7 @@
 // Sinnoh Mitte: Herzhofen, Route 209, Trostu, Route 210, Route 215, Schleiede, Route 214,
 // Seeufer der Kühnheit, Route 213, Weideburg und Route 212.
 import { build, house, grid, centerRoom, martRoom, houseRoom, gymRoom, GYM_PALETTES } from './mapkit.js';
+import { MAPS4, LINKS4 } from './maps4.js';
 
 const enc = (rate, list) => ({ grassRate: rate, grass: list.map(([species, min, max, weight]) => ({ species, min, max, weight })) });
 const slots = (list) => list.map(([species, min, max, weight]) => ({ species, min, max, weight }));
@@ -225,3 +226,6 @@ export const LINKS3 = [
   ['door', 'pastoria_city', 25, 6, 'pastoria_gym'],
   ['door', 'pastoria_city', 23, 15, 'pastoria_house']
 ];
+
+Object.assign(MAPS3, MAPS4);
+LINKS3.push(...LINKS4);

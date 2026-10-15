@@ -298,7 +298,12 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ rival3: true, badge_relic: true }, ['solaceon_town', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
     [{ badge_cobble: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
     [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
-    [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, [], ['lake_valor']]
+    [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, ['celestic_town'], ['celestic_ruins', 'lake_valor', 'canalave_city']],
+    [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym'], ['lake_valor', 'route_216']],
+    [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'route_216', 'route_217'], ['snowpoint_city', 'galactic_hq']],
+    [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity'], ['galactic_hq']],
+    [{ badge_icicle: true, acuity_done: true }, ['galactic_hq'], ['spear_pillar']],
+    [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']]
   ];
   let flags = { ...base };
   for (const [add, yes, no] of stages) {
@@ -316,7 +321,7 @@ await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {
     assert.ok(MAPS[mapId], 'Karte fehlt: ' + mapId);
     for (const n of list) {
       const t = MAPS[mapId].tiles[n.y]?.[n.x];
-      assert.ok(t && !SOLID.has(t) && !'DCGU'.includes(t), `${mapId}/${n.id} steht auf ${t}`);
+      assert.ok(t && (!SOLID.has(t) || t === '~') && !'DCGU'.includes(t), `${mapId}/${n.id} steht auf ${t}`);
       if (n.trainer) assert.ok(story.TRAINERS[n.trainer], n.trainer);
       if (typeof n.talk === 'string') assert.ok(story.SCRIPTS[n.talk], n.talk);
     }
@@ -385,6 +390,42 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
 });
 
 await sleep(200);
+await test('Story: Feldattacken, Fliegen, Speersäule und Zerrwelt', async () => {
+  game.storyOn = true;
+  const a = client('F');
+  await a.open;
+  autoplay(a);
+  if (process.env.DEBUG_TEST) a.ws.on('message', (raw) => { const m = JSON.parse(raw); console.log('   <', m.t, m.t === 'dialog' ? m.lines.map((l) => l.text).join(' | ').slice(0, 120) : m.t === 'mapChange' ? m.map : m.t === 'moveAck' ? `${m.ok} ${m.map} ${m.x},${m.y}` : ''); });
+  a.send({ t: 'hello', name: 'Feld', runCode: 'FIELD1' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  const s = game.sessions.get(w.selfId);
+  const mon = createPokemon(395, 100, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
+  Object.assign(mon.stats, { hp: 9999, atk: 999, def: 999, spa: 999, spd: 999, spe: 999 }); mon.hp = 9999;
+  mon.moves[0] = { id: 'hydro-pump', pp: 99, maxPp: 99 };
+  s.party.push(mon); s.player.starterChosen = true;
+  Object.assign(s.player.flags, { intro: true, has_starter: true, got_balls: true });
+  const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
+  let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); return a.wait((m) => m.t === 'moveAck' && m.seq === seq); };
+  // Felsbrocken: ohne Zertruemmerer blockiert, mit frei
+  tp('ravaged_path', 7, 4);
+  assert.equal((await step('up')).ok, false);
+  s.player.flags.hm_rocksmash = true;
+  assert.equal((await step('up')).ok, true);
+  // Fliegen zu einem besuchten Ort
+  s.player.flags.hm_fly = true; s.player.flags.visit_floaroma_town = true;
+  tp('route_204', 7, 10); a.send({ t: 'fly' });
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'floaroma_town', 5000);
+  // Speersaeule: nach Zyrus in die Zerrwelt, Giratina, zurueck
+  Object.assign(s.player.flags, { galactic_hq_done: true, beat_zyrus2: true });
+  tp('spear_pillar', 7, 7); await step('up'); await step('up');
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'distortion_world', 8000);
+  await sleep(100); await step('up'); await step('up');
+  await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 487, 8000);
+  await a.wait((m) => m.t === 'progress' && m.flags.spear_done, 30000);
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'spear_pillar', 8000);
+  a.ws.close();
+});
+
 game.stop();
 server.close();
 repo.close();

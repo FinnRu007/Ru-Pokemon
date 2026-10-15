@@ -67,6 +67,7 @@ export const LOOKS = {
   swimmer: { hat: '#e04040', band: '#e04040', hair: '#3a2a1a', shirt: '#f0c8a0', pants: '#3a6ad0', shoes: '#f0c8a0' },
   ace: { hat: '#2a2a3a', band: '#f0f0f0', hair: '#2a2a3a', shirt: '#e8e8f0', pants: '#2a2a3a', shoes: '#c03030' },
   skier: { hat: '#3ab0e0', band: '#ffffff', hair: '#3a2a1a', shirt: '#e05050', pants: '#3a3a6a', shoes: '#2a2a2a' },
+  giratina: { hat: '#2a2a32', band: '#d8b040', hair: '#2a2a32', shirt: '#4a4a58', pants: '#a02a2a', shoes: '#1a1a1a' },
   psychic: { hat: '#c8a0e0', band: '#c8a0e0', hair: '#c8a0e0', shirt: '#6a4a9a', pants: '#4a3a7a', shoes: '#2a2a3a' }
 };
 

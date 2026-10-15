@@ -113,7 +113,7 @@ export const NPCS3 = {
   ],
   veilstone_city: [
     { id: 'wh_guard', x: 25, y: 21, dir: 'down', look: 'grunt', name: 'Galaktik-Rüpel', show: '!badge_cobble', talk: [['Galaktik-Rüpel', 'Das ist unser Lagerhaus. Hier gibt es nichts zu sehen. Gar nichts!']] },
-    { id: 'hq_guard', x: 7, y: 23, dir: 'down', look: 'grunt', name: 'Galaktik-Rüpel', show: '!hq_open', talk: [['Galaktik-Rüpel', 'Das Hauptquartier von Team Galaktik! Hier kommt niemand rein. Unser Boss plant etwas Großes!']] },
+    { id: 'hq_guard', x: 7, y: 23, dir: 'down', look: 'grunt', name: 'Galaktik-Rüpel', show: '!acuity_done', talk: [['Galaktik-Rüpel', 'Das Hauptquartier von Team Galaktik! Hier kommt niemand rein. Unser Boss plant etwas Großes!']] },
     { id: 'vs_police', x: 18, y: 25, dir: 'up', look: 'police', name: 'Polizist', show: '!warehouse_done', talk: [['Polizist', 'Halt! Im Lagerhaus von Team Galaktik sollen gestohlene Pokémon sein. Solange wir das nicht geklärt haben, bleibt Route 214 gesperrt.']] },
     { id: 'vs_kid', x: 14, y: 15, dir: 'down', look: 'youngster', name: 'Junge', talk: [['Junge', 'Die Arena von Hilda ist oben rechts. Sie kämpft mit Kampf-Pokémon und ist super stark!']] }
   ],
@@ -215,3 +215,11 @@ export const BADGES3 = [
   { flag: 'badge_cobble', name: 'Pfahlorden', color: '#c87a3a' },
   { flag: 'badge_fen', name: 'Sumpforden', color: '#3a8ad8' }
 ];
+
+// Weitere Kapitel einhaengen
+import { TRAINERS4, NPCS4, TRIGGERS4, SCRIPTS4, BADGES4 } from './story4.js';
+Object.assign(TRAINERS3, TRAINERS4);
+Object.assign(SCRIPTS3, SCRIPTS4);
+for (const [m, list] of Object.entries(NPCS4)) NPCS3[m] = [...(NPCS3[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS4)) TRIGGERS3[m] = [...(TRIGGERS3[m] || []), ...list];
+BADGES3.push(...BADGES4);

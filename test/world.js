@@ -82,6 +82,6 @@ export function checkWorld() {
   }
   // Mit allen Faehigkeiten muss jede Karte erreichbar sein
   const all = reachable(ALL);
-  for (const id of Object.keys(MAPS)) if (!all.maps.has(id)) errors.push(`${id} ist nicht erreichbar`);
+  for (const id of Object.keys(MAPS)) if (!all.maps.has(id) && !MAPS[id].scripted) errors.push(`${id} ist nicht erreichbar`);
   return errors;
 }
