@@ -36,9 +36,9 @@ export class Hud {
   monRow(p, actions) {
     const pct = p.alive ? Math.round((p.hp / p.maxHp) * 100) : 0;
     const cls = pct <= 20 ? 'low' : pct <= 50 ? 'mid' : '';
-    const sub = p.alive ? `Lv${p.level} · ${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}` : `† ${CAUSE[p.deathCause] || 'tot'}`;
+    const sub = p.egg ? (p.eggHint || '') : p.alive ? `Lv${p.level} · ${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}` : `† ${CAUSE[p.deathCause] || 'tot'}`;
     return `<div class="mon ${p.alive ? '' : 'dead'}"><img class="icon" src="${monsterIcon(p)}" alt="">
-      <div><div class="name">${esc(p.name)}${p.shiny ? ' ★' : ''}</div><div class="sub">${esc(p.species)} · ${sub}</div>
+      <div><div class="name">${esc(p.name)}${p.shiny ? ' ★' : ''}</div><div class="sub">${p.egg ? esc(sub) : `${esc(p.species)} · ${sub}`}</div>
       <div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div><div class="acts">${actions}</div></div>`;
   }
 

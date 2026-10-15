@@ -24,6 +24,9 @@ export class Input {
       if (e.code === 'KeyM') { e.preventDefault(); this.emit('map'); }
       if (e.code === 'KeyN') { e.preventDefault(); this.emit('mute'); }
       if (e.code === 'KeyF') { e.preventDefault(); this.emit('fly'); }
+      if (e.code === 'KeyC') { e.preventDefault(); this.emit('freecam'); }
+      if (['Equal', 'NumpadAdd', 'BracketRight'].includes(e.code)) this.emit('zoomIn');
+      if (['Minus', 'NumpadSubtract', 'Slash'].includes(e.code)) this.emit('zoomOut');
       if (e.code === 'Escape') this.emit('escape');
       if (e.code === 'KeyX') { e.preventDefault(); this.emit('menu'); }
       if (/^Digit[1-6]$/.test(e.code)) { e.preventDefault(); this.emote = Number(e.code.slice(5)) - 1; this.emit('emote'); }

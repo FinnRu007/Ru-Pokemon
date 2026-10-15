@@ -115,12 +115,47 @@ export class Renderer {
     ents.push({ kind: 'self', o: world.me, p: me, anim: world.anim });
     ents.sort((a, b) => a.p.y - b.p.y);
     for (const e of ents) this.drawEntity(e, map, ox, oy, now);
-    this.amb.drawSky(g, map, world.me.map, this.c.width, this.c.height, now, { x: ox + me.x * T + T / 2, y: oy + me.y * T + T / 2 });
+    this.amb.drawSky(g, map, world.me.map, this.c.width, this.c.height, now, { x: ox + me.x * T + T / 2, y: oy + me.y * T + T / 2 }, { ox, oy, T });
     // Sprechblasen erst nach Licht und Wetter, damit sie gut lesbar bleiben
     for (const e of ents) if (e.o.emote) {
       const sx = Math.round(ox + e.p.x * T); const sy = Math.round(oy + (e.p.y - (e.p.hop || 0)) * T);
       this.drawEmote(sx, sy + T - 20 * S - 6 - (e.kind === 'player' ? 20 : 0), e.o.emote);
     }
+  }
+
+  // Freikamera: alle Aussenkarten an ihrer Lage auf der Weltkarte, frei verschiebbar und zoombar.
+  // cam = { x, y, zoom } in Weltkacheln (Mitte des Bildes). Liefert die Karte unter der Bildmitte.
+  drawFree(world, cam, now, layout) {
+    const g = this.g; const W = this.c.width; const H = this.c.height;
+    const T = this.T * cam.zoom;
+    const ox = W / 2 - cam.x * T; const oy = H / 2 - cam.y * T;
+    g.save(); g.fillStyle = this.forest; g.fillRect(0, 0, W, H); g.restore();
+    const frame = Math.floor(now / 420) % 3;
+    let under = null;
+    for (const [id, p] of Object.entries(layout.pos)) {
+      const m = MAPS[id];
+      if (m.indoor) continue;
+      const x = ox + p.x * T; const y = oy + p.y * T; const w = m.width * T; const h = m.height * T;
+      if (x > W || y > H || x + w < 0 || y + h < 0) continue;
+      const { frames } = this.bake(id);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(frames[frame], Math.round(x), Math.round(y), Math.ceil(w), Math.ceil(h));
+      if (cam.x >= p.x && cam.x < p.x + m.width && cam.y >= p.y && cam.y < p.y + m.height) under = id;
+    }
+    // Spieler als Punkte mit Namen
+    const dots = [world.me, ...world.others.values()];
+    for (const pl of dots) {
+      const p = pl && layout.pos[pl.map];
+      if (!p) continue;
+      const x = ox + (p.x + pl.x + 0.5) * T; const y = oy + (p.y + pl.y + 0.5) * T;
+      g.fillStyle = pl.color || '#e53935'; g.strokeStyle = '#fff'; g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, Math.max(5, T * 0.4), 0, Math.PI * 2); g.fill(); g.stroke();
+      this.drawLabel(pl.name, x, y - Math.max(8, T * 0.5) - 14);
+    }
+    // Fadenkreuz in der Mitte
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(W / 2 - 10, H / 2); g.lineTo(W / 2 + 10, H / 2); g.moveTo(W / 2, H / 2 - 10); g.lineTo(W / 2, H / 2 + 10); g.stroke();
+    return under;
   }
 
   drawMapLayer(mapId, ox, oy, frame) {

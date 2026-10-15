@@ -321,8 +321,8 @@ export class GameMenu {
         const tag = pick?.label ? pick.label(p) : null;
         return `<button data-nav data-i="${i}" class="pcard ${p.alive ? '' : 'dead'} ${st.swapFrom === i ? 'swap' : ''} ${i === 0 ? 'lead' : ''}">
           <img src="${monsterIcon(p)}" alt=""><div class="pn">${esc(p.name)} ${genderSym(p.gender)}</div>
-          <div class="pl">Lv. ${p.level}${p.status ? ` <span class="st st-${p.status}">${p.status.toUpperCase()}</span>` : ''}</div>
-          ${tag ? `<div class="ptag">${tag}</div>` : `<div class="hpbar ${pct <= 20 ? 'low' : pct <= 50 ? 'mid' : ''}"><i style="width:${pct}%"></i></div><div class="php">${p.hp}/${p.maxHp}</div>`}
+          ${p.egg ? `<div class="pl">&nbsp;</div><div class="ptag">${tag || ''}</div>` : `<div class="pl">Lv. ${p.level}${p.status ? ` <span class="st st-${p.status}">${p.status.toUpperCase()}</span>` : ''}</div>
+          ${tag ? `<div class="ptag">${tag}</div>` : `<div class="hpbar ${pct <= 20 ? 'low' : pct <= 50 ? 'mid' : ''}"><i style="width:${pct}%"></i></div><div class="php">${p.hp}/${p.maxHp}</div>`}`}
         </button>`;
       }).join('')}</div><div class="party-foot">${pick ? esc(pick.title) : st.swapFrom != null ? 'Mit welchem Pokémon tauschen?' : 'Wähle ein Pokémon.'}</div>
         <button data-nav data-back class="party-back">Zurück</button>`,
@@ -335,6 +335,11 @@ export class GameMenu {
             if (st.swapFrom != null) {
               if (st.swapFrom !== i) await this.swapParty(st.swapFrom, i);
               st.swapFrom = null; return this.render(i);
+            }
+            if (mon.egg && !pick) {
+              const c = await this.say(`Ein Ei. ${mon.eggHint || ''}`, ['Tausch', 'Zurück']);
+              if (c === 0) { st.swapFrom = i; this.render(i); }
+              return;
             }
             const c = await this.say(`Was tun mit ${mon.name}?`, ['Bericht', 'Tausch', 'Zurück']);
             if (c === 0) this.push(this.summaryScreen(i));

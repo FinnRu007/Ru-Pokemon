@@ -23,23 +23,29 @@ const ARCH = {
 let REAL = null;
 let SPRITE_INDEX = null;
 export const spriteIndex = () => SPRITE_INDEX;
-let NAMED = { types: new Set(), items: new Set(), trainers: new Set(), overworld: new Set(), terrain: new Set() };
+let NAMED = { types: new Set(), items: new Set(), trainers: new Set(), overworld: new Set(), terrain: new Set(), forms: new Set(), egg: false };
 export const hasReal = (kind, name) => NAMED[kind]?.has(name) || false;
 export async function loadRealSprites() {
   try {
     const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
     if (!res.ok) return false;
     const index = await res.json();
-    const { kinds, types = [], items = [], trainers = [], overworld = [], terrain = [] } = index;
+    const { kinds, types = [], items = [], trainers = [], overworld = [], terrain = [], forms = [], egg = false } = index;
     SPRITE_INDEX = index;
     REAL = Object.fromEntries(Object.entries(kinds).map(([k, ids]) => [k, new Set(ids)]));
-    NAMED = { types: new Set(types), items: new Set(items), trainers: new Set(trainers), overworld: new Set(overworld), terrain: new Set(terrain) };
+    NAMED = { types: new Set(types), items: new Set(items), trainers: new Set(trainers), overworld: new Set(overworld), terrain: new Set(terrain), forms: new Set(forms), egg };
     return true;
   } catch { return false; }
 }
 function realUrl(mon, kind) {
   const id = mon.speciesId;
+  if (mon.egg) return NAMED.egg ? '/sprites/egg.png' : null;
   if (!REAL || !id) return null;
+  // Formen wie die Buchstaben von Icognito liegen unter sprites/forms/<Ansicht>/<Nr>-<Form>.png
+  if (mon.form && mon.form !== 'a') {
+    const fk = mon.shiny && NAMED.forms.has(`${kind}-shiny/${id}-${mon.form}`) ? `${kind}-shiny` : kind;
+    if (NAMED.forms.has(`${fk}/${id}-${mon.form}`)) return `/sprites/forms/${fk}/${id}-${mon.form}.png`;
+  }
   const k = mon.shiny && REAL[`${kind}-shiny`]?.has(id) ? `${kind}-shiny` : kind;
   return REAL[k]?.has(id) ? `/sprites/${k}/${id}.png` : null;
 }
@@ -186,7 +192,7 @@ function inside(p, x, y) {
 
 const cache = new Map();
 export function monsterCanvas(mon, back = false, size = 56, fit = false) {
-  const key = `${mon.speciesId}|${mon.family}|${mon.stage}|${(mon.types || []).join()}|${mon.shiny ? 1 : 0}|${back ? 1 : 0}|${size}|${fit ? 1 : 0}`;
+  const key = `${mon.speciesId}|${mon.family}|${mon.stage}|${(mon.types || []).join()}|${mon.shiny ? 1 : 0}|${back ? 1 : 0}|${size}|${fit ? 1 : 0}|${mon.form || ''}|${mon.egg ? 1 : 0}`;
   if (cache.has(key)) return cache.get(key);
   const url = realUrl(mon, back ? 'back' : 'front');
   if (url) {
@@ -197,6 +203,7 @@ export function monsterCanvas(mon, back = false, size = 56, fit = false) {
     cache.set(key, c);
     return c;
   }
+  if (mon.egg) { const e = eggCanvas(size); cache.set(key, e); return e; }
   const pl = plan(mon);
   const [c, g] = canvas(size, size);
   const scale = fit ? 1.02 : [0.74, 0.88, 1.0][pl.stage - 1];
@@ -240,6 +247,12 @@ export function monsterCanvas(mon, back = false, size = 56, fit = false) {
     }
   }
   if (!back) drawFace(g, pl, unit, bottom, size, outline);
+  // Icognito: der Buchstabe der Form
+  if (mon.form && !back) {
+    const ch = mon.form === 'exclamation' ? '!' : mon.form === 'question' ? '?' : mon.form.toUpperCase();
+    g.font = `bold ${Math.round(size * 0.32)}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3; g.strokeStyle = outline; g.strokeText(ch, size / 2, size * 0.62); g.fillStyle = '#ffffff'; g.fillText(ch, size / 2, size * 0.62);
+  }
   cache.set(key, c);
   return c;
 }
@@ -268,6 +281,20 @@ function drawFace(g, pl, unit, bottom, size, outline) {
   g.fillStyle = outline;
   g.fillRect(mx - 1, my, 2, 1);
   if (pl.arch === 'bird') { g.fillStyle = '#f0b040'; g.fillRect(mx - 1, my - 2, 3, 2); g.fillRect(mx, my, 1, 1); }
+}
+
+// Ei ohne Originalbild: cremefarben mit grünen Flecken
+function eggCanvas(size) {
+  const [c, g] = canvas(size, size);
+  const cx = size / 2; const cy = size * 0.56; const rx = size * 0.3; const ry = size * 0.38;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const nx = (x + 0.5 - cx) / rx; const ny = (y + 0.5 - cy) / (ry * (y < cy ? 1 : 0.85));
+    const d = nx * nx + ny * ny;
+    if (d > 1) continue;
+    g.fillStyle = d > 0.82 ? '#5a5040' : Math.sin(x * 0.9) * Math.sin(y * 0.8) > 0.6 ? '#70b850' : ny < -0.4 && nx < 0 ? '#fffbe8' : '#f0e6c8';
+    g.fillRect(x, y, 1, 1);
+  }
+  return c;
 }
 
 const urls = new Map();
