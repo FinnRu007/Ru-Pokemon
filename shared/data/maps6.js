@@ -21,7 +21,7 @@ export const MAPS6 = {
   // ------------------------------------------------------------------ Fleetburg Hafen und Eiseninsel
   canalave_dock: {
     name: 'Hafenhaus Fleetburg', indoor: true, theme: 'house', entry: { x: 4, y: 7 },
-    ...grid(['WWWWWWWWWW', 'WWWWUWWWWW', 'Y________Y', '__________', '_TT____BB_', '_TT_______', '__________', '____E_____']),
+    ...grid(['WWWWWWWWWW', 'WWWWUWWUWW', 'Y________Y', '__________', '_TT____BB_', '_TT_______', '__________', '____E_____']),
     events: []
   },
   iron_island: {
@@ -162,3 +162,8 @@ export const LINKS6 = [
   ['pass', 'solaceon_town', 21, 6, 'solaceon_ruins', 7, 10, 'up'],
   ['pass', 'solaceon_ruins', 7, 11, 'solaceon_town', 21, 7, 'down']
 ];
+
+// Nach der Liga
+import { MAPS7, LINKS7 } from './maps7.js';
+Object.assign(MAPS6, MAPS7);
+LINKS6.push(...LINKS7);

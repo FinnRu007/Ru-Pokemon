@@ -372,7 +372,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ eterna_done: true, bike: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
     [{ rival3: true, badge_relic: true }, ['solaceon_town', 'solaceon_ruins', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
     [{ badge_cobble: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
-    [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
+    [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'turnback_cave', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
     [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, ['celestic_town'], ['celestic_ruins', 'lake_valor', 'canalave_city']],
     [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym', 'canalave_dock', 'verity_cavern'], ['lake_valor', 'route_216', 'iron_island']],
     [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'valor_cavern', 'route_216', 'route_217', 'iron_island', 'iron_island_deep'], ['snowpoint_city', 'galactic_hq']],
@@ -386,7 +386,8 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ beat_e4_aaron: true }, ['e4_bertha'], ['e4_flint']],
     [{ beat_e4_bertha: true, beat_e4_flint: true }, ['e4_lucian'], ['champion_room']],
     [{ beat_e4_lucian: true }, ['champion_room'], ['hall_of_fame']],
-    [{ beat_champ_cynthia: true }, ['hall_of_fame'], []]
+    [{ beat_champ_cynthia: true }, ['hall_of_fame'], ['north_sea', 'fight_area', 'snowpoint_temple', 'fullmoon_island']],
+    [{ champion: true }, ['north_sea', 'fight_area', 'battle_tower', 'route_225', 'survival_area', 'route_227', 'stark_mountain', 'stark_mountain_deep', 'snowpoint_temple', 'fullmoon_island', 'spear_pillar'], []]
   ];
   let flags = { ...base };
   for (const [add, yes, no] of stages) {
@@ -413,6 +414,7 @@ await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {
   const walk = (steps) => { for (const st of steps) { if (st.battle) assert.ok(story.TRAINERS[st.battle], st.battle); if (st.then) walk(st.then); if (st.else) walk(st.else); } };
   for (const sc of Object.values(story.SCRIPTS)) walk(sc);
   const ids = new Set(); for (const list of Object.values(story.NPCS)) for (const n of list) { assert.ok(!ids.has(n.id), 'doppelte NPC-ID ' + n.id); ids.add(n.id); }
+  for (const id of ['e4_aaron', 'e4_bertha', 'e4_flint', 'e4_lucian', 'champ_cynthia']) assert.ok(story.TRAINERS[id].rematch?.party.length >= 5, `Revanche ${id}`);
 });
 
 // Spielt automatisch weiter: Dialoge bestaetigen, Starter waehlen, im Kampf immer Attacke 1.
@@ -473,7 +475,7 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
 });
 
 await sleep(200);
-await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt und Pokémon Liga', async () => {
+await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga und Kampfzone', async () => {
   game.storyOn = true;
   const a = client('F');
   await a.open;
@@ -524,6 +526,15 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt und Pokémon Lig
   await sleep(100); tp('hall_of_fame', 5, 7); await step('up');
   await a.wait((m) => m.t === 'progress' && m.flags.champion, 5000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'twinleaf_town', 8000);
+  // Nach der Liga: Schiff zur Kampfzone, Charon am Kahlberg, Heatran
+  await sleep(100); tp('north_sea', 12, 17); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'fight_area', 8000);
+  Object.assign(s.player.flags, { beat_mars_stark: true, beat_jupiter_stark: true });
+  await sleep(100); tp('stark_mountain_deep', 7, 6); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.stark_done, 8000);
+  await sleep(100); tp('stark_mountain_deep', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 485, 8000);
+  await a.wait((m) => m.t === 'progress' && m.flags.met_heatran, 30000);
   a.ws.close();
 });
 

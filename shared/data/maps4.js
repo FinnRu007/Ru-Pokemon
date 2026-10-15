@@ -120,15 +120,14 @@ export const MAPS4 = {
     name: 'Blizzach', width: 30, height: 24, tint: 'snow', music: 'twinleaf', fly: [4, 7],
     tiles: build(30, 24, [
       ['rect', 1, 1, 28, 22, ','],
-      ['rect', 13, 8, 3, 16, '.'], ['rect', 1, 8, 29, 2, '.'],
+      ['rect', 13, 8, 3, 16, '.'], ['rect', 1, 8, 29, 2, '.'], ['rect', 13, 0, 3, 8, '.'],
       ...house(2, 2, 5, 4, 4, 'C'), ...house(8, 2, 4, 3, 9), ...house(18, 1, 9, 5, 22),
       ...house(3, 13, 5, 3, 5), ...house(19, 13, 6, 4, 21),
       ['tile', 12, 7, 'S']
     ]),
     buildings: [{ x: 2, y: 2, style: 'center' }, { x: 8, y: 2, style: 'mart' }, { x: 18, y: 1, style: 'gym' }, { x: 3, y: 13, style: 'house2' }, { x: 19, y: 13, style: 'temple' }],
     events: [
-      { x: 12, y: 7, type: 'text', text: 'Blizzach: Die Stadt im ewigen Schnee. Osten: See der Willenskraft' },
-      { x: 21, y: 16, type: 'text', text: 'Der Tempel von Blizzach. Nur Auserwählte dürfen ihn betreten.' }
+      { x: 12, y: 7, type: 'text', text: 'Blizzach: Die Stadt im ewigen Schnee. Osten: See der Willenskraft. Norden: Hafen' }
     ],
     encounters: null
   },

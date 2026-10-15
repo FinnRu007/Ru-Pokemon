@@ -653,7 +653,9 @@ export class GameServer {
     const starter = s.player.starterSpecies || s.party.concat(s.box).find((m) => m.metRoute === 'starter')?.speciesId || 387;
     // Der Starter des Rivalen entwickelt sich mit seinem Level mit
     const rivalSp = (lv) => (RIVAL_STARTER[species(starter).family] || RIVAL_STARTER[starter] || 390) + (lv >= 34 ? 2 : lv >= 16 ? 1 : 0);
-    const foeParty = tr.party.map(([sp, lv]) => createPokemon(sp === 'rival' ? rivalSp(lv) : sp, lv, { metRoute: 'trainer' }));
+    // Nach dem Titel kaempfen manche Trainer (Top Vier, Champ) mit staerkeren Teams
+    const party = tr.rematch && s.player.flags[tr.rematch.flag] ? tr.rematch.party : tr.party;
+    const foeParty = party.map(([sp, lv]) => createPokemon(sp === 'rival' ? rivalSp(lv) : sp, lv, { metRoute: 'trainer' }));
     const nuz = this.rules.rulesFor(s.player).nuzlocke;
     s.encounter = { route: 'trainer', counted: false };
     s.battleMeta = { trainerId, safe: !!tr.safe };

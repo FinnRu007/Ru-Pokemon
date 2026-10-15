@@ -6,6 +6,9 @@
 //   { choose: [Label, ...], branches: [[...], ...] }  Auswahl mit beliebig vielen Zweigen
 //   { warp: [karte, x, y, richtung?] }               Spieler versetzen
 //   { legend: art, level }                           Legendaeres Pokemon (echter, fangbarer Kampf)
+//   { pokemon: art, level }                          Geschenktes Pokemon (ins Team oder in die Box)
+//   { ifOwn: art, then, else }                       Verzweigung: besitzt der Spieler diese Art?
+// Trainer koennen rematch: { flag, party } haben: mit dem Flag kaempfen sie mit diesem Team.
 
 const CENTER = (map) => ({ id: `${map}_nurse`, x: 5, y: 2, dir: 'down', look: 'nurse', name: 'Pflegerin' });
 const CLERK = (map) => ({ id: `${map}_clerk`, x: 0, y: 3, dir: 'right', look: 'clerk', name: 'Verkäufer' });

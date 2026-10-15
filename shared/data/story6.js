@@ -61,7 +61,8 @@ export const SCRIPTS6 = {
   ],
   captain: [
     { if: '!badge_mine', then: [['Kapitän', 'Mein Schiff fährt zur Eiseninsel. Aber nur mit Trainern, die den Mineralorden von Adam haben. Die Insel ist gefährlich!']],
-      else: [['Kapitän', 'Zur Eiseninsel? Einfach hoch zum Steg, wir legen sofort ab!'], ['Kapitän', 'Und zurück bringe ich dich auch. Ich warte am Steg der Insel.']] }
+      else: [['Kapitän', 'Zur Eiseninsel? Die linke Treppe hoch zum Steg, wir legen sofort ab!'], ['Kapitän', 'Und zurück bringe ich dich auch. Ich warte am Steg der Insel.'],
+        { if: 'champion', then: [['Kapitän', 'Für den Champ fahre ich auch zur Vollmondinsel. Das ist die rechte Treppe.']] }] }
   ],
   ironBlock: [['Kapitän', 'Halt! Ohne den Mineralorden nehme ich niemanden mit zur Eiseninsel.'], { back: true }],
   riley: [
@@ -83,3 +84,10 @@ export const SCRIPTS6 = {
     ['Mira', 'Tief in der Höhle sollen Kaumalat leben. Sie beißen in alles, sogar in Felsen!']
   ], say('Mira', 'Kaumalat wohnen tief in dieser Höhle. Sei vorsichtig!'))
 };
+
+// Nach der Liga
+import { TRAINERS7, NPCS7, TRIGGERS7, SCRIPTS7 } from './story7.js';
+Object.assign(TRAINERS6, TRAINERS7);
+Object.assign(SCRIPTS6, SCRIPTS7);
+for (const [m, list] of Object.entries(NPCS7)) NPCS6[m] = [...(NPCS6[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS7)) TRIGGERS6[m] = [...(TRIGGERS6[m] || []), ...list];

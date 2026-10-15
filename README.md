@@ -159,6 +159,13 @@ Nebengebiete wie im Original:
 - Irrweg: Höhle im Fels am Radweg, mit Mira und wilden Kaumalat.
 - Trostu-Ruinen mit Icognito.
 
+Nach der Liga (ab dem Titel):
+
+- Top Vier und Champ kämpfen bei jeder Revanche mit stärkeren Teams.
+- Vom Hafen in Blizzach fährt ein Schiff zur Kampfzone (mit Surfer geht es auch schwimmend über das Nordmeer): Kampfareal mit Kampfturm und Turmherr Palmer, Barry, Route 225, Überlebensareal und Route 227.
+- Kahlberg: Mars und Jupiter helfen Charon, den Magmastein zu stehlen. Danach erwacht Heatran.
+- Regigigas im Tempel von Blizzach, Dialga und Palkia auf der Speersäule, Cresselia auf der Vollmondinsel (Schiff ab Fleetburg) und Giratina in der Höhle der Umkehr (Route 214), falls es noch nicht gefangen ist.
+
 Technik: `shared/data/story.js` enthält NPCs, Trainer, Bodenausloeser und Skripte als Daten. Der Server (`server/game/story.js`) fuehrt die Skripte aus und merkt sich den Fortschritt als Flags im Spielstand. Der Client zeigt NPCs passend zu den Flags an. Trainer, die dich sehen, fordern dich von selbst heraus. Kaempfe gegen Trainer bringen Preisgeld, eine Niederlage kostet die Haelfte des Geldes. Die beiden Story-Kaempfe am See sind ohne Risiko. Pokemon-Center heilen, im Markt gibt es Baelle und Heilmittel, Heilmittel lassen sich im Kampf und im Beutel benutzen.
 
 ## Pokédex
@@ -179,4 +186,4 @@ Server an Client: `welcome`, `needStarter`, `moveAck`, `mapChange`, `playerJoine
 
 ## Nächste Ausbaustufen
 
-Angel-Encounter, Tageszeiten, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena, Kampfzone und Inseln nach der Liga.
+Angel-Encounter, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena.

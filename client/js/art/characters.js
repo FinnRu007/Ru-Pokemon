@@ -74,7 +74,12 @@ export const LOOKS = {
   uxie: { hat: '#e8d060', band: '#e8d060', hair: '#e8d060', shirt: '#f0e8c8', pants: '#e8d060', shoes: '#c03a3a' },
   mesprit: { hat: '#e890b8', band: '#e890b8', hair: '#e890b8', shirt: '#f0e8c8', pants: '#e890b8', shoes: '#c03a3a' },
   azelf: { hat: '#5aa0e0', band: '#5aa0e0', hair: '#5aa0e0', shirt: '#f0e8c8', pants: '#5aa0e0', shoes: '#c03a3a' },
-  rotom: { hat: '#f08a30', band: '#8ad8f8', hair: '#f08a30', shirt: '#f0a050', pants: '#8ad8f8', shoes: '#f08a30' }
+  rotom: { hat: '#f08a30', band: '#8ad8f8', hair: '#f08a30', shirt: '#f0a050', pants: '#8ad8f8', shoes: '#f08a30' },
+  heatran: { hat: '#8a4a2a', band: '#e86a2a', hair: '#8a4a2a', shirt: '#6a5a5a', pants: '#e86a2a', shoes: '#3a2a2a' },
+  regigigas: { hat: '#e8e4d8', band: '#3a8a5a', hair: '#e8e4d8', shirt: '#e8e4d8', pants: '#d8c8a8', shoes: '#3a3a3a' },
+  dialga: { hat: '#3a5aa8', band: '#a8c8e8', hair: '#3a5aa8', shirt: '#5a7ac8', pants: '#3a5aa8', shoes: '#2a3a6a' },
+  palkia: { hat: '#e8c8d8', band: '#a85a8a', hair: '#e8c8d8', shirt: '#d8b0c8', pants: '#a85a8a', shoes: '#5a3a5a' },
+  cresselia: { hat: '#e8d070', band: '#e8a0c8', hair: '#e8d070', shirt: '#a0c0e8', pants: '#e8a0c8', shoes: '#6a7ab8' }
 };
 
 function palette(l) {

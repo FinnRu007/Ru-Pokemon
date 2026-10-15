@@ -212,3 +212,6 @@ Object.assign(TRAINERS5, TRAINERS6);
 Object.assign(SCRIPTS5, SCRIPTS6);
 for (const [m, list] of Object.entries(NPCS6)) NPCS5[m] = [...(NPCS5[m] || []), ...list];
 for (const [m, list] of Object.entries(TRIGGERS6)) TRIGGERS5[m] = [...(TRIGGERS5[m] || []), ...list];
+// Revanchen nach dem Titel
+import { REMATCH7 } from './story7.js';
+for (const [id, r] of Object.entries(REMATCH7)) TRAINERS5[id].rematch = r;

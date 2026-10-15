@@ -73,6 +73,11 @@ export class StoryRunner {
       return 'wait';
     }
     if (step.if) { sc.stack.push({ steps: (cond(flags, step.if) ? step.then : step.else) || [], i: 0 }); return; }
+    if (step.ifOwn) {
+      const own = [...s.party, ...s.box].some((m) => m.speciesId === step.ifOwn);
+      sc.stack.push({ steps: (own ? step.then : step.else) || [], i: 0 });
+      return;
+    }
     if (step.starter) {
       if (p.starterChosen) return;
       sc.waiting = 'starter';
