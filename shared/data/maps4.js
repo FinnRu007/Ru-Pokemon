@@ -199,3 +199,8 @@ export const LINKS4 = [
   ['pass', 'spear_pillar', 7, 13, 'mt_coronet', 24, 3, 'down'],
   ['pass', 'distortion_world', 7, 10, 'spear_pillar', 7, 12, 'up']
 ];
+
+// Weitere Kapitel einhaengen
+import { MAPS5, LINKS5 } from './maps5.js';
+Object.assign(MAPS4, MAPS5);
+LINKS4.push(...LINKS5);

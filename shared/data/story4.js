@@ -63,7 +63,7 @@ export const TRAINERS4 = {
   saturn2: {
     name: 'Saturn', cls: 'Commander', look: 'saturn', prize: 80, sight: 3, party: [[454, 42], [437, 42], [435, 42]],
     intro: [['Saturn', 'Du bist bis hierher gekommen. Respekt. Aber der Boss darf nicht gestört werden.']],
-    win: [['Saturn', 'Ich habe verloren. Geh zu Zyrus. Vielleicht ... bist du die Einzige Hoffnung, die es noch gibt.']]
+    win: [['Saturn', 'Ich habe verloren. Geh zu Zyrus. Vielleicht ... bist du die einzige Hoffnung, die es noch gibt.']]
   },
   zyrus1: {
     name: 'Zyrus', cls: 'Galaktik-Boss', look: 'boss', prize: 100, leader: true, flag: 'galactic_hq_done', party: [[215, 44], [430, 46], [169, 46]],
@@ -222,3 +222,11 @@ export const BADGES4 = [
   { flag: 'badge_mine', name: 'Mineralorden', color: '#9aa0aa' },
   { flag: 'badge_icicle', name: 'Gletscherorden', color: '#8ad0f0' }
 ];
+
+// Weitere Kapitel einhaengen
+import { TRAINERS5, NPCS5, TRIGGERS5, SCRIPTS5, BADGES5 } from './story5.js';
+Object.assign(TRAINERS4, TRAINERS5);
+Object.assign(SCRIPTS4, SCRIPTS5);
+for (const [m, list] of Object.entries(NPCS5)) NPCS4[m] = [...(NPCS4[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS5)) TRIGGERS4[m] = [...(TRIGGERS4[m] || []), ...list];
+BADGES4.push(...BADGES5);

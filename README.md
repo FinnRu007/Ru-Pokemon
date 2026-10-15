@@ -14,7 +14,7 @@ Voraussetzung: Node.js 22.5 oder neuer (für das eingebaute `node:sqlite`).
 
 Mehrere Spieler: Browserfenster öffnen (oder andere Rechner im Netz auf `http://<IP>:3000`), Namen eingeben und **denselben Run-Code** verwenden. Der erste Spieler mit einem neuen Code legt die Regeln fest.
 
-Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren, T Chat, M Weltkarte, 1 bis 6 Emotes, N Ton an/aus. Kurzes Antippen dreht nur die Blickrichtung.
+Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren, T Chat, M Weltkarte, F Fliegen (ab der VM Fliegen, zu jeder schon besuchten Stadt), 1 bis 6 Emotes, N Ton an/aus. Kurzes Antippen dreht nur die Blickrichtung.
 
 ### Online mit Freunden spielen
 
@@ -135,7 +135,7 @@ Eigene Bilder koennen weiterhin ueber `client/assets/sprites/manifest.json` eing
 
 ## Story
 
-Die Handlung reicht bis zum ersten Orden und folgt lose dem Ablauf von Platin. Alle Texte sind selbst geschrieben.
+Die Handlung reicht von Zweiblattdorf bis zur Ruhmeshalle der Pokémon Liga und folgt dem Ablauf von Platin. Alle Texte sind selbst geschrieben. Wege öffnen sich wie im Original erst mit dem passenden Fortschritt: Polizisten, Rüpel, Barry oder Feldhindernisse (Felsbrocken, dünne Bäume, schwere Felsblöcke, Felswände, Wasser und Wasserfälle) versperren sie, bis der Orden, die VM oder das Story-Ereignis da ist.
 
 1. Zweiblattdorf: Barry weckt dich, Mama warnt vor dem hohen Gras.
 2. Kraterberg-See: Zyrus taucht auf, Prof. Eibe vergisst seinen Koffer, du wählst deinen Starter, kämpfst gegen ein wildes Staralili und gegen Barry.
@@ -143,6 +143,13 @@ Die Handlung reicht bis zum ersten Orden und folgt lose dem Ablauf von Platin. A
 4. Route 202 und Jubelstadt: Trainer mit Sichtlinie, Lucias Tipps, Trainerschule, zwei Rüpel von Team Galaktik.
 5. Route 203: zweiter Kampf gegen Barry, weitere Trainer, Erzelingen-Tor mit Wanderer.
 6. Erzelingen: Veit ist erst in der Mine, danach in der Arena. Zwei Arenatrainer, dann Veit selbst. Der Sieg bringt den Kohleorden, Superbälle, Supertränke und Beleber werden im Markt freigeschaltet.
+7. Route 204 bis Ewigenau: Zertrümmerer von Barry, Flori, das Windkraftwerk, der Ewigwald, Silvana und der Waldorden, das Galaktik-Gebäude, Zerschneider von Cynthia, das Fahrrad.
+8. Kraterberg bis Schleiede: Herzhofen mit Lamina (Reliktorden), Trostu, Route 210 mit Enton, Schleiede mit Hilda (Pfahlorden), das Lagerhaus und Fliegen.
+9. Weideburg bis Fleetburg: Marinus (Sumpforden), Elyses mit der Ruine und Surfer, Fleetburg mit Adam (Mineralorden) und Stärke.
+10. Die drei Seen: Saturn am See der Kühnheit, Mars am See der Wahrheit, Kraxler auf Route 217, Frida in Blizzach (Gletscherorden), Jupiter am See der Willenskraft.
+11. Das Galaktik-Hauptquartier, die Speersäule auf dem Kraterberg und die Zerrwelt mit Giratina.
+12. Route 222 und Sonnewik: Ignaz vor der Arena, Volkner im Leuchtturm, der Leuchtorden, Kaskade von Jasmin.
+13. Route 223, die Ordenskontrolle, die Siegesstraße, Barrys letzter Kampf, die Top Vier (Herbaro, Teresa, Ignaz, Lucian), Champ Cynthia und die Ruhmeshalle. Wer in der Liga verliert, beginnt wieder bei Herbaro.
 
 Technik: `shared/data/story.js` enthält NPCs, Trainer, Bodenausloeser und Skripte als Daten. Der Server (`server/game/story.js`) fuehrt die Skripte aus und merkt sich den Fortschritt als Flags im Spielstand. Der Client zeigt NPCs passend zu den Flags an. Trainer, die dich sehen, fordern dich von selbst heraus. Kaempfe gegen Trainer bringen Preisgeld, eine Niederlage kostet die Haelfte des Geldes. Die beiden Story-Kaempfe am See sind ohne Risiko. Pokemon-Center heilen, im Markt gibt es Baelle und Heilmittel, Heilmittel lassen sich im Kampf und im Beutel benutzen.
 
@@ -159,9 +166,9 @@ Entwicklungen per Level funktionieren wie im Original. Für Entwicklungen, die e
 
 ## Protokoll (Auszug)
 
-Client an Server: `hello`, `chooseStarter`, `move`, `face`, `interact`, `chat`, `battleAction`, `partySwap`, `boxMove`, `nickname`, `learnMove`, `dialogDone`, `buy`, `shopClose`, `useItem`.
+Client an Server: `hello`, `chooseStarter`, `move`, `face`, `interact`, `chat`, `battleAction`, `partySwap`, `boxMove`, `nickname`, `learnMove`, `dialogDone`, `buy`, `shopClose`, `useItem`, `fly`.
 Server an Client: `welcome`, `needStarter`, `moveAck`, `mapChange`, `playerJoined`, `playerMoved`, `playerLeft`, `playerState`, `party`, `nuzlocke`, `soulDeath`, `battleStart`, `battleEvents`, `battleEnd`, `gameOver`, `dialog`, `script`, `progress`, `npcEmote`, `shop`. Vollständig in `shared/protocol.js`.
 
 ## Nächste Ausbaustufen
 
-Alle 493 Arten und Attacken der vierten Generation, weitere Routen und Arenen, Surfer/Angel-Encounter, Tageszeiten, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena.
+Angel-Encounter, Tageszeiten, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena, Kampfzone und Inseln nach der Liga.

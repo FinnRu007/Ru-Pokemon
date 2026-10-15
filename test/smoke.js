@@ -303,7 +303,15 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'route_216', 'route_217'], ['snowpoint_city', 'galactic_hq']],
     [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity'], ['galactic_hq']],
     [{ badge_icicle: true, acuity_done: true }, ['galactic_hq'], ['spear_pillar']],
-    [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']]
+    [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']],
+    [{ spear_done: true }, ['route_222', 'sunyshore_city', 'sunyshore_lighthouse', 'route_223'], ['sunyshore_gym', 'pokemon_league_south']],
+    [{ volkner_ready: true }, ['sunyshore_gym'], ['pokemon_league_south']],
+    [{ hm_waterfall: true }, ['pokemon_league_south', 'league_south_center'], ['victory_road']],
+    [{ badge_beacon: true }, ['victory_road', 'pokemon_league', 'league_lobby', 'e4_aaron'], ['e4_bertha']],
+    [{ beat_e4_aaron: true }, ['e4_bertha'], ['e4_flint']],
+    [{ beat_e4_bertha: true, beat_e4_flint: true }, ['e4_lucian'], ['champion_room']],
+    [{ beat_e4_lucian: true }, ['champion_room'], ['hall_of_fame']],
+    [{ beat_champ_cynthia: true }, ['hall_of_fame'], []]
   ];
   let flags = { ...base };
   for (const [add, yes, no] of stages) {
@@ -390,7 +398,7 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
 });
 
 await sleep(200);
-await test('Story: Feldattacken, Fliegen, Speersäule und Zerrwelt', async () => {
+await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt und Pokémon Liga', async () => {
   game.storyOn = true;
   const a = client('F');
   await a.open;
@@ -423,6 +431,15 @@ await test('Story: Feldattacken, Fliegen, Speersäule und Zerrwelt', async () =>
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 487, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.spear_done, 30000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'spear_pillar', 8000);
+  // Liga: Eingang setzt die Top Vier zurueck, die Ruhmeshalle macht zum Champ
+  Object.assign(s.player.flags, { beat_e4_aaron: true, beat_e4_lucian: true });
+  await sleep(100); tp('league_lobby', 7, 3); await step('up');
+  await a.wait((m) => m.t === 'progress' && !m.flags.beat_e4_aaron && !m.flags.beat_e4_lucian, 5000);
+  await sleep(100); await step('up');
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'e4_aaron', 5000);
+  await sleep(100); tp('hall_of_fame', 5, 7); await step('up');
+  await a.wait((m) => m.t === 'progress' && m.flags.champion, 5000);
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'twinleaf_town', 8000);
   a.ws.close();
 });
 
