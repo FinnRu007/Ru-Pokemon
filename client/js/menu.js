@@ -190,7 +190,7 @@ export class GameMenu {
     return all.filter((s) => s.sinnoh).sort((a, b) => a.sinnoh - b.sinnoh).map((s) => s.id);
   }
   dexScreen() {
-    const canNational = !!this.flags.champion;
+    const canNational = !!this.flags.national_dex;
     const st = { national: false, sel: null };
     const seen = () => new Set(this.progress.dex?.seen || []);
     const caught = () => new Set(this.progress.dex?.caught || []);

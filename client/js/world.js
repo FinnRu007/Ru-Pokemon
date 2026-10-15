@@ -1,7 +1,7 @@
 // Overworld-Zustand im Client: lokale Bewegungsvorhersage (Kachel fuer Kachel wie im Original),
 // Kollision ueber dieselbe Logik wie der Server, Interpolation der anderen Spieler.
 import { MAPS } from '/shared/data/maps.js';
-import { resolveStep } from '/shared/world.js';
+import { resolveStep, fieldFlags } from '/shared/world.js';
 import { visibleNpcs, npcAt } from '/shared/data/story.js';
 
 const TURN_DELAY = 90; // kurzes Antippen dreht nur die Blickrichtung (wie im Original)
@@ -87,7 +87,7 @@ export class World {
       return;
     }
     if (now < (this.turnUntil || 0)) return;
-    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked, this.flags);
+    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked, fieldFlags(this.flags, this.party));
     if (!r.ok) {
       if (!this.bumpAt || now - this.bumpAt > 300) { this.bumpAt = now; this.net.send({ t: 'face', dir }); this.onBump(); }
       return;

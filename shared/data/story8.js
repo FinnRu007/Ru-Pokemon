@@ -31,8 +31,16 @@ export const TOWER = {
   names: ['Leni', 'Jakob', 'Selma', 'Bernd', 'Tom', 'Anna', 'Paul', 'Mia', 'Lukas', 'Emma', 'Felix', 'Lina', 'Jonas', 'Nora', 'Ben', 'Ella', 'Max', 'Lea', 'Tim', 'Ida'],
   // Kampfpunkte je geschaffter Runde (danach bleibt es beim letzten Wert)
   bp: [3, 4, 5, 6, 7, 8, 9, 10],
-  // Tausch gegen Kampfpunkte: [Gegenstand, Preis]
-  shop: [['rare-candy', 48], ['tm06', 32], ['tm45', 32], ['tm61', 32], ['tm40', 40], ['tm31', 40], ['tm08', 48], ['tm04', 48], ['tm81', 64], ['tm30', 64], ['tm53', 64], ['tm71', 80], ['tm26', 80]]
+  // Tausch gegen Kampfpunkte wie in Platin: [Gegenstand, Preis], links Items, rechts TMs
+  shop: [['protein', 1], ['calcium', 1], ['iron', 1], ['zinc', 1], ['carbos', 1], ['hp-up', 1],
+    ['power-bracer', 16], ['power-belt', 16], ['power-lens', 16], ['power-band', 16], ['power-anklet', 16], ['power-weight', 16], ['toxic-orb', 16], ['flame-orb', 16],
+    ['white-herb', 32], ['power-herb', 32], ['bright-powder', 48], ['choice-band', 48], ['focus-band', 48], ['scope-lens', 48], ['muscle-band', 48], ['focus-sash', 48],
+    ['choice-scarf', 48], ['razor-claw', 48], ['razor-fang', 48], ['rare-candy', 48]],
+  shopTm: [['tm06', 32], ['tm73', 32], ['tm61', 32], ['tm45', 32], ['tm40', 40], ['tm31', 40], ['tm08', 48], ['tm04', 48], ['tm81', 64], ['tm30', 64], ['tm53', 64], ['tm36', 80], ['tm59', 80], ['tm71', 80], ['tm26', 80]],
+  // Multi-Kampf: Partner wie in Platin (Teams auf Level 50)
+  partners: [['Heide', [[242, 50], [468, 50]]], ['Mira', [[65, 50], [437, 50]]], ['Urs', [[448, 50], [208, 50]]], ['Buck', [[344, 50], [467, 50]]]],
+  // Bänder für Rekorde
+  ribbons: { single21: 'ability', single49: 'great-ability', double50: 'double-ability', multi50: 'multi-ability' }
 };
 
 export const TRAINERS8 = {
@@ -200,12 +208,12 @@ export const SCRIPTS8 = {
   // Kampfturm
   towerDesk: [
     ['Empfang', 'Willkommen im Kampfturm! Hier kämpfst du so lange wie möglich ohne Pause. Pro Runde gibt es sieben Kämpfe.'],
-    ['Empfang', 'Die ersten drei Pokémon deines Teams treten an. Pokémon über Level 50 kämpfen auf Level 50. Nach jedem Kampf wird geheilt.'],
-    { choose: ['Einzelkampf', 'Rekord', 'Abbrechen'], branches: [[{ tower: 'start' }], [{ tower: 'record' }], [['Empfang', 'Wir hoffen, dich bald wiederzusehen.']]] }
+    ['Empfang', 'Im Einzelkampf treten deine ersten drei Pokémon an, im Doppelkampf vier, im Multi-Kampf zwei zusammen mit einem Partner. Pokémon über Level 50 kämpfen auf Level 50. Nach jedem Kampf wird geheilt.'],
+    { choose: ['Einzelkampf', 'Doppelkampf', 'Multi-Kampf', 'Rekord', 'Abbrechen'], branches: [[{ tower: 'start', mode: 'single' }], [{ tower: 'start', mode: 'double' }], [{ tower: 'multi' }], [{ tower: 'record' }], [['Empfang', 'Wir hoffen, dich bald wiederzusehen.']]] }
   ],
   towerShop: [
     ['Tausch', 'Hier tauschst du Kampfpunkte gegen Preise. Was möchtest du?'],
-    { tower: 'shop' }
+    { choose: ['Items', 'TMs', 'Zurück'], branches: [[{ tower: 'shop', list: 'shop' }], [{ tower: 'shop', list: 'shopTm' }], []] }
   ]
 };
 

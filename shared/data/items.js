@@ -120,7 +120,7 @@ export const HELD = {
   'scope-lens': { name: 'Scope-Linse', crit: 1 }, 'razor-claw': { crit: 1 }, 'kings-rock': { flinch: 10 }, 'razor-fang': { flinch: 10 },
   'quick-claw': { name: 'Flinkklaue', quick: 20 }, 'lagging-tail': { last: true }, 'full-incense': { last: true },
   'bright-powder': { name: 'Blendpuder', evade: 0.9 }, 'lax-incense': { evade: 0.9 }, 'wide-lens': { name: 'Großlinse', acc: 1.1 }, 'zoom-lens': { name: 'Zoomlinse', zoom: 1.2 },
-  'white-herb': { name: 'Schlohkraut', white: true }, 'toxic-orb': { name: 'Toxik-Orb', inflict: 'tox' }, 'flame-orb': { name: 'Heiß-Orb', inflict: 'brn' },
+  'white-herb': { name: 'Schlohkraut', white: true }, 'power-herb': { name: 'Energiekraut' }, 'toxic-orb': { name: 'Toxik-Orb', inflict: 'tox' }, 'flame-orb': { name: 'Heiß-Orb', inflict: 'brn' },
   'iron-ball': { slow: 0.5 }, 'macho-brace': { name: 'Machoband', slow: 0.5, evx: 2 },
   'power-weight': { name: 'Machtgewicht', slow: 0.5, ev: 'hp' }, 'power-bracer': { name: 'Machtreif', slow: 0.5, ev: 'atk' }, 'power-belt': { name: 'Machtgurt', slow: 0.5, ev: 'def' },
   'power-lens': { name: 'Machtlinse', slow: 0.5, ev: 'spa' }, 'power-band': { name: 'Machtband', slow: 0.5, ev: 'spd' }, 'power-anklet': { name: 'Machtkette', slow: 0.5, ev: 'spe' },

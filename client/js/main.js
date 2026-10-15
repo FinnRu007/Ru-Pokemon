@@ -4,6 +4,7 @@ import { ITEMS, sellPrice } from '/shared/data/items.js';
 import { Net } from './net.js';
 import { Input } from './input.js';
 import { World } from './world.js';
+import { fieldFlags } from '/shared/world.js';
 import { Renderer } from './renderer.js';
 import { BattleUI } from './battleUI.js';
 import { Hud } from './hud.js';
@@ -160,7 +161,7 @@ net.on('notice', (m) => {
   if (menu.isOpen && menu.onNotice(m.text)) return;
   if (m.kind === 'dialog') showDialog(m.text);
 });
-net.on('party', (m) => { hud.setParty(m); menu.onParty(); });
+net.on('party', (m) => { hud.setParty(m); world.party = m.party; menu.onParty(); });
 net.on('saved', (m) => menu.onSaved(m));
 net.on('learnPrompt', (m) => { learnQueue.push(m); setTimeout(processLearnQueue, 300); });
 net.on('service', (m) => {
@@ -285,7 +286,7 @@ input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); 
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
 // Weltkarte: Mausrad zoomt, Ziehen verschiebt, Klick auf einen besuchten Ort fliegt dorthin
-worldMap.canFlyTo = (id) => !!(world.flags.hm_fly && world.flags['visit_' + id] && world.me && id !== world.me.map && !MAPS[world.me.map]?.indoor);
+worldMap.canFlyTo = (id) => !!(fieldFlags(world.flags, world.party).hm_fly && world.flags['visit_' + id] && world.me && id !== world.me.map && !MAPS[world.me.map]?.indoor);
 const wmc = $('wmCanvas');
 const wmSize = () => { const r = wmc.getBoundingClientRect(); return { W: r.width, H: r.height }; };
 const wmPoint = (e) => { const r = wmc.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };

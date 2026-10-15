@@ -64,6 +64,7 @@ export class StoryRunner {
       return;
     }
     if (step.tower) return g.towerStep(s, step, sc, lines);
+    if (step.x) return g.extraStep(s, step, sc, lines);
     if (step.service) { g.openService(s, step); sc.waiting = 'service'; return 'wait'; }
     if (step.unflag) { delete flags[step.unflag]; g.sendProgress(s); return; }
     if (step.give) {

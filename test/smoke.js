@@ -548,6 +548,10 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   tp('ravaged_path', 43, 4);
   assert.equal((await step('up')).ok, false);
   s.player.flags.hm_rocksmash = true;
+  // Feldattacke braucht Orden und ein Pokémon, das sie beherrscht
+  assert.equal((await step('up')).ok, false);
+  await a.wait((m) => m.t === 'notice' && /Zertrümmerer/.test(m.text));
+  mon.moves = [{ id: 'hydro-pump', pp: 99, maxPp: 99 }, { id: 'rock-smash', pp: 15, maxPp: 15 }, { id: 'fly', pp: 15, maxPp: 15 }, { id: 'surf', pp: 15, maxPp: 15 }];
   assert.equal((await step('up')).ok, true);
   // Fliegen zu einem besuchten Ort
   s.player.flags.hm_fly = true; s.player.flags.visit_floaroma_town = true;
@@ -612,6 +616,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 486, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.met_regigigas, 30000);
   // Kampfturm: Serie mit drei Pokémon auf Level 50, das echte Team bleibt unberührt
+  for (let i = 0; i < 2; i++) { const e = createPokemon(395, 100, { ownerId: s.player.id, metRoute: 'test' }); e.moves[0] = { id: 'hydro-pump', pp: 99, maxPp: 99 }; s.party.splice(1, 0, e); }
   const lvBefore = s.party.map((m) => m.level).join();
   await sleep(200); tp('battle_tower', 6, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
   const tb = await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer', 8000);

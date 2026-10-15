@@ -23,6 +23,8 @@ export const C2S = {
   FORGET: 'forget',               // { pokemonId, index } beim Attacken-Verlerner
   MOVE_SWAP: 'moveSwap',          // { pokemonId, a, b } Reihenfolge der Attacken (Bericht)
   SERVICE_DONE: 'serviceDone',    // {} Lehrer, Erinnerer oder Verlerner verlassen
+  HOLD: 'hold',                   // { pokemonId, item|null } Item tragen lassen oder abnehmen
+  POKETCH: 'poketch',             // {} Daten für den Pokétch anfordern
   PING: 'ping'
 };
 
@@ -55,6 +57,7 @@ export const S2C = {
   SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }
   ROSTER: 'roster',               // { players: [{ id, name, map, x, y, color, runId }] } alle online (Weltkarte)
   PLAYER_EMOTE: 'playerEmote',    // { id, kind }
+  POKETCH: 'poketch',             // { roamers: [{ speciesId, map, name }], steps, party }
   PONG: 'pong'
 };
 

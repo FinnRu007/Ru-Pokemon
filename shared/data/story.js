@@ -347,6 +347,7 @@ export const SCRIPTS = {
 };
 
 import { applyStory8 } from './story8.js';
+import { applyStory9 } from './story9.js';
 export const NEW_PLAYER_SPAWN = { map: 'twinleaf_home_2f', x: 3, y: 4, dir: 'up' };
 // Flags fuer Spielstaende von vor der Story (Starter schon gewaehlt)
 export const LEGACY_FLAGS = ['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done'];
@@ -372,6 +373,7 @@ for (const [m, list] of Object.entries(FIELD_ITEMS)) {
 
 // Begleiter, Doppelkämpfe, Wanderer, Kampfturm und restliche Kampfzone (story8.js)
 applyStory8({ TRAINERS, SCRIPTS, NPCS, TRIGGERS });
+applyStory9({ SCRIPTS, NPCS });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

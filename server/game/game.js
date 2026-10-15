@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { MAPS, SPAWN } from '../../shared/data/maps.js';
 import { POKEMON, STARTERS } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
-import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, WATER, DIRS, isStandable } from '../../shared/world.js';
+import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, WATER, DIRS, isStandable, fieldFlags } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
@@ -91,6 +91,8 @@ export class GameServer {
       case C2S.FORGET: return this.forget(s, msg);
       case C2S.MOVE_SWAP: return this.moveSwap(s, msg);
       case C2S.SERVICE_DONE: return this.serviceDone(s);
+      case C2S.HOLD: return this.holdItem(s, msg);
+      case C2S.POKETCH: return this.poketch(s);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -201,6 +203,11 @@ export class GameServer {
     const fresh = !d.seen[id] || (caught && !d.caught[id]);
     d.seen[id] = 1;
     if (caught) d.caught[id] = 1;
+    // Wie in Platin: wer alle 210 Pokémon des Sinnoh-Pokédex gesehen hat, bekommt den Nationalen Pokédex
+    if (fresh && !s.player.flags.national_dex && Object.values(POKEMON).every((sp) => !sp.sinnoh || d.seen[sp.id])) {
+      s.player.flags.national_dex = true;
+      this.notice(s, 'Du hast alle Pokémon des Sinnoh-Pokédex gesehen! Prof. Eibe erweitert deinen Pokédex zum Nationalen Pokédex.', 'dialog');
+    }
     if (fresh) this.sendProgress(s);
     return fresh;
   }
@@ -320,8 +327,8 @@ export class GameServer {
     const minGap = (msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
     p.dir = msg.dir;
-    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined, this.storyOn ? p.flags : undefined);
-    if (!r.ok) { ack(false); return this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id); }
+    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined, this.storyOn ? fieldFlags(p.flags, s.party) : undefined);
+    if (!r.ok) { ack(false); this.fieldHint(s, msg.dir); return this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id); }
     s.lastMoveAt = now;
     s.prev = { map: p.map, x: p.x, y: p.y };
     const oldMap = p.map;
@@ -330,6 +337,7 @@ export class GameServer {
     s.posDirty = true;
     ack(true);
 
+    p.steps = (p.steps || 0) + 1;
     if (this.storyOn) this.eggStep(s);
     if (oldMap !== p.map) {
       this.onMapChange(s, oldMap);
@@ -632,6 +640,7 @@ export class GameServer {
     if (s.battle || s.script || !this.storyOn) return;
     const p = s.player;
     if (!p.flags.hm_fly) return this.notice(s, 'Du beherrschst Fliegen noch nicht.', 'error');
+    if (!fieldFlags(p.flags, s.party).hm_fly) return this.notice(s, 'Kein Pokémon in deinem Team beherrscht Fliegen.', 'error');
     if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
     const spots = Object.entries(MAPS).filter(([id, m]) => m.fly && p.flags['visit_' + id] && id !== p.map);
     // Direktflug aus der Weltkarte: Ziel muss ein besuchter Ort sein

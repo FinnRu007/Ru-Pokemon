@@ -11,7 +11,7 @@ import { characterSheet, DIR_ROW } from './art/characters.js';
 import { overworldSheet } from './art/realSheets.js';
 import { fieldReady } from './art/realField.js';
 import { forestTile } from './art/realTiles.js';
-import { FIELD } from '/shared/world.js';
+import { FIELD, fieldFlags } from '/shared/world.js';
 
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
 const CLEARABLE = ['Q', 'Z', 'M'];
@@ -49,7 +49,7 @@ export class Renderer {
 
   // Karte einmalig in drei Animationsbildern vorrendern
   bake(mapId) {
-    const open = openSet(this.flags);
+    const open = openSet(fieldFlags(this.flags, this.party));
     const key = mapId + '|' + [...open].join('');
     if (this.baked.has(key)) return this.baked.get(key);
     const map = MAPS[mapId];
@@ -76,7 +76,7 @@ export class Renderer {
 
   draw(world, now) {
     const g = this.g; const T = this.T;
-    this.flags = world.flags;
+    this.flags = world.flags; this.party = world.party;
     if (!world.me) { g.fillStyle = '#000'; g.fillRect(0, 0, this.c.width, this.c.height); return; }
     const map = MAPS[world.me.map];
     const me = world.selfPos(now);

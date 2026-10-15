@@ -13,6 +13,13 @@ export const WATER = '~';
 //   N  Felswand (Kraxler)            J  Wasserfall (Kaskade)          ~  Wasser (Surfer)
 export const FIELD = { Q: 'hm_rocksmash', Z: 'hm_cut', M: 'hm_strength', N: 'hm_rockclimb', J: 'hm_waterfall', '~': 'hm_surf' };
 export const FIELD_NAMES = { hm_rocksmash: 'Zertrümmerer', hm_cut: 'Zerschneider', hm_strength: 'Stärke', hm_rockclimb: 'Kraxler', hm_waterfall: 'Kaskade', hm_surf: 'Surfer', hm_fly: 'Fliegen' };
+// Wie in Platin braucht eine Feldattacke den Orden (Flag) und ein Pokémon im Team, das sie beherrscht
+export const FIELD_MOVES = { hm_cut: 'cut', hm_fly: 'fly', hm_surf: 'surf', hm_strength: 'strength', hm_defog: 'defog', hm_rocksmash: 'rock-smash', hm_waterfall: 'waterfall', hm_rockclimb: 'rock-climb' };
+export function fieldFlags(flags, party) {
+  const out = { ...flags };
+  for (const [flag, move] of Object.entries(FIELD_MOVES)) if (out[flag] && !(party || []).some((m) => !m.egg && m.alive !== false && (m.moves || []).some((x) => x.id === move))) out[flag] = false;
+  return out;
+}
 export function fieldOpen(t, flags) { const need = FIELD[t]; return !!(need && flags && flags[need]); }
 const passable = (t, flags) => t !== null && (!SOLID.has(t) || fieldOpen(t, flags));
 export const CAVE_FLOOR = ':';
