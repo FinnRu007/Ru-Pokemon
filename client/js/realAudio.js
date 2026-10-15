@@ -13,7 +13,7 @@ const TOWN = {
   oreburgh: T('Oreburgh City'), floaroma: T('Floaroma Town'), eterna: T('Eterna City'), hearthome: T('Hearthome City'),
   solaceon: T('Solaceon Town'), veilstone: T('Veilstone City'), canalave: ['Canalave City', 'Canalave City (Night)'], snowpoint: T('Snowpoint City'),
   // Ohne eigenen Titel in der Sound Library: naechstes passendes Stueck
-  pastoria: T('Hearthome City'), celestic: T('Solaceon Town'), sunyshore: T('Sunyshore City'), fight: T('Fight Area'), survival: T('Fight Area')
+  pastoria: T('Hearthome City'), celestic: T('Solaceon Town'), sunyshore: T('Sunyshore City'), fight: T('Fight Area'), survival: T('Fight Area'), resort: T('Route 225')
 };
 
 // Musik je Karte (Vorrang vor allem anderen)
@@ -41,7 +41,9 @@ export const MAP_TRACKS = {
   old_chateau: 'Old Chateau', solaceon_ruins: 'Oreburgh Gate', celestic_ruins: 'Oreburgh Gate', canalave_dock: TOWN.canalave,
   north_sea: 'Surf', fight_area: TOWN.fight, battle_tower: 'Battle Tower', route_225: T('Route 225'), survival_area: TOWN.survival,
   route_227: T('Route 228'), stark_mountain: 'Stark Mountain', stark_mountain_deep: 'Stark Mountain',
-  snowpoint_temple: 'Lake Caverns', fullmoon_island: 'Lake', lakefront_house: T('Valor Lakefront')
+  snowpoint_temple: 'Lake Caverns', fullmoon_island: 'Lake', lakefront_house: T('Valor Lakefront'),
+  route_226: T('Route 225'), route_228: T('Route 228'), route_229: T('Route 225'), route_230: 'Surf', resort_area: TOWN.resort,
+  rock_peak_ruins: 'Lake Caverns', iceberg_ruins: 'Lake Caverns', iron_ruins: 'Lake Caverns'
 };
 // Raeume nach Thema, sonst gilt die Musik des Ortes (Praefix der Karten-ID)
 export const THEME_TRACKS = { center: T('Pokémon Center'), mart: 'Poké Mart', gym: 'Pokémon Gym' };

@@ -153,7 +153,8 @@ const MAP_OF = [
   [/^LakeAcuity$/, 'lake_acuity'], [/^OldChateau/, 'old_chateau'], [/^JubilifeCity$/, 'jubilife_city'], [/^TrainersSchool$/, 'jubilife_school'],
   [/^SnowpointCity$/, 'snowpoint_city'], [/^CelesticTown$/, 'celestic_town'], [/^SnowpointTemple/, 'snowpoint_temple'],
   [/^StarkMountainOutside$/, 'stark_mountain'], [/^StarkMountainRoom/, 'stark_mountain_deep'], [/^SurvivalArea$/, 'survival_area'],
-  [/^FullmoonIsland/, 'fullmoon_island']
+  [/^FullmoonIsland/, 'fullmoon_island'], [/^ResortArea$/, 'resort_area'], [/^IronIslandIronRuins$/, 'iron_ruins'],
+  [/^MtCoronetIcebergRuins$/, 'iceberg_ruins'], [/^Route228RockPeakRuins$/, 'rock_peak_ruins']
 ];
 // Story-Gegenstaende (VMs, Schluessel) vergibt die Story selbst
 const SKIP = new Set(['hm02', 'hm05', 'hm08', 'storage-key', 'galactic-key', 'lunar-wing']);

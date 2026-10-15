@@ -15,7 +15,9 @@ export const OW_BY_NAME = {
   Koch: 'npc/waiter', Floristin: 'npc/lady', Radladenbesitzer: 'npc/middle_aged_man', Lagerarbeiter: 'npc/worker',
   Polizist: 'npc/policeman', Techniker: 'npc/worker', Bergsteiger: 'npc/hiker', 'Galaktik-Rüpel': 'npc/grunt_m', Heide: 'npc/school_kid_f',
   Jasmin: 'npc/jasmine', Urs: 'npc/riley', Palmer: 'npc/palmer', Selfe: 'pokemon/uxie', Vesprit: 'pokemon/mesprit', Tobutz: 'pokemon/azelf',
-  Dialga: 'pokemon/dialga', Palkia: 'pokemon/palkia', Heatran: 'pokemon/heatran', Regigigas: 'pokemon/regigigas', Cresselia: 'pokemon/cresselia'
+  Dialga: 'pokemon/dialga', Palkia: 'pokemon/palkia', Heatran: 'pokemon/heatran', Regigigas: 'pokemon/regigigas', Cresselia: 'pokemon/cresselia',
+  // Ohne Overworld-Bild in Platin: verkleinertes Kampfbild (mon:<Nr>)
+  Regirock: 'mon:377', Regice: 'mon:378', Registeel: 'mon:379', Rotom: 'mon:479', Buck: 'npc/buck'
 };
 export const OW_BY_CLASS = {
   'Ass-Trainer': 'npc/ace_trainer_m', 'Ass-Trainerin': 'npc/ace_trainer_f', Radler: 'npc/cyclist_m', Radlerin: 'npc/cyclist_f',
@@ -36,7 +38,7 @@ export const OW_BY_LOOK = {
   item_ball: 'objects/pokeball', jasmine: 'npc/jasmine', riley: 'npc/riley', uxie: 'pokemon/uxie', mesprit: 'pokemon/mesprit', azelf: 'pokemon/azelf',
   dialga: 'pokemon/dialga', palkia: 'pokemon/palkia', heatran: 'pokemon/heatran', regigigas: 'pokemon/regigigas', cresselia: 'pokemon/cresselia', swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic'
 };
-export const OW_FILES = [...new Set([OW_PLAYER, ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])];
+export const OW_FILES = [...new Set([OW_PLAYER, ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])].filter((f) => !f.startsWith('mon:'));
 
 export function overworldFor({ name = '', look = '' } = {}) {
   return [OW_BY_NAME[name], OW_BY_CLASS[name.split(' ')[0]], OW_BY_LOOK[look]].filter(Boolean);

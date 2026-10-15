@@ -25,6 +25,7 @@ let SPRITE_INDEX = null;
 export const spriteIndex = () => SPRITE_INDEX;
 let NAMED = { types: new Set(), items: new Set(), trainers: new Set(), overworld: new Set(), terrain: new Set(), forms: new Set(), egg: false };
 export const hasReal = (kind, name) => NAMED[kind]?.has(name) || false;
+export const hasFront = (id) => !!REAL?.front?.has(id);
 export async function loadRealSprites() {
   try {
     const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
