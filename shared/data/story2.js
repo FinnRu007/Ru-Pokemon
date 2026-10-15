@@ -226,3 +226,11 @@ export const SCRIPTS2 = {
 export const BADGES2 = [
   { flag: 'badge_forest', name: 'Waldorden', color: '#4a9a4a' }
 ];
+
+// Weitere Kapitel einhaengen
+import { TRAINERS3, NPCS3, TRIGGERS3, SCRIPTS3, BADGES3 } from './story3.js';
+Object.assign(TRAINERS2, TRAINERS3);
+Object.assign(SCRIPTS2, SCRIPTS3);
+for (const [m, list] of Object.entries(NPCS3)) NPCS2[m] = [...(NPCS2[m] || []), ...list];
+for (const [m, list] of Object.entries(TRIGGERS3)) TRIGGERS2[m] = [...(TRIGGERS2[m] || []), ...list];
+BADGES2.push(...BADGES3);

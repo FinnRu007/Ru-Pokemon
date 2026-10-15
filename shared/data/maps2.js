@@ -4,21 +4,13 @@
 //   N  Felswand (Kraxler)            J  Wasserfall (Kaskade)          b  Holzbruecke   n  Schnee
 // Wasser (~) laesst sich mit Surfer befahren. map.fly = Landepunkt fuer Fliegen.
 // map.palette faerbt Innenraeume (Arenen), map.tint faerbt ganze Karten (snow, distortion, dusk).
-import { build, grid, house, centerRoom, martRoom, houseRoom, gymRoom } from './mapkit.js';
+import { build, grid, house, centerRoom, martRoom, houseRoom, gymRoom, GYM_PALETTES } from './mapkit.js';
+import { MAPS3, LINKS3 } from './maps3.js';
+
+export { GYM_PALETTES };
 
 const enc = (rate, list) => ({ grassRate: rate, grass: list.map(([species, min, max, weight]) => ({ species, min, max, weight })) });
 const slots = (list) => list.map(([species, min, max, weight]) => ({ species, min, max, weight }));
-
-export const GYM_PALETTES = {
-  forest: { floor: '#a6cc84', speck: '#86ac64', wall: '#5a8a4a', wallStripe: '#4a7a3a', base: '#3a5a2a', top: '#2a4a20', rock: '#4f8f42' },
-  ghost: { floor: '#6a5a86', speck: '#54466e', wall: '#3a2e52', wallStripe: '#2e2444', base: '#221a34', top: '#1a1428', rock: '#4a3a66' },
-  fight: { floor: '#c8c0b4', speck: '#a8a094', wall: '#8a6a5a', wallStripe: '#7a5a4a', base: '#5a3a2a', top: '#3a2a20', rock: '#9a8a7a' },
-  water: { floor: '#8cc0e8', speck: '#6aa0d0', wall: '#3a6aa8', wallStripe: '#2e5a96', base: '#1e3a6a', top: '#16305a', rock: '#3a7ac0' },
-  steel: { floor: '#b8bcc4', speck: '#989ca8', wall: '#6a6e7a', wallStripe: '#5a5e6a', base: '#3a3e48', top: '#2a2e38', rock: '#8a8e9a' },
-  ice: { floor: '#dceef8', speck: '#b8d8ec', wall: '#8ab8d8', wallStripe: '#7aa8c8', base: '#4a789a', top: '#3a6888', rock: '#a8d0ec' },
-  electric: { floor: '#e8d890', speck: '#c8b870', wall: '#6a6a7a', wallStripe: '#5a5a6a', base: '#3a3a48', top: '#2a2a38', rock: '#d8b840' },
-  galactic: { floor: '#c8d4dc', floorLine: '#a8b8c4', wall: '#9ab0bc', wallStripe: '#7a98a8', base: '#3a6a7a', top: '#2a4a5a', counter: '#d8e0e6' }
-};
 
 export const MAPS2 = {
   // ------------------------------------------------------------------ Felsige Schneise
@@ -251,3 +243,6 @@ export const LINKS2 = [
   ['door', 'eterna_city', 24, 21, 'eterna_bikeshop'],
   ['door', 'eterna_city', 29, 21, 'eterna_house']
 ];
+
+Object.assign(MAPS2, MAPS3);
+LINKS2.push(...LINKS3);
