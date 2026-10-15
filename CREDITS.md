@@ -3,6 +3,8 @@
 ## Grafik
 Saemtliche Kacheln, Gebaeude, Figuren und Pokemon-Sprites werden zur Laufzeit aus eigenem Code erzeugt (`client/js/art/`). Sie stehen unter derselben Lizenz wie der restliche Code dieses Projekts.
 
+Optional laedt `npm run sprites` die Original-Sprites aus Pokemon Platin ueber https://github.com/PokeAPI/sprites in den lokalen, nicht versionierten Ordner `client/sprites/`. Diese Bilder sind Eigentum von Nintendo, Creatures Inc. und GAME FREAK inc. und sind nicht Teil dieses Repos.
+
 ## Schrift
 **Pixelify Sans**, Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans).
 Lizenz: SIL Open Font License 1.1, vollstaendiger Text in `client/assets/fonts/OFL-PixelifySans.txt`. Bezogen ueber das npm-Paket `@fontsource/pixelify-sans`.

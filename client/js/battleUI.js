@@ -217,7 +217,9 @@ export class BattleUI {
   renderSprites(s) {
     const set = (el, mon, back) => {
       // Eigene Grafik aus dem Manifest hat Vorrang, sonst das prozedural erzeugte Sprite.
-      el.style.backgroundImage = `url(${monsterDataUrl(mon, back)})`;
+      const src = monsterDataUrl(mon, back);
+      el.style.backgroundImage = `url(${src})`;
+      el.classList.toggle('real', src.startsWith('/sprites/'));
       el.title = `${mon.species} (${mon.types.join('/')})`;
       el.classList.toggle('shiny', !!mon.shiny);
       if (this.m.pokemon?.useImages) {

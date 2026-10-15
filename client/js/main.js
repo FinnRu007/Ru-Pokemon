@@ -6,7 +6,7 @@ import { World } from './world.js';
 import { Renderer } from './renderer.js';
 import { BattleUI } from './battleUI.js';
 import { Hud } from './hud.js';
-import { monsterDataUrl } from './art/monsters.js';
+import { monsterDataUrl, loadRealSprites } from './art/monsters.js';
 import { Dialog } from './dialog.js';
 import { audio, musicForMap } from './audio.js';
 import { WorldMap, placeName, areaOf } from './worldmap.js';
@@ -16,6 +16,7 @@ import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
 
 const $ = (id) => document.getElementById(id);
 const manifest = await (await fetch('/assets/sprites/manifest.json')).json();
+await loadRealSprites();
 const net = new Net();
 const input = new Input();
 const world = new World(net);

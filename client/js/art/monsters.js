@@ -17,6 +17,41 @@ const ARCH = {
   ghost: ['ghost'], dragon: ['serpent', 'biped', 'quad'], dark: ['quad', 'biped'], steel: ['blob', 'biped', 'quad']
 };
 
+// Originalbilder aus `npm run sprites` (client/sprites/, nicht im Repo). Sind sie vorhanden,
+// haben sie Vorrang, sonst bleibt es bei der prozeduralen Grafik.
+let REAL = null;
+export async function loadRealSprites() {
+  try {
+    const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
+    if (!res.ok) return false;
+    const { kinds } = await res.json();
+    REAL = Object.fromEntries(Object.entries(kinds).map(([k, ids]) => [k, new Set(ids)]));
+    return true;
+  } catch { return false; }
+}
+function realUrl(mon, kind) {
+  const id = mon.speciesId;
+  if (!REAL || !id) return null;
+  const k = mon.shiny && REAL[`${kind}-shiny`]?.has(id) ? `${kind}-shiny` : kind;
+  return REAL[k]?.has(id) ? `/sprites/${k}/${id}.png` : null;
+}
+// Zeichnet ein Originalbild auf die Leinwand: bei fit auf den sichtbaren Teil zugeschnitten, unten mittig.
+function paintReal(g, img, size, fit) {
+  const [t, tg] = canvas(img.width, img.height);
+  tg.drawImage(img, 0, 0);
+  const px = tg.getImageData(0, 0, img.width, img.height).data;
+  let x0 = img.width, y0 = img.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) {
+    if (px[(y * img.width + x) * 4 + 3] > 0) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  }
+  if (x1 < 0) return;
+  if (!fit) { x0 = 0; y0 = 0; x1 = img.width - 1; y1 = img.height - 1; }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const sc = Math.min(size / w, size / h);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(t, x0, y0, w, h, Math.round((size - w * sc) / 2), Math.round(size - h * sc), Math.round(w * sc), Math.round(h * sc));
+}
+
 const ell = (cx, cy, rx, ry, color, o = {}) => ({ k: 'e', cx, cy, rx, ry, color, ...o });
 const tri = (pts, color, o = {}) => ({ k: 't', pts, color, ...o });
 
@@ -135,6 +170,15 @@ const cache = new Map();
 export function monsterCanvas(mon, back = false, size = 56, fit = false) {
   const key = `${mon.speciesId}|${mon.family}|${mon.stage}|${(mon.types || []).join()}|${mon.shiny ? 1 : 0}|${back ? 1 : 0}|${size}|${fit ? 1 : 0}`;
   if (cache.has(key)) return cache.get(key);
+  const url = realUrl(mon, back ? 'back' : 'front');
+  if (url) {
+    const [c, g] = canvas(size, size);
+    const img = new Image();
+    img.onload = () => paintReal(g, img, size, fit);
+    img.src = url;
+    cache.set(key, c);
+    return c;
+  }
   const pl = plan(mon);
   const [c, g] = canvas(size, size);
   const scale = fit ? 1.02 : [0.74, 0.88, 1.0][pl.stage - 1];
@@ -210,9 +254,31 @@ function drawFace(g, pl, unit, bottom, size, outline) {
 
 const urls = new Map();
 export function monsterDataUrl(mon, back = false, size = 56, fit = false) {
+  const url = realUrl(mon, back ? 'back' : 'front');
+  if (url) return url;
   const c = monsterCanvas(mon, back, size, fit);
   if (!urls.has(c)) urls.set(c, c.toDataURL());
   return urls.get(c);
 }
 // Kleines Symbol fuer Team- und Boxlisten (fuellt das Bild unabhaengig von der Stufe)
-export const monsterIcon = (mon) => monsterDataUrl(mon, false, 40, true);
+// Mit Originalbildern: Vorderansicht auf den sichtbaren Teil zugeschnitten. Bis der Zuschnitt fertig ist,
+// steht das ganze Bild da, danach werden passende <img> im Dokument ausgetauscht.
+const icons = new Map();
+export function monsterIcon(mon) {
+  const url = realUrl(mon, 'front');
+  if (!url) return monsterDataUrl(mon, false, 40, true);
+  if (icons.get(url)) return icons.get(url);
+  if (!icons.has(url)) {
+    icons.set(url, null);
+    const img = new Image();
+    img.onload = () => {
+      const [c, g] = canvas(40, 40);
+      paintReal(g, img, 40, true);
+      const data = c.toDataURL();
+      icons.set(url, data);
+      for (const el of document.querySelectorAll('img')) if (el.getAttribute('src') === url) el.src = data;
+    };
+    img.src = url;
+  }
+  return url;
+}
