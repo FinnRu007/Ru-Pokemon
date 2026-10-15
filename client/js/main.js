@@ -6,7 +6,7 @@ import { World } from './world.js';
 import { Renderer } from './renderer.js';
 import { BattleUI } from './battleUI.js';
 import { Hud } from './hud.js';
-import { monsterDataUrl, loadRealSprites } from './art/monsters.js';
+import { monsterDataUrl, loadRealSprites, itemIcon } from './art/monsters.js';
 import { Dialog } from './dialog.js';
 import { audio, musicForMap } from './audio.js';
 import { WorldMap, placeName, areaOf } from './worldmap.js';
@@ -182,7 +182,7 @@ function flushDialogs() {
 }
 function openShop(m) {
   shopOpen = true; updateLock();
-  const rows = m.stock.map((it) => `<div class="shop-row${it.locked ? ' locked' : ''}"><span class="nm">${it.name}<small>Im Beutel: ${it.have}</small></span><span class="pr">${it.price} ¥</span>
+  const rows = m.stock.map((it) => `<div class="shop-row${it.locked ? ' locked' : ''}"><span class="nm">${itemIcon(it.id)}${it.name}<small>Im Beutel: ${it.have}</small></span><span class="pr">${it.price} ¥</span>
     ${it.locked ? '<span class="hint">ab Orden 1</span>' : `<button data-buy="${it.id}" data-n="1" ${m.money < it.price ? 'disabled' : ''}>1</button><button data-buy="${it.id}" data-n="5" ${m.money < it.price * 5 ? 'disabled' : ''}>5</button><button data-buy="${it.id}" data-n="10" ${m.money < it.price * 10 ? 'disabled' : ''}>10</button>`}</div>`).join('');
   openModal(`<h1>Pokémon-Markt</h1><p>Dein Geld: <b>${m.money} ¥</b></p><div class="shop">${rows}</div><button id="shopClose">Fertig</button>`);
   document.querySelectorAll('#modalPanel button[data-buy]').forEach((b) => { b.onclick = () => net.send({ t: 'buy', item: b.dataset.buy, count: Number(b.dataset.n) }); });

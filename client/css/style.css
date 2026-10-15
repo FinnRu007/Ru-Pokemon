@@ -87,6 +87,8 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .mon-sprite { position: absolute; width: 168px; height: 168px; background-size: contain; background-repeat: no-repeat; background-position: center bottom; image-rendering: pixelated; transition: opacity .4s, transform .3s; z-index: 1; }
 .mon-sprite.foe { top: 8px; right: 82px; animation: enter-foe .5s ease-out; } .mon-sprite.ally { bottom: 0; left: 60px; width: 224px; height: 224px; animation: enter-ally .5s ease-out; }
 @keyframes enter-foe { from { transform: translateX(-300px); } } @keyframes enter-ally { from { transform: translateX(300px); } }
+.item-ic { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; margin: -4px 4px -4px 0; }
+.type-badge { width: 48px; height: 16px; image-rendering: pixelated; vertical-align: middle; margin-right: 4px; }
 .mon-sprite.real { background-size: 160px; } .mon-sprite.ally.real { background-size: 240px; }
 .mon-sprite.shiny { filter: drop-shadow(0 0 6px #fff7a0); }
 .mon-sprite.fainted { opacity: 0; transform: translateY(50px); } .mon-sprite.hit { animation: hit .35s; }

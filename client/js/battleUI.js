@@ -1,5 +1,5 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
-import { monsterDataUrl } from './art/monsters.js';
+import { monsterDataUrl, typeBadge, itemIcon } from './art/monsters.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition } from './battleFx.js';
 import { audio } from './audio.js';
@@ -282,7 +282,7 @@ export class BattleUI {
     const allEmpty = moves.every((m) => m.pp <= 0);
     const btns = moves.map((m, i) => ({
       cls: 'mv', color: this.m.typeColors[m.type],
-      html: `${m.name}<small>AP ${m.pp}/${m.maxPp} · ${m.power || '-'}</small>`,
+      html: `${m.name}<small>${typeBadge(m.type)}AP ${m.pp}/${m.maxPp} · ${m.power || '-'}</small>`,
       disabled: m.pp <= 0 && !allEmpty,
       fn: () => this.act({ type: 'move', index: i })
     }));
@@ -293,9 +293,9 @@ export class BattleUI {
     const names = { 'poke-ball': 'Pokéball', 'great-ball': 'Superball', 'ultra-ball': 'Hyperball' };
     const btns = [];
     if (this.state.kind !== 'trainer') {
-      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ label: `${names[k]} x${n}`, disabled: !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k }) });
+      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ html: `${itemIcon(k)}${names[k]} x${n}`, disabled: !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k }) });
     }
-    for (const [k, it] of Object.entries(this.state.bag || {})) btns.push({ label: `${it.name} x${it.count}`, color: '#3f8a7a', fn: () => this.itemTarget(k, it.name) });
+    for (const [k, it] of Object.entries(this.state.bag || {})) btns.push({ html: `${itemIcon(k)}${it.name} x${it.count}`, color: '#3f8a7a', fn: () => this.itemTarget(k, it.name) });
     $('battleText').textContent = !btns.length ? 'Dein Beutel ist leer.' : this.state.kind === 'trainer' ? 'Welchen Gegenstand?' : !this.state.catchable ? 'Dieses Pokémon kannst du nicht fangen.' : 'Welchen Gegenstand?';
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
     this.menu(btns);

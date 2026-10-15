@@ -116,7 +116,7 @@ Alle Grafiken sind selbst erstellt und liegen als Code in `client/js/art/`. Es w
 
 ### Original-Sprites (optional, nur lokal)
 
-`npm run sprites` laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd, Nr. 1 bis 493) aus https://github.com/PokeAPI/sprites nach `client/sprites/`. Der Client nutzt sie automatisch, sobald sie da sind, auch fuer die Teamsymbole. Fehlen sie, bleibt es bei der eigenen Pixelgrafik. Der Ordner ist gitignored: Die Bilder gehoeren Nintendo und werden nicht mit diesem Repo verteilt.
+`npm run sprites` laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd, Nr. 1 bis 493), die Typ-Schilder aus Platin und die Symbole der Gegenstaende aus https://github.com/PokeAPI/sprites nach `client/sprites/`. Der Client nutzt sie automatisch, sobald sie da sind: im Kampf, als Teamsymbole, bei den Attacken, im Beutel und im Markt. Fehlen sie, bleibt es bei der eigenen Pixelgrafik. Der Ordner ist gitignored: Die Bilder gehoeren Nintendo und werden nicht mit diesem Repo verteilt.
 
 Eigene Bilder koennen weiterhin ueber `client/assets/sprites/manifest.json` eingebunden werden (Kacheln per `image`, Spieler-Spritesheet per `player.image`, Pokemon per `pokemon.useImages` und `pokemon/{id}.png`). Gesetzte Bilder haben Vorrang vor der eingebauten Grafik.
 

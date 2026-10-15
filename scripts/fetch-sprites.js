@@ -1,22 +1,25 @@
-// Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd)
-// aus dem Projekt PokeAPI/sprites nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
+// Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd), die Typ-Schilder
+// aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
 // Nintendo und werden nicht mit dem Code verteilt. Fehlen sie, zeichnet der Client die eigene Pixelgrafik.
 // Aufruf: npm run sprites   (bereits vorhandene Dateien werden uebersprungen)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { ITEMS } from '../shared/data/items.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
-const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites';
 const MAX_ID = 493;
 const KINDS = {
-  front: 'versions/generation-iv/platinum',
-  back: 'versions/generation-iv/platinum/back',
-  'front-shiny': 'versions/generation-iv/platinum/shiny',
-  'back-shiny': 'versions/generation-iv/platinum/back/shiny'
+  front: 'pokemon/versions/generation-iv/platinum',
+  back: 'pokemon/versions/generation-iv/platinum/back',
+  'front-shiny': 'pokemon/versions/generation-iv/platinum/shiny',
+  'back-shiny': 'pokemon/versions/generation-iv/platinum/back/shiny'
 };
+// Typ-Schilder sind bei PokeAPI nach Typnummer abgelegt
+const TYPE_IDS = ['normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug', 'ghost', 'steel', 'fire', 'water', 'grass', 'electric', 'psychic', 'ice', 'dragon', 'dark'];
 
 // Hinter einem Proxy (HTTPS_PROXY) kann fetch von Node nicht direkt raus, dann hilft curl.
 const useCurl = !!(process.env.HTTPS_PROXY || process.env.https_proxy);
@@ -38,8 +41,12 @@ async function download(url) {
 const jobs = [];
 for (const [kind, dir] of Object.entries(KINDS)) {
   fs.mkdirSync(path.join(OUT, kind), { recursive: true });
-  for (let id = 1; id <= MAX_ID; id++) jobs.push({ kind, id, url: `${BASE}/${dir}/${id}.png`, file: path.join(OUT, kind, `${id}.png`) });
+  for (let id = 1; id <= MAX_ID; id++) jobs.push({ url: `${BASE}/${dir}/${id}.png`, file: path.join(OUT, kind, `${id}.png`) });
 }
+for (const dir of ['types', 'items']) fs.mkdirSync(path.join(OUT, dir), { recursive: true });
+TYPE_IDS.forEach((t, i) => jobs.push({ url: `${BASE}/types/generation-iv/platinum/${i + 1}.png`, file: path.join(OUT, 'types', `${t}.png`) }));
+for (const id of Object.keys(ITEMS)) jobs.push({ url: `${BASE}/items/${id}.png`, file: path.join(OUT, 'items', `${id}.png`) });
+const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
 async function worker() {
@@ -49,7 +56,7 @@ async function worker() {
       const data = await download(job.url);
       if (data && data.length) { fs.writeFileSync(job.file, data); loaded++; } else failed++;
     }
-    if (++done % 250 === 0) process.stdout.write(`\r${done} / ${MAX_ID * Object.keys(KINDS).length} Bilder`);
+    if (++done % 250 === 0) process.stdout.write(`\r${done} / ${total} Bilder`);
   }
 }
 console.log('Lade Pokemon-Sprites aus github.com/PokeAPI/sprites ...');
@@ -60,6 +67,7 @@ const index = { source: 'https://github.com/PokeAPI/sprites', kinds: {} };
 for (const kind of Object.keys(KINDS)) {
   index.kinds[kind] = fs.readdirSync(path.join(OUT, kind)).filter((f) => f.endsWith('.png')).map((f) => +f.slice(0, -4)).sort((a, b) => a - b);
 }
+for (const dir of ['types', 'items']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries(index.kinds)) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items })) console.log(`  ${k}: ${ids.length}`);

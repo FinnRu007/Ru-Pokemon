@@ -20,12 +20,14 @@ const ARCH = {
 // Originalbilder aus `npm run sprites` (client/sprites/, nicht im Repo). Sind sie vorhanden,
 // haben sie Vorrang, sonst bleibt es bei der prozeduralen Grafik.
 let REAL = null;
+let NAMED = { types: new Set(), items: new Set() };
 export async function loadRealSprites() {
   try {
     const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
     if (!res.ok) return false;
-    const { kinds } = await res.json();
+    const { kinds, types = [], items = [] } = await res.json();
     REAL = Object.fromEntries(Object.entries(kinds).map(([k, ids]) => [k, new Set(ids)]));
+    NAMED = { types: new Set(types), items: new Set(items) };
     return true;
   } catch { return false; }
 }
@@ -35,6 +37,9 @@ function realUrl(mon, kind) {
   const k = mon.shiny && REAL[`${kind}-shiny`]?.has(id) ? `${kind}-shiny` : kind;
   return REAL[k]?.has(id) ? `/sprites/${k}/${id}.png` : null;
 }
+// Typ-Schild und Gegenstandssymbol als <img>, leer ohne Originalbilder
+export const typeBadge = (type) => NAMED.types.has(type) ? `<img class="type-badge" src="/sprites/types/${type}.png" alt="">` : '';
+export const itemIcon = (id) => NAMED.items.has(id) ? `<img class="item-ic" src="/sprites/items/${id}.png" alt="">` : '';
 // Zeichnet ein Originalbild auf die Leinwand: bei fit auf den sichtbaren Teil zugeschnitten, unten mittig.
 function paintReal(g, img, size, fit) {
   const [t, tg] = canvas(img.width, img.height);
