@@ -3,6 +3,7 @@
 // Farben, Ohren, Hoerner, Flossen und Augen werden aus einem Startwert abgeleitet.
 // Entwicklungen einer Familie teilen den Grundbauplan und werden groesser und kantiger.
 import { canvas, rng, shade, mix, hueShift } from './pixel.js';
+import { TRAINER_BY_NAME, TRAINER_BY_CLASS, TRAINER_BY_LOOK } from './realTrainers.js';
 
 const TYPE_COLORS = {
   normal: '#c8b890', fire: '#f07838', water: '#5890e8', electric: '#f8d030', grass: '#68c050', ice: '#88d8e0',
@@ -20,14 +21,14 @@ const ARCH = {
 // Originalbilder aus `npm run sprites` (client/sprites/, nicht im Repo). Sind sie vorhanden,
 // haben sie Vorrang, sonst bleibt es bei der prozeduralen Grafik.
 let REAL = null;
-let NAMED = { types: new Set(), items: new Set() };
+let NAMED = { types: new Set(), items: new Set(), trainers: new Set() };
 export async function loadRealSprites() {
   try {
     const res = await fetch('/sprites/index.json', { cache: 'no-cache' });
     if (!res.ok) return false;
-    const { kinds, types = [], items = [] } = await res.json();
+    const { kinds, types = [], items = [], trainers = [] } = await res.json();
     REAL = Object.fromEntries(Object.entries(kinds).map(([k, ids]) => [k, new Set(ids)]));
-    NAMED = { types: new Set(types), items: new Set(items) };
+    NAMED = { types: new Set(types), items: new Set(items), trainers: new Set(trainers) };
     return true;
   } catch { return false; }
 }
@@ -40,6 +41,13 @@ function realUrl(mon, kind) {
 // Typ-Schild und Gegenstandssymbol als <img>, leer ohne Originalbilder
 export const typeBadge = (type) => NAMED.types.has(type) ? `<img class="type-badge" src="/sprites/types/${type}.png" alt="">` : '';
 export const itemIcon = (id) => NAMED.items.has(id) ? `<img class="item-ic" src="/sprites/items/${id}.png" alt="">` : '';
+// Trainerbild fuer den Kampf: { name, cls, look } -> URL oder null
+export function trainerImage(t) {
+  for (const f of [TRAINER_BY_NAME[t.name], TRAINER_BY_CLASS[t.cls], TRAINER_BY_LOOK[t.look]]) {
+    if (f && NAMED.trainers.has(f)) return `/sprites/trainers/${encodeURIComponent(f)}.png`;
+  }
+  return null;
+}
 // Zeichnet ein Originalbild auf die Leinwand: bei fit auf den sichtbaren Teil zugeschnitten, unten mittig.
 function paintReal(g, img, size, fit) {
   const [t, tg] = canvas(img.width, img.height);

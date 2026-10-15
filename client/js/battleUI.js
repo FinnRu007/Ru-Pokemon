@@ -1,5 +1,5 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
-import { monsterDataUrl, typeBadge, itemIcon } from './art/monsters.js';
+import { monsterDataUrl, typeBadge, itemIcon, trainerImage } from './art/monsters.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition } from './battleFx.js';
 import { audio } from './audio.js';
@@ -46,7 +46,9 @@ export class BattleUI {
       this.menu(null);
       const tr = $('trainerSprite');
       if (s.kind === 'trainer' && s.trainer) {
-        tr.style.backgroundImage = `url(${trainerUrl(s.trainer.look)})`;
+        const real = trainerImage(s.trainer);
+        tr.style.backgroundImage = `url(${real || trainerUrl(s.trainer.look)})`;
+        tr.classList.toggle('real', !!real);
         tr.classList.remove('hidden', 'leave');
         $('foeSprite').classList.add('waiting');
         await this.say(`${s.trainer.name} möchte kämpfen!`, 1300, false);

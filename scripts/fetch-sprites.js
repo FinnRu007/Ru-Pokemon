@@ -1,5 +1,6 @@
 // Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd), die Typ-Schilder
-// aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
+// aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites sowie die Trainerbilder
+// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
 // Nintendo und werden nicht mit dem Code verteilt. Fehlen sie, zeichnet der Client die eigene Pixelgrafik.
 // Aufruf: npm run sprites   (bereits vorhandene Dateien werden uebersprungen)
 import fs from 'node:fs';
@@ -7,6 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../shared/data/items.js';
+import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
@@ -43,9 +45,11 @@ for (const [kind, dir] of Object.entries(KINDS)) {
   fs.mkdirSync(path.join(OUT, kind), { recursive: true });
   for (let id = 1; id <= MAX_ID; id++) jobs.push({ url: `${BASE}/${dir}/${id}.png`, file: path.join(OUT, kind, `${id}.png`) });
 }
-for (const dir of ['types', 'items']) fs.mkdirSync(path.join(OUT, dir), { recursive: true });
+const TRAINER_BASE = 'https://raw.githubusercontent.com/smogon/sprites/master/src/_uncategorized/canonical/trainers/gen4/diamond-pearl';
+for (const dir of ['types', 'items', 'trainers']) fs.mkdirSync(path.join(OUT, dir), { recursive: true });
 TYPE_IDS.forEach((t, i) => jobs.push({ url: `${BASE}/types/generation-iv/platinum/${i + 1}.png`, file: path.join(OUT, 'types', `${t}.png`) }));
 for (const id of Object.keys(ITEMS)) jobs.push({ url: `${BASE}/items/${id}.png`, file: path.join(OUT, 'items', `${id}.png`) });
+for (const name of TRAINER_FILES) jobs.push({ url: `${TRAINER_BASE}/${encodeURIComponent(name)}.png`, file: path.join(OUT, 'trainers', `${name}.png`) });
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -59,15 +63,15 @@ async function worker() {
     if (++done % 250 === 0) process.stdout.write(`\r${done} / ${total} Bilder`);
   }
 }
-console.log('Lade Pokemon-Sprites aus github.com/PokeAPI/sprites ...');
+console.log('Lade Sprites aus github.com/PokeAPI/sprites und github.com/smogon/sprites ...');
 await Promise.all(Array.from({ length: useCurl ? 8 : 24 }, worker));
 
 // Verzeichnis, welche Bilder vorhanden sind (der Client fragt nur diese Datei ab)
-const index = { source: 'https://github.com/PokeAPI/sprites', kinds: {} };
+const index = { source: ['https://github.com/PokeAPI/sprites', 'https://github.com/smogon/sprites'], kinds: {} };
 for (const kind of Object.keys(KINDS)) {
   index.kinds[kind] = fs.readdirSync(path.join(OUT, kind)).filter((f) => f.endsWith('.png')).map((f) => +f.slice(0, -4)).sort((a, b) => a - b);
 }
-for (const dir of ['types', 'items']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
+for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers })) console.log(`  ${k}: ${ids.length}`);
