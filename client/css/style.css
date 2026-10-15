@@ -36,7 +36,7 @@ button:focus-visible { outline: 3px solid #ffe066; outline-offset: 1px; }
 .dialog .more { position: absolute; right: 16px; bottom: 6px; color: #e04848; font-size: 14px; opacity: 0; }
 .dialog.waiting .more { opacity: 1; animation: bob .6s infinite alternate; }
 @keyframes bob { to { transform: translateY(3px); } }
-.dialog-choices { position: absolute; right: 8px; bottom: calc(100% + 8px); display: flex; flex-direction: column; gap: 4px; background: var(--box); border: 4px solid var(--boxLine); border-radius: 8px; padding: 6px; }
+.dialog-choices { position: absolute; right: 8px; bottom: calc(100% + 8px); display: flex; flex-direction: column; gap: 4px; background: var(--box); border: 4px solid var(--boxLine); border-radius: 8px; padding: 6px; max-height: 380px; overflow-y: auto; }
 .dialog-choices button { background: transparent; color: var(--boxInk); box-shadow: none; text-align: left; padding: 4px 18px; }
 .dialog-choices button:hover, .dialog-choices button:focus { background: #dce6f8; outline: none; }
 
@@ -278,3 +278,12 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 [data-frame="6"] .dialog, [data-frame="6"] .menu-msg, .opt-preview.frame-6 { border-color: #20202a; border-style: double; border-width: 6px; }
 [data-frame="7"] .dialog, [data-frame="7"] .menu-msg, .opt-preview.frame-7 { border-color: #e070a0; border-radius: 18px; box-shadow: inset 0 0 0 3px #f8d0e0, 0 4px 0 rgba(0,0,0,.35); }
 [data-frame="8"] .dialog, [data-frame="8"] .menu-msg, .opt-preview.frame-8 { border-color: #5a6070; border-style: dashed; }
+
+/* Startbildschirm: Spielmodus mit Erklaerung je Option */
+#ruleSet .rule { display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; margin: 6px 0; cursor: pointer; }
+#ruleSet .rule input { grid-row: span 2; margin-top: 3px; }
+#ruleSet .rule span { color: var(--muted); font-size: 13px; line-height: 1.3; }
+#ruleSet .rule.off { opacity: .45; cursor: default; }
+#ruleSet .rule-sub { margin-left: 22px; border-left: 2px solid var(--border); padding-left: 8px; }
+#login .hint { font-size: 13px; color: var(--muted); margin: 2px 0 6px; }
+.freecam-info { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: rgba(20,24,40,.85); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 13px; white-space: nowrap; pointer-events: none; }

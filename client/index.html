@@ -13,6 +13,7 @@
       <canvas id="game" width="720" height="528"></canvas>
       <div id="fade"></div>
       <div id="mapName" class="banner hidden"></div>
+      <div id="freeCamInfo" class="freecam-info hidden"></div>
       <div id="dialog" class="dialog hidden"></div>
 
       <section id="battle" class="hidden">
@@ -33,14 +34,23 @@
         <div class="panel">
           <h1>Pokemon Platin <small>Multiplayer</small></h1>
           <label>Trainername <input id="loginName" maxlength="16" autocomplete="off"></label>
-          <label>Run-Code (leer = Solo) <input id="loginRun" maxlength="12" placeholder="z. B. SOUL1" autocomplete="off"></label>
+          <label>Run-Code <input id="loginRun" maxlength="12" placeholder="leer lassen für ein eigenes Spiel" autocomplete="off"></label>
+          <p class="hint">Mit demselben Run-Code spielt ihr gemeinsam in einer Welt und seht euch gegenseitig.</p>
           <fieldset id="ruleSet">
-            <legend>Regeln (nur beim Erstellen eines neuen Runs)</legend>
-            <label><input type="checkbox" data-rule="nuzlocke" checked> Nuzlocke (Permadeath, 1 Fang pro Route)</label>
-            <label><input type="checkbox" data-rule="soulbound" checked> Linked Soulbound</label>
-            <label><input type="checkbox" data-rule="dupesClause" checked> Dupes Clause</label>
-            <label><input type="checkbox" data-rule="shinyClause" checked> Shiny Clause</label>
-            <label><input type="checkbox" data-rule="failedEncounterBreaksLink" checked> Gescheiterter Encounter bricht Seelenband</label>
+            <legend>Spielmodus (nur für neue Spielstände)</legend>
+            <p class="hint">Standard ist das normale Spiel wie in Platin. Alle Extras sind aus, du kannst sie hier einschalten.</p>
+            <label class="rule"><input type="checkbox" data-rule="nuzlocke"><b>Nuzlocke</b>
+              <span>Besiegte Pokémon sterben für immer. Pro Route darfst du nur das erste wilde Pokémon fangen.</span></label>
+            <div class="rule-sub">
+              <label class="rule"><input type="checkbox" data-rule="dupesClause"><b>Dupes Clause</b>
+                <span>Triffst du eine Art, die du schon hast, zählt die Begegnung nicht und du darfst weitersuchen.</span></label>
+              <label class="rule"><input type="checkbox" data-rule="shinyClause"><b>Shiny Clause</b>
+                <span>Schillernde Pokémon darfst du immer fangen, auch wenn die Route schon verbraucht ist.</span></label>
+              <label class="rule"><input type="checkbox" data-rule="soulbound"><b>Linked Soulbound</b>
+                <span>Nur mit Run-Code: Was ihr auf derselben Route fangt, ist verbunden. Stirbt eines, sterben alle Partner.</span></label>
+              <label class="rule"><input type="checkbox" data-rule="failedEncounterBreaksLink"><b>Seelenband reißt</b>
+                <span>Nur mit Soulbound: Scheitert jemand an seiner Begegnung, sterben die Partner dieser Route mit.</span></label>
+            </div>
           </fieldset>
           <button id="loginBtn">Spielen</button>
           <p id="loginSaved" class="hint"></p>
@@ -81,11 +91,12 @@
         <button id="sfxBtn" class="tg" title="Effekte an/aus">Effekte</button>
         <button id="setBtn" class="tg" title="Lautstärke und Tasten">⚙</button>
         <button id="menuBtn" class="tg" title="Menü (X)">Menü</button>
+        <button id="freeCamBtn" class="tg" title="Freikamera: frei über die ganze Karte fliegen (C)">Kamera</button>
       </div>
       <div id="log" class="log hidden"></div>
       <div id="setPanel" class="settings hidden">
         <div class="volumes"><label>Musik <input id="musicVol" type="range" min="0" max="100"></label><label>Effekte <input id="sfxVol" type="range" min="0" max="100"></label></div>
-        <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · X: Menü · T: Chat · M: Karte · 1 bis 6: Emotes · N: Musik an/aus</div>
+        <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · X: Menü · T: Chat · M: Karte · 1 bis 6: Emotes · N: Musik an/aus · C: Freikamera</div>
       </div>
       <form id="chatForm"><input id="chatInput" maxlength="200" placeholder="Chat (T)"></form>
       <div class="toolbar"><div id="emoteBar" class="emotes"></div><span class="online">Online: <b id="onlineCount">0</b></span></div>

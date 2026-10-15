@@ -13,14 +13,27 @@
 import crypto from 'node:crypto';
 import { species, displayName } from './pokemonFactory.js';
 
+// Standard ist das normale Spiel wie in Platin: alle Extras aus. Wer sie will, schaltet sie beim
+// Erstellen ein (Startbildschirm). Ohne Nuzlocke haben die anderen Regeln keine Wirkung.
 export const DEFAULT_RULES = {
-  nuzlocke: true,
-  soulbound: true,
-  dupesClause: true,
-  shinyClause: true,
-  failedEncounterBreaksLink: true,
+  nuzlocke: false,
+  soulbound: false,
+  dupesClause: false,
+  shinyClause: false,
+  failedEncounterBreaksLink: false,
   maxLevelCap: null
 };
+// Solo-Spielstände von vor der Regelauswahl liefen mit Nuzlocke und allen Klauseln
+const LEGACY_SOLO_RULES = { nuzlocke: true, dupesClause: true, shinyClause: true, failedEncounterBreaksLink: true };
+
+// Regeln aus der Anmeldung übernehmen (nur bekannte Schalter, Extras nur mit Nuzlocke)
+export function sanitizeRules(input, solo = false) {
+  const rules = { ...DEFAULT_RULES };
+  for (const k of Object.keys(DEFAULT_RULES)) if (input && typeof input[k] === typeof DEFAULT_RULES[k] && input[k] !== null) rules[k] = input[k];
+  if (!rules.nuzlocke) Object.assign(rules, { soulbound: false, dupesClause: false, shinyClause: false, failedEncounterBreaksLink: false });
+  if (solo || !rules.soulbound) Object.assign(rules, { soulbound: false, failedEncounterBreaksLink: solo ? false : rules.failedEncounterBreaksLink && rules.soulbound });
+  return rules;
+}
 
 export class RulesEngine {
   /**
@@ -34,7 +47,8 @@ export class RulesEngine {
 
   rulesFor(player) {
     const run = player.runId ? this.repo.getRun(player.runId) : null;
-    return { ...DEFAULT_RULES, ...(run ? run.rules : { soulbound: false }) };
+    if (run) return { ...DEFAULT_RULES, ...run.rules };
+    return { ...DEFAULT_RULES, ...(player.rules || LEGACY_SOLO_RULES), soulbound: false };
   }
 
   // Wird beim Start eines Wildkampfes aufgerufen.

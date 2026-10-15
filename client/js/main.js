@@ -13,7 +13,7 @@ import { loadBuildings } from './art/realBuildings.js';
 import { Dialog } from './dialog.js';
 import { audio, musicForMap } from './audio.js';
 import { trackForMap } from './realAudio.js';
-import { WorldMap, placeName, areaOf } from './worldmap.js';
+import { WorldMap, placeName, areaOf, layout as worldLayout } from './worldmap.js';
 import { Intro } from './intro.js';
 import { terrainFor } from './art/realTerrain.js';
 import { EMOTES } from '/shared/protocol.js';
@@ -51,7 +51,28 @@ let gameOver = false;
 let scriptActive = false;
 let shopOpen = false;
 const pendingDialogs = [];
-function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || mapOpen || menu.isOpen; }
+function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || mapOpen || menu.isOpen || !!freeCam; }
+// Freikamera: frei ueber ganz Sinnoh fliegen und schauen (C an und aus, Pfeiltasten, Shift schneller, +/- Zoom)
+let freeCam = null; let freeUnder = null;
+function toggleFreeCam(on = !freeCam) {
+  if (on && (!world.me || battle.active || menu.isOpen || dialog.open || scriptActive || mapOpen)) return;
+  if (on) {
+    const L = worldLayout(); const p = L.pos[world.me.map] || (L.anchor[world.me.map] && { x: L.anchor[world.me.map].x, y: L.anchor[world.me.map].y, a: true });
+    const x = p ? (p.a ? p.x : p.x + world.me.x) : 0; const y = p ? (p.a ? p.y : p.y + world.me.y) : 0;
+    freeCam = { x: x + 0.5, y: y + 0.5, zoom: 0.5 };
+  } else freeCam = null;
+  $('freeCamBtn')?.classList.toggle('on', !!freeCam);
+  $('freeCamInfo').classList.toggle('hidden', !freeCam);
+  audio.sfx(on ? 'map' : 'back');
+  updateLock();
+}
+function updateFreeCam() {
+  const d = input.dirs[input.dirs.length - 1];
+  const v = (input.running ? 1.2 : 0.4) / freeCam.zoom;
+  if (d === 'up') freeCam.y -= v; if (d === 'down') freeCam.y += v; if (d === 'left') freeCam.x -= v; if (d === 'right') freeCam.x += v;
+  const L = worldLayout();
+  freeCam.x = Math.max(L.minX, Math.min(L.minX + L.w, freeCam.x)); freeCam.y = Math.max(L.minY, Math.min(L.minY + L.h, freeCam.y));
+}
 
 // ------------------------------------------------------------------ Login
 const saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
@@ -69,6 +90,16 @@ $('loginBtn').onclick = () => {
   audio.sfx('select');
   net.connect(hello);
 };
+// Extras gelten nur mit Nuzlocke, die Seelenband-Regeln nur mit Run-Code
+function syncRules() {
+  const on = (k) => document.querySelector(`#ruleSet [data-rule="${k}"]`);
+  const nuz = on('nuzlocke').checked; const run = !!$('loginRun').value.trim();
+  const allow = { dupesClause: nuz, shinyClause: nuz, soulbound: nuz && run, failedEncounterBreaksLink: nuz && run && on('soulbound').checked };
+  for (const [k, ok] of Object.entries(allow)) { const i = on(k); i.disabled = !ok; if (!ok) i.checked = false; i.closest('label').classList.toggle('off', !ok); }
+}
+document.querySelectorAll('#ruleSet input').forEach((i) => i.addEventListener('change', syncRules));
+$('loginRun').addEventListener('input', syncRules);
+syncRules();
 $('loginName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
 
 // ------------------------------------------------------------------ Netzwerk-Handler
@@ -237,7 +268,7 @@ input.on('action', () => {
 });
 input.on('chat', () => $('chatInput').focus());
 input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
-input.on('escape', () => { if (mapOpen) toggleMap(false); });
+input.on('escape', () => { if (mapOpen) toggleMap(false); if (freeCam) toggleFreeCam(false); });
 input.on('menu', () => openMenu());
 $('menuBtn').onclick = () => openMenu();
 function openMenu() {
@@ -246,6 +277,10 @@ function openMenu() {
   menu.open(); updateLock();
 }
 input.on('mute', () => toggleMute());
+input.on('freecam', () => toggleFreeCam());
+input.on('zoomIn', () => { if (freeCam) freeCam.zoom = Math.min(1, freeCam.zoom * 1.25); });
+input.on('zoomOut', () => { if (freeCam) freeCam.zoom = Math.max(0.08, freeCam.zoom / 1.25); });
+$('freeCamBtn').onclick = () => toggleFreeCam();
 input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
@@ -336,7 +371,7 @@ function drawWorldMap(now) {
   const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   worldMap.draw(g, r.width, r.height, now);
   const tod = timeOfDay(); const w = weatherFor(areaOf(world.me.map));
-  $('wmInfo').textContent = `${placeName(world.me.map)} · ${TIME_NAMES[tod]}${w !== 'clear' ? ' · ' + { rain: 'Regen', fog: 'Nebel', leaves: 'Windig', ash: 'Kohlenstaub' }[w] : ''}`;
+  $('wmInfo').textContent = `${placeName(world.me.map)} · ${TIME_NAMES[tod]}${w !== 'clear' ? ' · ' + { rain: 'Regen', fog: 'Nebel', leaves: 'Windig', ash: 'Kohlenstaub', sand: 'Sandsturm' }[w] : ''}`;
   requestAnimationFrame(drawWorldMap);
 }
 let miniAt = 0;
@@ -362,7 +397,11 @@ setInterval(() => net.send({ t: 'ping', at: Date.now() }), 20000);
 // ------------------------------------------------------------------ Spielschleife
 function frame(now) {
   if (world.me) world.update(input, now);
-  renderer.draw(world, now);
+  if (freeCam && world.me) {
+    updateFreeCam();
+    const under = renderer.drawFree(world, freeCam, now, worldLayout());
+    if (under !== freeUnder) { freeUnder = under; $('freeCamInfo').textContent = `Freikamera: ${under ? placeName(under) : 'Sinnoh'} · Pfeiltasten: fliegen · Shift: schneller · +/−: Zoom · C oder Esc: zurück`; }
+  } else renderer.draw(world, now);
   drawMinimap(false);
   requestAnimationFrame(frame);
 }
