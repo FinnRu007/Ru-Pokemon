@@ -13,6 +13,9 @@ import { StoryRunner } from './story.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
 import { ITEMS, MART_STOCK, applyItem } from '../../shared/data/items.js';
 
+// Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
+export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
+
 const NAME_RE = /^[\p{L}\p{N} _-]{2,16}$/u;
 const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#fdd835', '#6d4c41'];
 
@@ -77,6 +80,7 @@ export class GameServer {
       case C2S.USE_ITEM: return this.useItem(s, msg);
       case C2S.EMOTE: return this.emote(s, msg);
       case C2S.FLY: return this.fly(s, msg);
+      case C2S.SAVE: return this.saveGame(s);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -120,6 +124,7 @@ export class GameServer {
     if (!player.flags) player.flags = player.starterChosen ? Object.fromEntries(LEGACY_FLAGS.map((f) => [f, true])) : {};
     if (player.money == null) player.money = 3000;
     if (!player.items) player.items = {};
+    if (!player.playMs) player.playMs = 0;
     if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
@@ -132,8 +137,13 @@ export class GameServer {
     const old = this.sessions.get(player.id);
     if (old) { this.send(old.ws, { t: S2C.ERROR, message: 'Du hast dich an anderer Stelle angemeldet.' }); old.ws.close(); this.disconnect({ session: old }); }
 
-    const s = { ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [], script: null, shop: false, prev: null };
+    const s = { ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [], script: null, shop: false, prev: null, playTick: Date.now() };
     this.loadMons(s);
+    // Pokedex: aeltere Spielstaende kennen mindestens ihre eigenen Pokemon
+    if (!player.dex) {
+      player.dex = { seen: {}, caught: {} };
+      for (const m of [...s.party, ...s.box]) { player.dex.seen[m.speciesId] = 1; player.dex.caught[m.speciesId] = 1; }
+    }
     conn.session = s;
     this.sessions.set(player.id, s);
 
@@ -162,7 +172,34 @@ export class GameServer {
   sendStarterChoice(s) {
     this.send(s.ws, { t: S2C.NEED_STARTER, options: STARTERS.map((id) => ({ id, speciesId: id, name: POKEMON[id].name, types: POKEMON[id].types, family: POKEMON[id].family, stage: 1 })) });
   }
-  sendProgress(s) { this.send(s.ws, { t: S2C.PROGRESS, flags: s.player.flags, money: s.player.money }); }
+  sendProgress(s) {
+    const p = s.player;
+    this.send(s.ws, {
+      t: S2C.PROGRESS, flags: p.flags, money: p.money, trainerId: trainerNo(p.id), playMs: this.playTime(s),
+      dex: { seen: Object.keys(p.dex?.seen || {}).map(Number), caught: Object.keys(p.dex?.caught || {}).map(Number) }
+    });
+  }
+  playTime(s) { return (s.player.playMs || 0) + (Date.now() - (s.playTick || Date.now())); }
+
+  // Pokedex: gesehen (Kampf) und gefangen (Fang, Starter, Entwicklung)
+  dexMark(s, speciesId, caught = false) {
+    const d = (s.player.dex ||= { seen: {}, caught: {} });
+    const id = Number(speciesId);
+    const fresh = !d.seen[id] || (caught && !d.caught[id]);
+    d.seen[id] = 1;
+    if (caught) d.caught[id] = 1;
+    if (fresh) this.sendProgress(s);
+    return fresh;
+  }
+
+  // Speichern im Menue: alles sofort auf die Platte, Zusammenfassung wie im Original
+  saveGame(s) {
+    if (s.battle || s.script) return this.notice(s, 'Jetzt kannst du nicht speichern.', 'error');
+    this.saveMons(s);
+    this.savePlayerNow(s);
+    const p = s.player;
+    this.send(s.ws, { t: S2C.SAVED, at: Date.now(), map: p.map, playMs: p.playMs, badges: Object.keys(p.flags || {}).filter((f) => f.startsWith('badge_')).length });
+  }
 
   loadMons(s) {
     const all = this.repo.listPokemon(s.player.id);
@@ -195,7 +232,11 @@ export class GameServer {
     return [...this.sessions.values()].filter((s) => s.player.map === mapId && s.player.id !== exceptId).map((s) => this.publicPlayer(s.player));
   }
 
-  savePlayerNow(s) { this.repo.savePlayer(s.player); s.posDirty = false; }
+  savePlayerNow(s) {
+    const now = Date.now();
+    if (s.playTick) { s.player.playMs = (s.player.playMs || 0) + (now - s.playTick); s.playTick = now; }
+    this.repo.savePlayer(s.player); s.posDirty = false;
+  }
   flushPositions() { for (const s of this.sessions.values()) if (s.posDirty) this.savePlayerNow(s); }
   saveMons(s) { this.repo.transaction(() => { for (const p of [...s.party, ...s.box]) this.repo.savePokemon(p); }); }
 
@@ -223,6 +264,7 @@ export class GameServer {
     s.player.starterChosen = true;
     s.player.starterSpecies = id;
     s.player.flags.has_starter = true;
+    this.dexMark(s, id, true);
     this.repo.transaction(() => { this.repo.savePlayer(s.player); this.repo.savePokemon(mon); });
     // Starter zaehlen als Encounter "starter" und werden bei Soulbound miteinander verlinkt.
     const rules = this.rules.rulesFor(s.player);
@@ -461,6 +503,7 @@ export class GameServer {
       onFaint: (mon) => this.onAllyFaint(s, mon)
     });
     const events = s.battle.intro();
+    this.dexMark(s, speciesId);
     this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
     if (gate.counted) this.sendNuzlocke(s);
@@ -502,6 +545,7 @@ export class GameServer {
 
   beginBattle(s) {
     const events = s.battle.intro();
+    this.dexMark(s, s.battle.wild.mon.speciesId);
     this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
   }
@@ -512,6 +556,7 @@ export class GameServer {
     const action = { type: msg.type, index: Number(msg.index), ball: msg.ball, item: msg.item };
     const { events, error } = b.act(action);
     if (error) return this.send(s.ws, { t: S2C.BATTLE_EVENTS, events: [{ type: 'text', text: error }], state: b.snapshot(), error: true });
+    for (const e of events) if (e.type === 'foeSwitch') this.dexMark(s, e.mon.speciesId);
     this.send(s.ws, { t: S2C.BATTLE_EVENTS, events, state: b.snapshot() });
     if (b.state === 'ended') this.finishBattle(s, b.result);
   }
@@ -576,6 +621,7 @@ export class GameServer {
       mon.ownerId = s.player.id;
       mon.runId = s.player.runId;
       mon.status = mon.status || null;
+      if (this.dexMark(s, mon.speciesId, true) && s.player.flags.dex) extra.push(`Die Daten von ${species(mon.speciesId).name} wurden in den Pokédex eingetragen.`);
       if (s.party.length < 6) s.party.push(mon); else { s.box.push(mon); extra.push(`${displayName(mon)} wurde in die Box geschickt.`); }
       this.reslot(s);
       this.repo.savePokemon(mon);
@@ -603,7 +649,7 @@ export class GameServer {
       extra.push(tr ? `${tr.name}: Ha! Aber keine Sorge, das war nur ein Übungskampf.` : 'Dein Pokémon hat sich zum Glück schnell erholt.');
     } else if (result === 'win') {
       for (const m of s.party) {
-        if (m.alive && m.hp > 0 && canEvolve(m)) { const e = evolve(m); if (e) extra.push(e.text); }
+        if (m.alive && m.hp > 0 && canEvolve(m)) { const e = evolve(m); if (e) { extra.push(e.text); this.dexMark(s, m.speciesId, true); } }
       }
     }
 

@@ -4,6 +4,7 @@ import { terrainImage } from './art/realTerrain.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition } from './battleFx.js';
 import { audio } from './audio.js';
+import { options, textStep, textPause } from './options.js';
 const $ = (id) => document.getElementById(id);
 const STATUS = { par: ['PAR', '#c9a400'], slp: ['SLF', '#7a7a7a'], psn: ['GIF', '#a040a0'], tox: ['GIF', '#702070'], brn: ['BRT', '#e05a2a'], frz: ['GFR', '#4bb3d6'] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,11 +101,12 @@ export class BattleUI {
     if (log) this.hooks.log(text, 'battle');
     this.skip = false;
     // Schreibmaschine wie im Original, Aktionstaste zeigt sofort alles
-    for (let n = 2; n < text.length && !this.skip; n += 2) { el.textContent = text.slice(0, n); await sleep(16); }
+    const [step, tick] = textStep();
+    for (let n = step; n < text.length && !this.skip; n += step) { el.textContent = text.slice(0, n); await sleep(Math.max(8, tick / 2)); }
     el.textContent = text;
     this.skip = false;
-    const t0 = performance.now();
-    while (performance.now() - t0 < ms && !this.skip) await sleep(30);
+    const t0 = performance.now(); const wait = textPause(ms);
+    while (performance.now() - t0 < wait && !this.skip) await sleep(30);
   }
 
   async playEvent(ev, next = []) {
@@ -116,6 +118,8 @@ export class BattleUI {
       case 'death': this.hooks.log(ev.text, 'death'); return this.say(ev.text, 1400, false);
       case 'anim':
         sfx('move', { move: ev.move, type: ev.moveType });
+        // Kampfanimation aus (Optionen): nur kurzes Aufblitzen wie im Original
+        if (!options.battleAnim) return sleep(200);
         return this.fx.move(ev);
       case 'stat': sfx(ev.up ? 'statUp' : 'statDown'); this.fx.stat(ev.side, ev.up); return sleep(350);
       case 'hp': {

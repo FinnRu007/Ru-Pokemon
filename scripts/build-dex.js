@@ -13,11 +13,12 @@ const OUT = path.join(ROOT, 'shared', 'data', 'dex', 'gen4.json');
 const BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/';
 const FILES = ['pokemon_species', 'pokemon', 'pokemon_stats', 'pokemon_stats_past', 'pokemon_types', 'pokemon_types_past', 'pokemon_abilities',
   'abilities', 'pokemon_moves', 'moves', 'move_changelog', 'move_meta', 'move_meta_stat_changes', 'move_names', 'move_flag_map',
-  'pokemon_species_names', 'pokemon_evolution', 'growth_rates', 'types'];
+  'pokemon_species_names', 'pokemon_evolution', 'growth_rates', 'types', 'pokemon_dex_numbers', 'machines', 'ability_names'];
 
 const MAX_ID = 493;
 const GERMAN = '6';
 const PLATINUM = '9';      // version_group_id
+const SINNOH_DEX = '6';    // extended-sinnoh: Regionaler Pokedex von Platin (210 Arten)
 const LAST_GEN4_VG = 10;   // HeartGold/SoulSilver
 const GROWTH = { slow: 'slow', medium: 'medium_fast', fast: 'fast', 'medium-slow': 'medium_slow', 'slow-then-very-fast': 'erratic', 'fast-then-very-slow': 'fluctuating' };
 const STAT_KEYS = { atk: 2, def: 3, spa: 4, spd: 5, spe: 6, acc: 7, eva: 8 };
@@ -134,13 +135,20 @@ function buildPokemon(t, moveIds) {
   const ptypes = groupBy(t.pokemon_types, 'pokemon_id');
   const ptypesPast = groupBy(t.pokemon_types_past, 'pokemon_id');
   const pabil = groupBy(t.pokemon_abilities, 'pokemon_id');
-  const learn = new Map();
+  const learn = new Map(); const machine = new Map(); const tutor = new Map();
+  const push = (m, k, v) => { if (!m.has(k)) m.set(k, new Set()); m.get(k).add(v); };
   for (const r of t.pokemon_moves) {
-    if (r.version_group_id !== PLATINUM || r.pokemon_move_method_id !== '1' || Number(r.pokemon_id) > MAX_ID) continue;
+    if (r.version_group_id !== PLATINUM || Number(r.pokemon_id) > MAX_ID) continue;
     const id = moveIds[r.move_id]; if (!id) continue;
+    // Methode 4: TM/VM, Methode 3: Attacken-Lehrer
+    if (r.pokemon_move_method_id === '4') { push(machine, r.pokemon_id, id); continue; }
+    if (r.pokemon_move_method_id === '3') { push(tutor, r.pokemon_id, id); continue; }
+    if (r.pokemon_move_method_id !== '1') continue;
     if (!learn.has(r.pokemon_id)) learn.set(r.pokemon_id, []);
     learn.get(r.pokemon_id).push([Math.max(1, Number(r.level)), id, Number(r.order || 0)]);
   }
+  const genus = new Map(t.pokemon_species_names.filter((r) => r.local_language_id === GERMAN).map((r) => [r.pokemon_species_id, r.genus]));
+  const sinnoh = new Map(t.pokemon_dex_numbers.filter((r) => r.pokedex_id === SINNOH_DEX).map((r) => [r.species_id, Number(r.pokedex_number)]));
   const familyOf = (id) => { let cur = species.get(String(id)); while (cur?.evolves_from_species_id) cur = species.get(cur.evolves_from_species_id); return Number(cur.id); };
 
   const evos = new Map();
@@ -185,8 +193,13 @@ function buildPokemon(t, moveIds) {
       growth: GROWTH[growth.get(s.growth_rate_id)] || 'medium_fast',
       ability: ab[0] ? abilities.get(ab[0].ability_id).identifier : 'none',
       genderRatio: Number(s.gender_rate) < 0 ? -1 : 1 - Number(s.gender_rate) / 8,
-      family: familyOf(id), learnset: ls
+      family: familyOf(id), learnset: ls,
+      // Pokedex: Groesse in Dezimetern, Gewicht in Hektogramm, Kategorie, Nummer im Sinnoh-Dex
+      height: Number(p.height), weight: Number(p.weight), genus: (genus.get(pid) || '').replace(/-?Pokémon$/, '').trim()
     };
+    if (sinnoh.has(pid)) sp.sinnoh = sinnoh.get(pid);
+    if (machine.has(pid)) sp.tm = [...machine.get(pid)].sort();
+    if (tutor.has(pid)) sp.tutor = [...tutor.get(pid)].sort();
     if (ab[1]) sp.ability2 = abilities.get(ab[1].ability_id).identifier;
     if (s.is_legendary === '1' || s.is_mythical === '1') sp.legendary = true;
     const e = evos.get(pid);
@@ -201,6 +214,17 @@ console.log(dir ? `Lese CSV-Dateien aus ${dir} ...` : 'Lade CSV-Dateien von GitH
 const t = await load(dir);
 const { moves, byNumId } = buildMoves(t);
 const pokemon = buildPokemon(t, byNumId);
+// TM01 bis TM92 und VM01 bis VM08 in Platin (Maschinennummer 101 bis 108 sind die VMs)
+const machines = {};
+for (const r of t.machines) {
+  if (r.version_group_id !== PLATINUM || !byNumId[r.move_id]) continue;
+  const n = Number(r.machine_number);
+  machines[n > 100 ? `hm${String(n - 100).padStart(2, '0')}` : `tm${String(n).padStart(2, '0')}`] = byNumId[r.move_id];
+}
+// Deutsche Namen der Faehigkeiten
+const abilityIds = new Map(t.abilities.map((r) => [r.id, r.identifier]));
+const abilities = {};
+for (const r of t.ability_names) if (r.local_language_id === GERMAN && abilityIds.has(r.ability_id) && Number(r.ability_id) < 10000) abilities[abilityIds.get(r.ability_id)] = r.name;
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
-fs.writeFileSync(OUT, JSON.stringify({ source: 'PokeAPI CSV (BSD-3-Clause), Stand Platin', pokemon, moves }));
+fs.writeFileSync(OUT, JSON.stringify({ source: 'PokeAPI CSV (BSD-3-Clause), Stand Platin', pokemon, moves, machines, abilities }));
 console.log(`Fertig: ${Object.keys(pokemon).length} Arten, ${Object.keys(moves).length} Attacken -> ${path.relative(ROOT, OUT)} (${Math.round(fs.statSync(OUT).size / 1024)} KB)`);

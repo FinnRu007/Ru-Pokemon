@@ -17,6 +17,7 @@ export const C2S = {
   USE_ITEM: 'useItem',            // { item, pokemonId }
   EMOTE: 'emote',                 // { kind } kleine Sprechblase ueber der eigenen Figur
   FLY: 'fly',                     // { to? } Fliegen: Auswahl besuchter Orte, mit to direkt dorthin (Weltkarte)
+  SAVE: 'save',                   // {} Spiel speichern (Menue)
   PING: 'ping'
 };
 
@@ -41,7 +42,8 @@ export const S2C = {
   GAME_OVER: 'gameOver',
   DIALOG: 'dialog',               // { token, lines: [{ speaker, text }], choices?, face? }
   SCRIPT: 'script',               // { active }
-  PROGRESS: 'progress',           // { flags, money }
+  PROGRESS: 'progress',           // { flags, money, trainerId, playMs, dex: { seen, caught } }
+  SAVED: 'saved',                 // { at, map, playMs, badges } Bestaetigung nach dem Speichern
   NPC_EMOTE: 'npcEmote',          // { id }
   SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }
   ROSTER: 'roster',               // { players: [{ id, name, map, x, y, color, runId }] } alle online (Weltkarte)

@@ -186,6 +186,14 @@ class Chip {
     return this.real.music.has(k) ? `music/${k}.mp3` : null;
   }
 
+  // Ton-Option Mono: alles wird auf einen Kanal heruntergemischt
+  setMono(on) {
+    this.mono = !!on;
+    if (!this.master) return;
+    this.master.channelCountMode = 'explicit';
+    this.master.channelCount = this.mono ? 1 : 2;
+  }
+
   // Muss aus einer Nutzeraktion heraus aufgerufen werden (Browser-Regel fuer Autoplay)
   unlock() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
@@ -194,6 +202,7 @@ class Chip {
     const ctx = this.ctx = new AC();
     this.master = ctx.createGain();
     this.master.connect(ctx.destination);
+    this.setMono(this.mono);
     // Leichter Kompressor, damit Musik und Effekte nicht uebersteuern
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;

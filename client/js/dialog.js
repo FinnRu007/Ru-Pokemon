@@ -1,5 +1,6 @@
 // Textfenster im Stil der DS-Spiele: Schreibmaschineneffekt, Sprechername, Weiter-Pfeil,
 // optionale Auswahl (Ja/Nein usw.). Aktionstaste beschleunigt bzw. blaettert weiter.
+import { textStep } from './options.js';
 const $ = (id) => document.getElementById(id);
 
 export class Dialog {
@@ -33,11 +34,12 @@ export class Dialog {
     this.typing = true;
     this.el.classList.remove('waiting');
     clearInterval(this.timer);
+    const [step, ms] = textStep();
     this.timer = setInterval(() => {
-      this.shown += 2;
+      this.shown += step;
       this.textEl.textContent = this.full.slice(0, this.shown);
       if (this.shown >= this.full.length) this.finishLine();
-    }, 22);
+    }, ms);
   }
 
   finishLine() {
