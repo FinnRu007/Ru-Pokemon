@@ -76,6 +76,13 @@ for (const f of FIELD_SETS) jobs.push({ url: `${FIELD_BASE}/field/maps/texture_s
 // Gebaeude im Stil der 4. Generation (Kachelsatz aus Pokemon Essentials)
 jobs.push({ url: 'https://raw.githubusercontent.com/Manurocker95/Pokemon-Essentials-21-With-Unofficial-EBDX/main/Graphics/Tilesets/Outside.png', file: path.join(OUT, 'field', 'Outside.png') });
 for (const f of FIELD_OBJECTS) jobs.push({ url: `${FIELD_BASE}/graphics/field_sprites/objects/${f}.png`, file: path.join(OUT, 'field', `${f}.png`) });
+// Formen (Icognito-Buchstaben) und das Ei
+const FORMS = { 201: [...'bcdefghijklmnopqrstuvwxyz'.split(''), 'exclamation', 'question'] };
+for (const [kind, dir] of Object.entries(KINDS)) {
+  fs.mkdirSync(path.join(OUT, 'forms', kind), { recursive: true });
+  for (const [id, forms] of Object.entries(FORMS)) for (const f of forms) jobs.push({ url: `${BASE}/${dir}/${id}-${f}.png`, file: path.join(OUT, 'forms', kind, `${id}-${f}.png`) });
+}
+jobs.push({ url: `${BASE}/pokemon/egg.png`, file: path.join(OUT, 'egg.png') });
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -101,6 +108,8 @@ for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(pa
 index.terrain = TERRAINS.filter((t) => ['enemy', 'player'].every((s) => fs.existsSync(path.join(OUT, 'terrain', t, `${s}.png`))));
 index.field = [...FIELD_SETS, ...FIELD_OBJECTS, 'Outside'].filter((f) => fs.existsSync(path.join(OUT, 'field', `${f}.${f.startsWith('map_') ? 'nsbtx' : 'png'}`)));
 index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
+index.forms = Object.keys(KINDS).flatMap((kind) => fs.readdirSync(path.join(OUT, 'forms', kind)).filter((f) => f.endsWith('.png')).map((f) => `${kind}/${f.slice(0, -4)}`));
+index.egg = fs.existsSync(path.join(OUT, 'egg.png'));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
 for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, field: index.field })) console.log(`  ${k}: ${ids.length}`);

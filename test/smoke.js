@@ -20,7 +20,7 @@ for (const backend of ['sqlite', 'json']) {
   process.env.STORAGE = backend;
   const repo = openStorage(path.join(tmp, backend));
   const rules = new RulesEngine(repo);
-  repo.createRun({ id: 'SOUL', name: 'Test', rules: DEFAULT_RULES });
+  repo.createRun({ id: 'SOUL', name: 'Test', rules: { ...DEFAULT_RULES, nuzlocke: true, soulbound: true, dupesClause: true, shinyClause: true, failedEncounterBreaksLink: true } });
   const mk = (name) => repo.savePlayer({ id: name, name, token: name + 't', runId: 'SOUL', gameOver: false, map: 'route_201', x: 0, y: 0 });
   const A = mk('Ash'); const B = mk('Barry');
   const catchOn = (pl, route, speciesId) => {
@@ -195,7 +195,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 await test('Zwei Spieler sehen sich und Bewegungen in Echtzeit', async () => {
   const a = client('A'); const b = client('B');
   await Promise.all([a.open, b.open]);
-  a.send({ t: 'hello', name: 'Lucas', runCode: 'NET1' });
+  a.send({ t: 'hello', name: 'Lucas', runCode: 'NET1', rules: { nuzlocke: true, soulbound: true, failedEncounterBreaksLink: true } });
   const wa = await a.wait((m) => m.t === 'welcome');
   await a.wait((m) => m.t === 'needStarter');
   b.send({ t: 'hello', name: 'Lucia', runCode: 'NET1' });
@@ -224,6 +224,19 @@ await test('Zwei Spieler sehen sich und Bewegungen in Echtzeit', async () => {
   assert.equal(pb.party[0].deathCause, 'soulbound');
   await b.wait((m) => m.t === 'gameOver');
   a.ws.close(); b.ws.close();
+});
+
+await test('Regeln: Standard ist das normale Spiel, Extras nur mit Nuzlocke', async () => {
+  const { sanitizeRules } = await import('../server/game/rules.js');
+  assert.deepEqual(Object.values(sanitizeRules(undefined)).filter((v) => v === true), []);
+  const off = sanitizeRules({ nuzlocke: false, soulbound: true, dupesClause: true });
+  assert.equal(off.soulbound || off.dupesClause, false);
+  const solo = sanitizeRules({ nuzlocke: true, soulbound: true, dupesClause: true }, true);
+  assert.equal(solo.nuzlocke && solo.dupesClause && !solo.soulbound, true);
+  // Alte Solo-Spielstände ohne gespeicherte Regeln behalten Nuzlocke
+  const eng = new RulesEngine(repo);
+  assert.equal(eng.rulesFor({ runId: null }).nuzlocke, true);
+  assert.equal(eng.rulesFor({ runId: null, rules: sanitizeRules({}, true) }).nuzlocke, false);
 });
 
 await test('Encounter im hohen Gras startet serverseitigen Kampf', async () => {
@@ -533,11 +546,23 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 487, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.spear_done, 30000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'spear_pillar', 8000);
-  // Eiseninsel: Urs schenkt nach beiden Rüpeln ein Riolu
-  Object.assign(s.player.flags, { beat_iron_grunt1: true, beat_iron_grunt2: true });
+  // Eiseninsel: Urs schließt sich an, Doppelkampf gegen beide Rüpel, danach das Riolu-Ei
+  await sleep(100); tp('iron_island', 12, 13); await step('up');
+  await a.wait((m) => m.t === 'progress' && m.flags.riley_joined, 8000);
+  assert.equal(s.player.partner, 'riley');
+  await sleep(100); tp('iron_island_deep', 8, 8); await step('left');
+  const tag = await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer', 8000);
+  assert.ok(tag.events.some((e) => /Urs schickt/.test(e.text || '')), 'Urs kämpft mit');
+  await a.wait((m) => m.t === 'progress' && m.flags.beat_iron_tag, 30000);
   await sleep(100); tp('iron_island_deep', 4, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
-  await a.wait((m) => m.t === 'party' && m.party.some((p) => p.speciesId === 447), 8000);
+  await a.wait((m) => m.t === 'party' && m.party.some((p) => p.speciesId === 447 && p.egg), 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.riolu_gift, 8000);
+  assert.equal(s.player.partner, null);
+  // Das Ei schlüpft beim Laufen
+  s.party.find((p) => p.egg).eggSteps = 1;
+  await sleep(100); tp('iron_island_deep', 8, 8); await step('right');
+  await a.wait((m) => m.t === 'notice' && /geschlüpft/.test(m.text), 5000);
+  assert.ok(s.party.some((p) => p.speciesId === 447 && !p.egg && p.level === 1 && p.hp > 0));
   // Seehöhle: nach der Speersäule wartet Selfe
   await sleep(100); tp('acuity_cavern', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 480, 8000);
@@ -554,12 +579,31 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   // Nach der Liga: Schiff zur Kampfzone, Charon am Kahlberg, Heatran
   await sleep(100); tp('north_sea', 12, 17); s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'fight_area', 8000);
-  Object.assign(s.player.flags, { beat_mars_stark: true, beat_jupiter_stark: true });
+  Object.assign(s.player.flags, { beat_stark_tag: true });
   await sleep(100); tp('stark_mountain_deep', 7, 6); s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.stark_done, 8000);
   await sleep(100); tp('stark_mountain_deep', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 485, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.met_heatran, 30000);
+  // Vesprit flieht und wandert, im Kampf flieht es sofort wieder
+  await sleep(100); tp('verity_cavern', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.met_mesprit, 8000);
+  assert.ok(s.player.roamers?.[481]?.map, 'Vesprit wandert');
+  // Regigigas erwacht nur mit den drei Titanen im Team
+  await sleep(100); tp('snowpoint_temple', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /drei Zeichen/.test(l.text)), 8000);
+  for (const id of [377, 378, 379]) s.party.push(createPokemon(id, 30, { ownerId: s.player.id, metRoute: 'test' }));
+  await sleep(300); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 486, 8000);
+  await a.wait((m) => m.t === 'progress' && m.flags.met_regigigas, 30000);
+  // Kampfturm: Serie mit drei Pokémon auf Level 50, das echte Team bleibt unberührt
+  const lvBefore = s.party.map((m) => m.level).join();
+  await sleep(200); tp('battle_tower', 6, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  const tb = await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer', 8000);
+  assert.ok(tb.state.party.every((m) => m.level <= 50), 'Level 50');
+  await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer', 30000);
+  assert.ok(s.player.tower.streak >= 1, 'Serie zählt');
+  assert.equal(s.party.map((m) => m.level).join(), lvBefore);
   a.ws.close();
 });
 
