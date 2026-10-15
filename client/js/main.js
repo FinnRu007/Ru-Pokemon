@@ -11,6 +11,7 @@ import { Dialog } from './dialog.js';
 import { audio, musicForMap } from './audio.js';
 import { WorldMap, placeName, areaOf } from './worldmap.js';
 import { Intro } from './intro.js';
+import { terrainFor } from './art/realTerrain.js';
 import { EMOTES } from '/shared/protocol.js';
 import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
 
@@ -31,7 +32,8 @@ new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
   onEnd: () => { updateLock(); flushDialogs(); if (world.me) audio.music(musicForMap(world.me.map, MAPS[world.me.map])); },
-  onLearnPrompt: (ev) => learnQueue.push(ev)
+  onLearnPrompt: (ev) => learnQueue.push(ev),
+  terrain: () => world.me && terrainFor(world.me.map, MAPS[world.me.map])
 });
 const learnQueue = [];
 let starterOpen = false;

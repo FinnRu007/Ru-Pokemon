@@ -1,6 +1,6 @@
 // Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd), die Typ-Schilder
 // aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites sowie die Trainerbilder
-// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites und die Overworld-Figuren aus pret/pokeplatinum nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
+// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites, die Overworld-Figuren und Kampfboeden aus pret/pokeplatinum nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
 // Nintendo und werden nicht mit dem Code verteilt. Fehlen sie, zeichnet der Client die eigene Pixelgrafik.
 // Aufruf: npm run sprites   (bereits vorhandene Dateien werden uebersprungen)
 import fs from 'node:fs';
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../shared/data/items.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
+import { TERRAINS } from '../client/js/art/realTerrain.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
@@ -56,6 +57,11 @@ for (const f of OW_FILES) {
   fs.mkdirSync(path.join(OUT, 'overworld', path.dirname(f)), { recursive: true });
   jobs.push({ url: `${OW_BASE}/${f}.png`, file: path.join(OUT, 'overworld', `${f}.png`) });
 }
+const TERRAIN_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res/graphics/battle/terrain';
+for (const t of TERRAINS) {
+  fs.mkdirSync(path.join(OUT, 'terrain', t), { recursive: true });
+  for (const side of ['enemy', 'player']) jobs.push({ url: `${TERRAIN_BASE}/${t}/${side}.png`, file: path.join(OUT, 'terrain', t, `${side}.png`) });
+}
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -78,7 +84,8 @@ for (const kind of Object.keys(KINDS)) {
   index.kinds[kind] = fs.readdirSync(path.join(OUT, kind)).filter((f) => f.endsWith('.png')).map((f) => +f.slice(0, -4)).sort((a, b) => a - b);
 }
 for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
+index.terrain = TERRAINS.filter((t) => ['enemy', 'player'].every((s) => fs.existsSync(path.join(OUT, 'terrain', t, `${s}.png`))));
 index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain })) console.log(`  ${k}: ${ids.length}`);

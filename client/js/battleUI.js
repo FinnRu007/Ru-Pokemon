@@ -1,5 +1,6 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
-import { monsterDataUrl, typeBadge, itemIcon, trainerImage } from './art/monsters.js';
+import { monsterDataUrl, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
+import { terrainImage } from './art/realTerrain.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition } from './battleFx.js';
 import { audio } from './audio.js';
@@ -43,6 +44,7 @@ export class BattleUI {
       this.root.classList.remove('hidden');
       this.renderBoxes(s);
       this.renderSprites(s);
+      this.renderTerrain();
       this.menu(null);
       const tr = $('trainerSprite');
       if (s.kind === 'trainer' && s.trainer) {
@@ -216,6 +218,17 @@ export class BattleUI {
 
   // -------------------------------------------------------------- Darstellung
   color(types) { return this.m.typeColors[types?.[0]] || '#888'; }
+  // Original-Kampfboden (npm run sprites) statt der gezeichneten Ellipsen
+  async renderTerrain() {
+    const field = this.root.querySelector('.field');
+    const t = this.hooks.terrain?.();
+    if (!t || !hasReal('terrain', t)) { field.classList.remove('real-terrain'); return; }
+    const [enemy, player] = await Promise.all([terrainImage(t, 'enemy'), terrainImage(t, 'player')]);
+    if (!enemy || !player) return;
+    field.style.setProperty('--terrain-enemy', `url(${enemy})`);
+    field.style.setProperty('--terrain-player', `url(${player})`);
+    field.classList.add('real-terrain');
+  }
   renderSprites(s) {
     const set = (el, mon, back) => {
       // Eigene Grafik aus dem Manifest hat Vorrang, sonst das prozedural erzeugte Sprite.

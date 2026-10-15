@@ -93,6 +93,9 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .mon-sprite.shiny { filter: drop-shadow(0 0 6px #fff7a0); }
 .mon-sprite.fainted { opacity: 0; transform: translateY(50px); } .mon-sprite.hit { animation: hit .35s; }
 @keyframes hit { 0%,100% { transform: translateX(0); opacity: 1; } 20% { opacity: .2; } 40% { transform: translateX(-8px); opacity: 1; } 60% { opacity: .2; } 80% { transform: translateX(8px); } }
+#battle .field.real-terrain::before, #battle .field.real-terrain::after { border-radius: 0; box-shadow: none; background-repeat: no-repeat; background-size: 100% 100%; image-rendering: pixelated; }
+#battle .field.real-terrain::before { background-image: var(--terrain-enemy); width: 256px; height: 128px; right: 38px; top: 96px; }
+#battle .field.real-terrain::after { background-image: var(--terrain-player); width: 512px; height: 64px; left: -84px; bottom: 0; }
 #battle .bottom { display: flex; height: 132px; background: #283050; border-top: 4px solid #12162a; }
 .battle-text { flex: 1; margin: 8px; background: var(--box); color: var(--boxInk); border: 4px solid var(--boxLine); border-radius: 8px; font-size: 19px; padding: 10px 14px; box-shadow: inset 0 0 0 3px #c8d4e8; }
 .battle-menu { width: 330px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 8px 8px 0; }
