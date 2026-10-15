@@ -124,7 +124,7 @@ const PREFS_KEY = 'platin.audio';
 class Chip {
   constructor() {
     this.ctx = null;
-    this.prefs = { music: 0.55, sfx: 0.7, muted: false };
+    this.prefs = { music: 0.45, sfx: 0.6, muted: false, musicOn: true, sfxOn: true };
     try { Object.assign(this.prefs, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')); } catch { /* privat */ }
     this.current = null; // { name, gain, timer }
     this.wanted = null;
@@ -143,8 +143,11 @@ class Chip {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     comp.connect(this.master);
-    this.musicBus = ctx.createGain(); this.musicBus.connect(comp);
-    this.sfxBus = ctx.createGain(); this.sfxBus.connect(comp);
+    // Tiefpass nimmt den Pulswellen die Schaerfe (weicherer, waermerer Klang)
+    const mlp = ctx.createBiquadFilter(); mlp.type = 'lowpass'; mlp.frequency.value = 2200; mlp.Q.value = 0.5; mlp.connect(comp);
+    const slp = ctx.createBiquadFilter(); slp.type = 'lowpass'; slp.frequency.value = 5000; slp.Q.value = 0.5; slp.connect(comp);
+    this.musicBus = ctx.createGain(); this.musicBus.connect(mlp);
+    this.sfxBus = ctx.createGain(); this.sfxBus.connect(slp);
     this.waves = { p12: this.pulse(0.125), p25: this.pulse(0.25), p50: this.pulse(0.5) };
     const len = ctx.sampleRate;
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -165,9 +168,10 @@ class Chip {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.prefs.muted ? 0 : 0.9, t, 0.05);
-    this.musicBus.gain.setTargetAtTime(this.prefs.music * 0.5, t, 0.05);
-    this.sfxBus.gain.setTargetAtTime(this.prefs.sfx, t, 0.05);
+    this.musicBus.gain.setTargetAtTime(this.prefs.musicOn ? this.prefs.music * 0.5 : 0, t, 0.05);
+    this.sfxBus.gain.setTargetAtTime(this.prefs.sfxOn ? this.prefs.sfx : 0, t, 0.05);
   }
+  toggle(kind) { const k = kind === 'music' ? 'musicOn' : 'sfxOn'; this.prefs[k] = !this.prefs[k]; this.applyPrefs(); return this.prefs[k]; }
   toggleMute() { this.prefs.muted = !this.prefs.muted; this.applyPrefs(); return this.prefs.muted; }
   setVolume(kind, v) { this.prefs[kind] = Math.max(0, Math.min(1, v)); this.applyPrefs(); }
 
@@ -200,10 +204,10 @@ class Chip {
     const src = ctx.createBufferSource(); src.buffer = this.noise;
     const f = ctx.createBiquadFilter();
     f.type = kind === 'h' ? 'highpass' : 'bandpass';
-    f.frequency.value = kind === 'h' ? 7000 : 1800;
+    f.frequency.value = kind === 'h' ? 5000 : 1500;
     const g = ctx.createGain();
     const dur = kind === 'h' ? 0.03 : 0.12;
-    g.gain.setValueAtTime((kind === 'h' ? 0.12 : 0.32) * vol, t);
+    g.gain.setValueAtTime((kind === 'h' ? 0.05 : 0.28) * vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     src.connect(f); f.connect(g); g.connect(dest);
     src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
@@ -227,7 +231,7 @@ class Chip {
         ev.push({ t: b0 + i, len: bass === 'pulse' ? 3 : 1.6, ch: 'bass', m });
       }
       if (song.arp) {
-        const notes = [...tones, 12].map((x) => 60 + root + x);
+        const notes = [...tones, 12].map((x) => 48 + root + x);
         const order = song.arp === 'down' ? [...notes].reverse() : notes;
         const step = song.arp === 'soft' ? 2 : 1;
         for (let i = 0; i < 16; i += step) ev.push({ t: b0 + i, len: step * 0.8, ch: 'arp', m: order[(i / step) % order.length] });
@@ -246,9 +250,10 @@ class Chip {
   schedule(dest, e, t, step, song) {
     if (e.ch === 'drum') return this.hit(dest, t, e.kind);
     const f = hz(e.m);
-    if (e.ch === 'lead') return this.tone(dest, song.leadWave || 'p25', f, t, e.len * step * 0.92, 0.2, { decay: 0.75, vib: e.len >= 6 ? 5.5 : 0 });
+    // Melodie eine Oktave tiefer als notiert und mit 50-%-Puls: runder, nicht schrill
+    if (e.ch === 'lead') return this.tone(dest, song.leadWave || 'p50', f / 2, t, e.len * step * 0.92, 0.2, { decay: 0.7, vib: e.len >= 6 ? 5 : 0 });
     if (e.ch === 'bass') return this.tone(dest, 'tri', f, t, e.len * step, 0.32, { release: 0.02 });
-    if (e.ch === 'arp') return this.tone(dest, 'p12', f, t, e.len * step, 0.06, { decay: 0.4, release: 0.02 });
+    if (e.ch === 'arp') return this.tone(dest, 'tri', f, t, e.len * step, 0.09, { decay: 0.4, release: 0.02 });
   }
 
   // Song abspielen. loop = false fuer Fanfaren, onEnd danach.

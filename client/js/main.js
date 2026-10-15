@@ -218,7 +218,6 @@ input.on('mute', () => toggleMute());
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
 $('worldmap').onclick = () => toggleMap(false);
-$('muteBtn').onclick = () => toggleMute();
 $('musicVol').value = Math.round(audio.prefs.music * 100);
 $('sfxVol').value = Math.round(audio.prefs.sfx * 100);
 $('musicVol').oninput = (e) => audio.setVolume('music', e.target.value / 100);
@@ -226,8 +225,27 @@ $('sfxVol').oninput = (e) => { audio.setVolume('sfx', e.target.value / 100); };
 $('sfxVol').onchange = () => audio.sfx('select');
 $('emoteBar').innerHTML = EMOTES.map((k, i) => `<button data-e="${i}" title="Taste ${i + 1}">${k}</button>`).join('');
 $('emoteBar').querySelectorAll('button').forEach((b) => { b.onclick = () => { if (world.me) net.send({ t: 'emote', kind: EMOTES[Number(b.dataset.e)] }); }; });
-function toggleMute() { const m = audio.toggleMute(); $('muteBtn').textContent = m ? '🔇' : '🔊'; $('muteBtn').classList.toggle('off', m); }
-if (audio.prefs.muted) { $('muteBtn').textContent = '🔇'; $('muteBtn').classList.add('off'); }
+
+// Seitenleiste: Verlauf und Einstellungen sind einklappbar, Musik und Effekte getrennt schaltbar
+const ui = (() => { try { return { log: false, settings: false, ...JSON.parse(localStorage.getItem('platin.ui') || '{}') }; } catch { return { log: false, settings: false }; } })();
+function saveUi() { try { localStorage.setItem('platin.ui', JSON.stringify(ui)); } catch { /* privat */ } }
+function renderToggles() {
+  $('log').classList.toggle('hidden', !ui.log);
+  $('setPanel').classList.toggle('hidden', !ui.settings);
+  $('logBtn').classList.toggle('on', ui.log);
+  $('setBtn').classList.toggle('on', ui.settings);
+  $('musicBtn').classList.toggle('on', audio.prefs.musicOn);
+  $('sfxBtn').classList.toggle('on', audio.prefs.sfxOn);
+  if (ui.log) { $('logBadge').classList.add('hidden'); unread = 0; $('log').scrollTop = $('log').scrollHeight; }
+}
+let unread = 0;
+hud.onChat = () => { if (!ui.log) { unread++; $('logBadge').textContent = unread; $('logBadge').classList.remove('hidden'); } };
+$('logBtn').onclick = () => { ui.log = !ui.log; saveUi(); renderToggles(); };
+$('setBtn').onclick = () => { ui.settings = !ui.settings; saveUi(); renderToggles(); };
+$('musicBtn').onclick = () => toggleMute();
+$('sfxBtn').onclick = () => { audio.toggle('sfx'); renderToggles(); audio.sfx('select'); };
+function toggleMute() { audio.toggle('music'); renderToggles(); }
+renderToggles();
 
 // ------------------------------------------------------------------ Weltkarte und Minikarte
 function toggleMap(open = !mapOpen) {

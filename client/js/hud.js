@@ -31,7 +31,7 @@ export class Hud {
     while (el.children.length > 200) el.firstChild.remove();
     el.scrollTop = el.scrollHeight;
   }
-  chat(from, text) { this.log(`<b>${esc(from)}:</b> ${esc(text)}`, 'chat'); }
+  chat(from, text) { this.log(`<b>${esc(from)}:</b> ${esc(text)}`, 'chat'); this.onChat?.(); }
 
   monRow(p, actions) {
     const pct = p.alive ? Math.round((p.hp / p.maxHp) * 100) : 0;
