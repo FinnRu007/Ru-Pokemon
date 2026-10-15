@@ -34,7 +34,8 @@ export class BattleUI {
     const s = this.state;
     const leader = s.kind === 'trainer' && (s.trainer?.leader || s.trainer?.look === 'leader');
     audio.sfx('encounter');
-    audio.music(leader ? 'battle_leader' : s.kind === 'trainer' ? 'battle_trainer' : 'battle_wild');
+    this.foeKind = leader ? 'leader' : s.kind === 'trainer' ? 'trainer' : 'wild';
+    audio.music('battle_' + this.foeKind);
     this.intro = (async () => {
       this.shown = true;
       await battleTransition($('stage'), s.kind);
@@ -114,7 +115,7 @@ export class BattleUI {
         return this.say(ev.text);
       case 'death': this.hooks.log(ev.text, 'death'); return this.say(ev.text, 1400, false);
       case 'anim':
-        sfx('move', ev.moveType);
+        sfx('move', { move: ev.move, type: ev.moveType });
         return this.fx.move(ev);
       case 'stat': sfx(ev.up ? 'statUp' : 'statDown'); this.fx.stat(ev.side, ev.up); return sleep(350);
       case 'hp': {
@@ -178,7 +179,7 @@ export class BattleUI {
     this.pendingEnd = null;
     (async () => {
       if (this.intro) await this.intro;
-      if (msg.result === 'win' && !this.caught) audio.music('victory');
+      if (msg.result === 'win' && !this.caught) audio.music(this.foeKind === 'wild' ? 'victory' : 'victory_' + this.foeKind);
       for (const t of msg.messages || []) {
         if (/Orden/.test(t) && /erhältst/.test(t)) audio.jingle('badge');
         await this.say(t, 1300);

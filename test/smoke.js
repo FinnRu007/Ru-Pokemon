@@ -442,5 +442,23 @@ await test('Musik: jede Melodie passt Takt fuer Takt zu ihren Akkorden', async (
   for (const [id, m] of Object.entries(MAPS)) assert.ok(SONGS[musicForMap(id, m)], `Musik fuer ${id}`);
 });
 
+await test('Original-Klaenge: Zuordnung zu Karten, Stuecken und Attacken', async () => {
+  const { soundKey, trackForMap, trackForSong, ALL_TRACKS, JINGLE_TRACKS } = await import('../client/js/realAudio.js');
+  const { SONGS } = await import('../client/js/audio.js');
+  const { MAPS } = await import('../shared/data/maps.js');
+  assert.equal(soundKey('Vine_Whip'), soundKey('vine-whip'));
+  assert.equal(soundKey('Battle! (Wild Pokémon)'), 'battlewildpokemon');
+  assert.equal(trackForMap('route_201', MAPS.route_201, false), 'Route 201 (Day)');
+  assert.equal(trackForMap('route_201', MAPS.route_201, true), 'Route 201 (Night)');
+  assert.equal(trackForMap('jubilife_center', MAPS.jubilife_center, false), 'Pokémon Center (Day)');
+  assert.equal(trackForMap('twinleaf_home_1f', MAPS.twinleaf_home_1f, false), 'Twinleaf Town (Day)');
+  for (const name of ['battle_wild', 'battle_trainer', 'battle_leader', 'victory', 'victory_trainer', 'victory_leader', 'title']) {
+    assert.ok(SONGS[name], `Chiptune ${name}`);
+    assert.ok(ALL_TRACKS.includes(trackForSong(name)), `Titel ${name}`);
+  }
+  for (const [id, m] of Object.entries(MAPS)) { const t = trackForMap(id, m); if (t) assert.ok(ALL_TRACKS.includes(t), id); }
+  assert.ok(Object.values(JINGLE_TRACKS).every((l) => l.length));
+});
+
 console.log(failures ? `\n${failures} Test(s) fehlgeschlagen` : '\nAlle Tests bestanden');
 process.exit(failures ? 1 : 0);

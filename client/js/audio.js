@@ -1,9 +1,13 @@
 // Klang: eigener Chiptune-Synthesizer auf WebAudio. Alle Stuecke und Effekte sind selbst
-// komponiert bzw. werden zur Laufzeit erzeugt (keine Originalmusik, keine Audiodateien).
+// komponiert bzw. werden zur Laufzeit erzeugt. Hat `npm run sounds` die Original-Klaenge nach
+// client/sounds/ geladen (nicht im Repo), spielen Musik, Fanfaren, Rufe und Attacken diese ab
+// (Zuordnung in realAudio.js), sonst bleibt alles beim eigenen Synthesizer.
 //
 // Notation der Melodien: "note.laenge" mit Laenge in Sechzehnteln, z. B. "c5.4 e5.2 r.2".
 // Akkorde (ein Takt je Akkord) erzeugen Bass und Arpeggio automatisch, Schlagzeug kommt
 // aus 16-stelligen Mustern (k = Kick, s = Snare, h = Hi-Hat, . = Pause).
+
+import { soundKey, trackForSong, JINGLE_TRACKS } from './realAudio.js';
 
 const NOTE = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
 function midi(n) {
@@ -92,6 +96,7 @@ const S = {
   }
 };
 S.battle_leader = { ...S.battle_trainer, bpm: 188, drums: ['kkhsk.hskkhsk.ss'] };
+S.victory_trainer = S.victory_leader = S.victory;
 
 // Kurze Fanfaren (spielen einmal, danach laeuft die Musik weiter)
 const J = {
@@ -129,6 +134,56 @@ class Chip {
     this.current = null; // { name, gain, timer }
     this.wanted = null;
     this.jingleUntil = 0;
+    // Original-Klaenge: Verzeichnis aus `npm run sounds`, dekodierte Puffer je Datei
+    this.real = { cries: new Set(), moves: {}, misc: {}, music: new Set() };
+    this.buffers = new Map();
+    this.token = 0;
+    if (typeof fetch === 'function' && typeof window !== 'undefined') this.loadReal();
+  }
+
+  async loadReal() {
+    try {
+      const res = await fetch('/sounds/index.json', { cache: 'no-cache' });
+      if (!res.ok) return;
+      const idx = await res.json();
+      this.real = { cries: new Set(idx.cries || []), moves: idx.moves || {}, misc: idx.misc || {}, music: new Set(idx.music || []) };
+    } catch { /* keine Original-Klaenge, eigener Synthesizer */ }
+  }
+
+  // Datei laden und dekodieren (einmal je Datei, danach aus dem Speicher)
+  buffer(file) {
+    if (!this.buffers.has(file)) {
+      const url = '/sounds/' + file.split('/').map(encodeURIComponent).join('/');
+      const p = fetch(url).then((r) => { if (!r.ok) throw new Error(url); return r.arrayBuffer(); })
+        .then((b) => this.ctx.decodeAudioData(b));
+      p.catch(() => this.buffers.delete(file));
+      this.buffers.set(file, p);
+    }
+    return this.buffers.get(file);
+  }
+
+  // Datei abspielen. Gibt ein Handle wie startSong zurueck (gain, stop ueber stopHandle).
+  playFile(file, bus, { loop = false, vol = 1, at = 0, onEnd, onFail } = {}) {
+    const ctx = this.ctx;
+    const gain = ctx.createGain(); gain.gain.value = vol; gain.connect(bus);
+    const h = { name: file, gain, timer: null, src: null, dead: false };
+    this.buffer(file).then((buf) => {
+      if (h.dead) return;
+      const src = h.src = ctx.createBufferSource();
+      src.buffer = buf; src.loop = loop;
+      src.connect(gain);
+      src.onended = () => { if (!h.dead && !loop) { h.dead = true; gain.disconnect(); onEnd?.(); } };
+      src.start(Math.max(ctx.currentTime, at));
+    }).catch(() => { if (!h.dead) { h.dead = true; gain.disconnect(); onFail?.(); } });
+    return h;
+  }
+
+  // Titel aus der Sound Library vorhanden? Liefert den Dateinamen oder null.
+  musicFile(title) {
+    if (!title) return null;
+    if (title.startsWith('misc:')) return this.real.misc[title.slice(5)] || null;
+    const k = soundKey(title);
+    return this.real.music.has(k) ? `music/${k}.mp3` : null;
   }
 
   // Muss aus einer Nutzeraktion heraus aufgerufen werden (Browser-Regel fuer Autoplay)
@@ -148,13 +203,16 @@ class Chip {
     const slp = ctx.createBiquadFilter(); slp.type = 'lowpass'; slp.frequency.value = 5000; slp.Q.value = 0.5; slp.connect(comp);
     this.musicBus = ctx.createGain(); this.musicBus.connect(mlp);
     this.sfxBus = ctx.createGain(); this.sfxBus.connect(slp);
+    // Original-Aufnahmen gehen am Filter vorbei, haengen aber an denselben Schaltern
+    this.realMusicBus = ctx.createGain(); this.realMusicBus.connect(this.master);
+    this.realSfxBus = ctx.createGain(); this.realSfxBus.connect(this.master);
     this.waves = { p12: this.pulse(0.125), p25: this.pulse(0.25), p50: this.pulse(0.5) };
     const len = ctx.sampleRate;
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.applyPrefs();
-    if (this.wanted) { const w = this.wanted; this.wanted = null; this.music(w); }
+    if (this.wanted) this.resumeWanted();
   }
 
   pulse(duty) {
@@ -170,6 +228,8 @@ class Chip {
     this.master.gain.setTargetAtTime(this.prefs.muted ? 0 : 0.9, t, 0.05);
     this.musicBus.gain.setTargetAtTime(this.prefs.musicOn ? this.prefs.music * 0.5 : 0, t, 0.05);
     this.sfxBus.gain.setTargetAtTime(this.prefs.sfxOn ? this.prefs.sfx : 0, t, 0.05);
+    this.realMusicBus.gain.setTargetAtTime(this.prefs.musicOn ? this.prefs.music * 0.7 : 0, t, 0.05);
+    this.realSfxBus.gain.setTargetAtTime(this.prefs.sfxOn ? this.prefs.sfx * 0.8 : 0, t, 0.05);
   }
   toggle(kind) { const k = kind === 'music' ? 'musicOn' : 'sfxOn'; this.prefs[k] = !this.prefs[k]; this.applyPrefs(); return this.prefs[k]; }
   toggleMute() { this.prefs.muted = !this.prefs.muted; this.applyPrefs(); return this.prefs.muted; }
@@ -290,34 +350,61 @@ class Chip {
   stopHandle(h, fade = 0.35) {
     if (!h) return;
     clearInterval(h.timer);
+    if (h.src !== undefined && !h.src) { h.dead = true; h.gain.disconnect(); return; }
+    h.dead = true;
     const t = this.ctx.currentTime;
     h.gain.gain.cancelScheduledValues(t);
     h.gain.gain.setValueAtTime(h.gain.gain.value, t);
     h.gain.gain.exponentialRampToValueAtTime(0.0001, t + fade);
-    setTimeout(() => h.gain.disconnect(), fade * 1000 + 300);
+    setTimeout(() => { h.gain.disconnect(); try { h.src?.stop(); } catch { /* schon beendet */ } }, fade * 1000 + 300);
   }
 
-  // Hintergrundmusik wechseln (gleicher Name: nichts tun)
-  music(name) {
-    if (!this.ctx) { this.wanted = name; return; }
-    if (this.current?.name === name) return;
-    this.wanted = name;
-    if (performance.now() < this.jingleUntil) return; // laeuft nach der Fanfare an
+  // Hintergrundmusik wechseln (gleicher Name: nichts tun). track: Titel aus der Sound Library
+  // fuer diese Karte; ohne Angabe gilt der Titel zum Stueck (realAudio.js), sonst der Chiptune.
+  music(name, track) {
+    const want = { name, track };
+    if (!this.ctx) { this.wanted = want; return; }
+    const file = this.musicFile(track ?? trackForSong(name));
+    const key = file || name;
+    if (this.current?.key === key) return;
+    this.wanted = want;
+    if (this.jingleUntil) return; // laeuft nach der Fanfare an
     this.stopHandle(this.current);
-    this.current = name && S[name] ? this.startSong(name, S[name], true) : null;
+    this.current = null;
+    if (file) {
+      const h = this.playFile(file, this.realMusicBus, { loop: true, onFail: () => { if (this.current === h) { this.current = null; this.startSynth(name); } } });
+      h.key = key;
+      // sanft einblenden
+      h.gain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+      h.gain.gain.exponentialRampToValueAtTime(1, this.ctx.currentTime + 0.3);
+      this.current = h;
+    } else this.startSynth(name);
+  }
+
+  startSynth(name) {
+    if (name && S[name]) { this.current = this.startSong(name, S[name], true); this.current.key = name; }
+  }
+
+  resumeWanted() {
+    this.jingleUntil = 0; this.jingleH = null;
+    const w = this.wanted; this.wanted = null;
+    if (w) this.music(w.name, w.track);
   }
 
   jingle(name) {
-    if (!this.ctx || !J[name]) return;
-    const song = { ...J[name], bass: 'oct', arp: null, drums: null };
+    if (!this.ctx) return;
+    const file = (JINGLE_TRACKS[name] || []).map((t) => this.musicFile(t)).find(Boolean);
+    if (!file && !J[name]) return;
     this.stopHandle(this.current, 0.08);
+    this.stopHandle(this.jingleH, 0.05);
     this.current = null;
-    const { len } = this.compile(song);
-    this.jingleUntil = performance.now() + len * (60 / song.bpm / 4) * 1000 + 200;
-    this.startSong('jingle', song, false, () => {
-      this.jingleUntil = 0;
-      const w = this.wanted; this.wanted = null; this.music(w);
-    });
+    const id = ++this.token;
+    const done = () => { if (this.token === id) this.resumeWanted(); };
+    this.jingleUntil = 1;
+    if (file) return void (this.jingleH = this.playFile(file, this.realMusicBus, { onEnd: done, onFail: done }));
+    if (!J[name]) return done();
+    const song = { ...J[name], bass: 'oct', arp: null, drums: null };
+    this.jingleH = this.startSong('jingle', song, false, done);
   }
 
   // ---------------------------------------------------------------- Effekte
@@ -349,8 +436,28 @@ class Chip {
       case 'heal': for (let i = 0; i < 5; i++) T('p25', hz(76 + [0, 4, 7, 12, 16][i]), i * 0.06, 0.08, 0.13); break;
       case 'map': T('p25', 660, 0, 0.05, 0.14); T('p25', 990, 0.05, 0.07, 0.14); break;
       case 'start': [0, 4, 7, 12].forEach((x, i) => T('p25', hz(72 + x), i * 0.07, 0.12, 0.2)); T('p25', hz(91), 0.3, 0.4, 0.2, { vib: 6 }); break;
-      case 'move': this.moveSound(arg); break;
-      case 'cry': this.cry(arg); break;
+      case 'move': {
+        // arg: { move, type } oder nur der Typ
+        const parts = arg?.move && this.real.moves[soundKey(arg.move)];
+        if (parts) this.playParts(parts);
+        else this.moveSound(arg?.type ?? arg);
+        break;
+      }
+      case 'cry':
+        if (this.real.cries.has(Number(arg))) this.playFile(`cries/${Number(arg)}.ogg`, this.realSfxBus, { onFail: () => this.cry(arg) });
+        else this.cry(arg);
+        break;
+    }
+  }
+
+  // Mehrteilige Attacken-Klaenge nacheinander abspielen
+  async playParts(files) {
+    let at = this.ctx.currentTime + 0.01;
+    for (const f of files) {
+      let buf;
+      try { buf = await this.buffer(f); } catch { continue; }
+      this.playFile(f, this.realSfxBus, { at });
+      at = Math.max(at, this.ctx.currentTime) + buf.duration;
     }
   }
 

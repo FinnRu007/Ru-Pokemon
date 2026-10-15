@@ -5,6 +5,9 @@ Saemtliche Kacheln, Gebaeude, Figuren und Pokemon-Sprites werden zur Laufzeit au
 
 Optional laedt `npm run sprites` die Original-Sprites aus Pokemon Platin ueber https://github.com/PokeAPI/sprites die Trainerbilder ueber https://github.com/smogon/sprites und die Overworld-Figuren und Kampfboeden ueber https://github.com/pret/pokeplatinum in den lokalen, nicht versionierten Ordner `client/sprites/`. Diese Bilder sind Eigentum von Nintendo, Creatures Inc. und GAME FREAK inc. und sind nicht Teil dieses Repos.
 
+## Klang
+Musik, Effekte und Rufe erzeugt der eigene Synthesizer in `client/js/audio.js`. Optional laedt `npm run sounds` die Pokemon-Rufe ueber https://github.com/PokeAPI/cries, Musik und Fanfaren aus der Pokemon DP Sound Library (https://soundlibrary.pokemon.co.jp, Abbild auf archive.org) und Attackenklaenge von https://sounds.spriters-resource.com in den lokalen, nicht versionierten Ordner `client/sounds/`. Diese Klaenge sind Eigentum von Nintendo, Creatures Inc. und GAME FREAK inc. und sind nicht Teil dieses Repos.
+
 ## Schrift
 **Pixelify Sans**, Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans).
 Lizenz: SIL Open Font License 1.1, vollstaendiger Text in `client/assets/fonts/OFL-PixelifySans.txt`. Bezogen ueber das npm-Paket `@fontsource/pixelify-sans`.

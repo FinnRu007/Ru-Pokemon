@@ -9,6 +9,7 @@ import { Hud } from './hud.js';
 import { monsterDataUrl, loadRealSprites, itemIcon } from './art/monsters.js';
 import { Dialog } from './dialog.js';
 import { audio, musicForMap } from './audio.js';
+import { trackForMap } from './realAudio.js';
 import { WorldMap, placeName, areaOf } from './worldmap.js';
 import { Intro } from './intro.js';
 import { terrainFor } from './art/realTerrain.js';
@@ -31,7 +32,7 @@ new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { updateLock(); flushDialogs(); if (world.me) audio.music(musicForMap(world.me.map, MAPS[world.me.map])); },
+  onEnd: () => { updateLock(); flushDialogs(); if (world.me) audio.music(musicForMap(world.me.map, MAPS[world.me.map]), trackForMap(world.me.map, MAPS[world.me.map])); },
   onLearnPrompt: (ev) => learnQueue.push(ev),
   terrain: () => world.me && terrainFor(world.me.map, MAPS[world.me.map])
 });
@@ -104,7 +105,7 @@ world.onBump = () => audio.sfx('bump');
 function enterMap(mapId, fromServer) {
   showMapName(mapId);
   worldMap.visit(mapId);
-  if (!battle.active) audio.music(musicForMap(mapId, MAPS[mapId]));
+  if (!battle.active) audio.music(musicForMap(mapId, MAPS[mapId]), trackForMap(mapId, MAPS[mapId]));
   drawMinimap(true);
 }
 net.on('playerJoined', (m) => { if (m.player.map === world.me?.map) { world.addOther(m.player); hud.log(`${m.player.name} ist hier.`); } });

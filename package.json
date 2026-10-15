@@ -10,7 +10,8 @@
     "fetch-data": "node scripts/fetch-pokeapi.js",
     "build-dex": "node scripts/build-dex.js",
     "test": "node --no-warnings test/smoke.js",
-    "sprites": "node scripts/fetch-sprites.js"
+    "sprites": "node scripts/fetch-sprites.js",
+    "sounds": "node scripts/fetch-sounds.js"
   },
   "engines": {
     "node": ">=22.5"
