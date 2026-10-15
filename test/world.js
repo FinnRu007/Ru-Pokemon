@@ -85,3 +85,47 @@ export function checkWorld() {
   for (const id of Object.keys(MAPS)) if (!all.maps.has(id) && !MAPS[id].scripted) errors.push(`${id} ist nicht erreichbar`);
   return errors;
 }
+
+// Weltkarte: Aussenkarten liegen ueber Randverbindungen und Innenraeume mit zwei Ausgaengen
+// zueinander. Alle Wege muessen dieselbe Lage ergeben, und keine zwei Aussenkarten duerfen sich decken.
+export function checkLayout(spawn = 'twinleaf_town') {
+  const errors = [];
+  const edges = [];
+  for (const [id, a] of Object.entries(MAPS)) {
+    if (a.indoor) continue;
+    for (const [edge, c] of Object.entries(a.connections || {})) {
+      const b = MAPS[c.map];
+      const d = edge === 'north' ? { x: -c.offset, y: -b.height } : edge === 'south' ? { x: -c.offset, y: a.height }
+        : edge === 'west' ? { x: -b.width, y: -c.offset } : { x: a.width, y: -c.offset };
+      edges.push({ a: id, b: c.map, d, via: edge });
+    }
+  }
+  for (const [cid, c] of Object.entries(MAPS)) {
+    if (!c.indoor) continue;
+    const outs = [...new Set(c.warps.map((w) => w.to).filter((t) => !MAPS[t].indoor))];
+    for (const u of outs) for (const v of outs) {
+      if (u === v) continue;
+      const wu = c.warps.find((w) => w.to === u); const wv = c.warps.find((w) => w.to === v);
+      const du = MAPS[u].warps.find((w) => w.to === cid); const dv = MAPS[v].warps.find((w) => w.to === cid);
+      if (du && dv) edges.push({ a: u, b: v, d: { x: du.x - wu.x + wv.x - dv.x, y: du.y - wu.y + wv.y - dv.y }, via: cid });
+    }
+  }
+  const pos = { [spawn]: { x: 0, y: 0 } }; const q = [spawn];
+  while (q.length) {
+    const id = q.shift();
+    for (const e of edges) if (e.a === id && !pos[e.b]) { pos[e.b] = { x: pos[id].x + e.d.x, y: pos[id].y + e.d.y }; q.push(e.b); }
+  }
+  for (const e of edges) {
+    const dx = pos[e.a].x + e.d.x - pos[e.b].x; const dy = pos[e.a].y + e.d.y - pos[e.b].y;
+    if (dx || dy) errors.push(`${e.a} -> ${e.b} (${e.via}) liegt um ${dx}, ${dy} daneben`);
+  }
+  const ids = Object.keys(pos);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const [a, b] = [ids[i], ids[j]]; const A = pos[a]; const B = pos[b];
+    const ox = Math.min(A.x + MAPS[a].width, B.x + MAPS[b].width) - Math.max(A.x, B.x);
+    const oy = Math.min(A.y + MAPS[a].height, B.y + MAPS[b].height) - Math.max(A.y, B.y);
+    if (ox > 0 && oy > 0) errors.push(`${a} und ${b} ueberlappen (${ox}x${oy})`);
+  }
+  for (const id of Object.keys(MAPS)) if (!MAPS[id].indoor && !pos[id]) errors.push(`${id} hat keine Lage auf der Weltkarte`);
+  return errors;
+}

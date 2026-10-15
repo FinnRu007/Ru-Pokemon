@@ -97,16 +97,18 @@ export const MAPS3 = {
     encounters: null
   },
   route_214: {
-    name: 'Route 214', width: 16, height: 36,
-    tiles: build(16, 36, [
-      ['rect', 1, 0, 14, 36, ','],
+    name: 'Route 214', width: 16, height: 63,
+    tiles: build(16, 63, [
+      ['rect', 1, 0, 14, 63, ','],
       ['rect', 1, 3, 5, 8, '"'], ['rect', 10, 12, 5, 8, '"'], ['rect', 1, 24, 5, 8, '"'], ['rect', 10, 26, 3, 3, 'X'],
-      ['rect', 6, 0, 3, 36, '.'], ['rect', 0, 18, 7, 2, '.'],
-      ['tile', 9, 2, 'S'], ['tile', 5, 17, 'S']
+      ['rect', 10, 36, 5, 9, '"'], ['rect', 1, 40, 4, 3, 'X'], ['rect', 1, 47, 5, 9, '"'], ['rect', 11, 50, 3, 3, 'X'], ['rect', 10, 56, 5, 5, '"'],
+      ['rect', 6, 0, 3, 63, '.'], ['rect', 0, 18, 7, 2, '.'],
+      ['tile', 9, 2, 'S'], ['tile', 5, 17, 'S'], ['tile', 9, 58, 'S']
     ]),
     events: [
       { x: 9, y: 2, type: 'text', text: 'Route 214  Süden: Seeufer der Kühnheit' },
-      { x: 5, y: 17, type: 'text', text: 'Westen: See der Kühnheit' }
+      { x: 5, y: 17, type: 'text', text: 'Westen: See der Kühnheit' },
+      { x: 9, y: 58, type: 'text', text: 'Route 214  Norden: Schleiede' }
     ],
     encounters: enc(30, [[185, 30, 32, 10], [41, 29, 31, 10], [42, 31, 32, 10], [228, 29, 31, 15], [111, 29, 31, 15], [434, 29, 31, 15], [74, 29, 31, 10], [75, 31, 32, 15]])
   },
@@ -124,17 +126,24 @@ export const MAPS3 = {
     encounters: { ...enc(30, [[397, 30, 32, 25], [400, 30, 32, 20], [203, 30, 32, 20], [183, 30, 32, 20], [108, 30, 32, 15]]), waterRate: 10, water: slots([[54, 30, 35, 50], [55, 32, 36, 20], [130, 30, 34, 30]]) }
   },
   route_213: {
-    name: 'Route 213', width: 36, height: 16,
-    tiles: build(36, 16, [
-      ['rect', 0, 1, 36, 10, ','],
-      ['rect', 4, 2, 8, 4, '"'], ['rect', 20, 2, 10, 4, '"'],
-      ['rect', 0, 10, 36, 3, '='], ['rect', 0, 13, 36, 3, '~'],
-      ['rect', 0, 8, 36, 2, '.'],
-      ['tile', 30, 7, 'S']
+    name: 'Route 213', width: 95, height: 16,
+    tiles: build(95, 16, [
+      ['rect', 0, 1, 95, 10, ','],
+      ['rect', 4, 2, 8, 4, '"'], ['rect', 20, 2, 10, 4, '"'], ['rect', 40, 2, 9, 4, '"'], ['rect', 62, 2, 7, 4, '"'], ['rect', 80, 2, 9, 4, '"'],
+      ['rect', 52, 2, 5, 2, 'X'],
+      ['rect', 0, 10, 95, 3, '='], ['rect', 0, 13, 95, 3, '~'],
+      ['rect', 0, 8, 95, 2, '.'],
+      ...house(71, 3, 5, 3, 73),
+      ['tile', 30, 7, 'S'], ['tile', 88, 7, 'S']
     ]),
-    events: [{ x: 30, y: 7, type: 'text', text: 'Route 213  Westen: Weideburg. Am Strand weht immer eine frische Brise.' }],
+    buildings: [{ x: 71, y: 3, style: 'house5' }],
+    events: [
+      { x: 30, y: 7, type: 'text', text: 'Route 213  Westen: Weideburg. Am Strand weht immer eine frische Brise.' },
+      { x: 88, y: 7, type: 'text', text: 'Route 213  Osten: Seeufer der Kühnheit' }
+    ],
     encounters: { ...enc(30, [[183, 30, 32, 20], [278, 30, 32, 25], [422, 30, 32, 20], [451, 30, 32, 15], [453, 30, 32, 20]]), waterRate: 10, water: slots([[72, 30, 35, 40], [73, 32, 36, 15], [278, 30, 34, 25], [279, 32, 36, 20]]) }
   },
+  route_213_house: houseRoom('Strandhaus', 2),
   // ------------------------------------------------------------------ Weideburg
   pastoria_city: {
     name: 'Weideburg', width: 34, height: 26, music: 'sandgem', fly: [5, 8],
@@ -221,6 +230,7 @@ export const LINKS3 = [
   ['door', 'veilstone_city', 32, 19, 'veilstone_house'],
   ['door', 'valor_lakefront', 21, 4, 'lakefront_center'],
   ['door', 'valor_lakefront', 5, 14, 'lakefront_house'],
+  ['door', 'route_213', 73, 5, 'route_213_house'],
   ['door', 'pastoria_city', 5, 6, 'pastoria_center'],
   ['door', 'pastoria_city', 10, 5, 'pastoria_mart'],
   ['door', 'pastoria_city', 25, 6, 'pastoria_gym'],

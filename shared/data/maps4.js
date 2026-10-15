@@ -90,15 +90,15 @@ export const MAPS4 = {
   },
   // ------------------------------------------------------------------ Routen 216 und 217
   route_216: {
-    name: 'Route 216', width: 34, height: 14, tint: 'snow', music: 'route2',
-    tiles: build(34, 14, [
-      ['rect', 0, 1, 30, 12, ','],
-      ['rect', 4, 1, 8, 4, '"'], ['rect', 14, 9, 10, 4, '"'], ['rect', 20, 2, 4, 3, 'X'],
-      ['rect', 30, 1, 4, 12, 'X'], ['rect', 30, 6, 3, 2, '.'], ['tile', 33, 6, 'G'],
-      ['rect', 0, 6, 30, 2, '.'],
-      ['tile', 27, 5, 'S']
+    name: 'Route 216', width: 26, height: 14, tint: 'snow', music: 'route2',
+    tiles: build(26, 14, [
+      ['rect', 1, 0, 24, 13, ','],
+      ['rect', 2, 2, 8, 4, '"'], ['rect', 16, 7, 8, 4, '"'], ['rect', 3, 9, 6, 3, '"'], ['rect', 18, 1, 4, 3, 'X'],
+      ['rect', 0, 13, 26, 1, 'X'],
+      ['rect', 12, 0, 3, 13, '.'], ['tile', 13, 13, 'G'],
+      ['tile', 11, 10, 'S']
     ]),
-    events: [{ x: 27, y: 5, type: 'text', text: 'Route 216. Schneegestöber! Westen: Route 217 nach Blizzach' }],
+    events: [{ x: 11, y: 10, type: 'text', text: 'Route 216. Schneegestöber! Norden: Route 217 nach Blizzach' }],
     encounters: enc(30, [[459, 34, 36, 30], [220, 34, 36, 25], [215, 34, 36, 20], [217, 35, 36, 10], [42, 34, 36, 15]])
   },
   route_217: {
@@ -106,7 +106,7 @@ export const MAPS4 = {
     tiles: build(30, 30, [
       ['rect', 1, 1, 28, 28, ','],
       ['rect', 2, 2, 10, 7, '"'], ['rect', 18, 3, 10, 6, '"'], ['rect', 2, 14, 10, 10, '"'], ['rect', 18, 14, 10, 6, '"'],
-      ['rect', 14, 0, 3, 24, '.'], ['rect', 14, 22, 16, 2, '.'],
+      ['rect', 14, 0, 3, 30, '.'], ['rect', 17, 22, 6, 2, '.'],
       ['rect', 1, 10, 28, 1, 'X'], ['rect', 14, 10, 3, 1, 'N'],
       ...house(20, 25, 4, 3, 21),
       ['tile', 13, 21, 'S']
@@ -176,7 +176,7 @@ export const LINKS4 = [
   ['conn', 'jubilife_city', 'west', 'route_218', -6],
   ['conn', 'route_218', 'west', 'canalave_city', 6],
   ['conn', 'route_214', 'west', 'lake_valor', -10],
-  ['conn', 'route_216', 'west', 'route_217', 16],
+  ['conn', 'route_216', 'north', 'route_217', 2],
   ['conn', 'route_217', 'north', 'snowpoint_city', -1],
   ['conn', 'snowpoint_city', 'east', 'lake_acuity', 0],
   ['door', 'celestic_town', 5, 6, 'celestic_center'],
@@ -193,8 +193,8 @@ export const LINKS4 = [
   ['door', 'snowpoint_city', 22, 5, 'snowpoint_gym'],
   ['door', 'snowpoint_city', 5, 15, 'snowpoint_house'],
   ['door', 'veilstone_city', 7, 22, 'galactic_hq'],
-  ['pass', 'mt_coronet', 14, 1, 'route_216', 32, 6, 'left'],
-  ['pass', 'route_216', 33, 6, 'mt_coronet', 14, 2, 'down'],
+  ['pass', 'mt_coronet', 14, 1, 'route_216', 13, 12, 'up'],
+  ['pass', 'route_216', 13, 13, 'mt_coronet', 14, 2, 'down'],
   ['pass', 'mt_coronet', 24, 2, 'spear_pillar', 7, 12, 'up'],
   ['pass', 'spear_pillar', 7, 13, 'mt_coronet', 24, 3, 'down'],
   ['pass', 'distortion_world', 7, 10, 'spear_pillar', 7, 12, 'up']

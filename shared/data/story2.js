@@ -83,6 +83,12 @@ export const TRAINERS2 = {
     intro: say('Radlerin Ela', 'Halt! Erst ein Kampf, dann darfst du weiterrollen.'), win: say('Radlerin Ela', 'Du bist ja ein richtiger Profi.') },
   hiker_horst: { name: 'Horst', cls: 'Wanderer', look: 'hiker', prize: 40, sight: 3, party: [[74, 19], [95, 20]],
     intro: say('Wanderer Horst', 'Hoho! Unter dem Radweg lässt es sich gut wandern!'), win: say('Wanderer Horst', 'Hoho! Ein starker Kampf!') },
+  cyclist_tom: { name: 'Tom', cls: 'Radler', look: 'ace', prize: 24, sight: 3, party: [[84, 18], [396, 19]],
+    intro: say('Radler Tom', 'Bergab geht es von ganz allein. Ein Kampf zwischendurch hält mich wach!'), win: say('Radler Tom', 'Ich roll dann mal weiter.') },
+  cyclist_mona: { name: 'Mona', cls: 'Radlerin', look: 'lass', prize: 24, sight: 3, party: [[77, 19], [399, 18]],
+    intro: say('Radlerin Mona', 'Der Radweg ist der längste Weg in Sinnoh. Und ich kenne jeden Meter!'), win: say('Radlerin Mona', 'Den Meter kannte ich wohl nicht.') },
+  hiker_gerd: { name: 'Gerd', cls: 'Wanderer', look: 'hiker', prize: 40, sight: 3, party: [[95, 20], [66, 19]],
+    intro: say('Wanderer Gerd', 'Hoho! Zu Fuß auf dem Radweg? Dann kämpf auch zu Fuß!'), win: say('Wanderer Gerd', 'Hoho! Gut zu Fuß, gut im Kampf.') },
   hiker_uwe: { name: 'Uwe', cls: 'Wanderer', look: 'hiker', prize: 40, sight: 3, party: [[66, 19], [74, 19]],
     intro: say('Wanderer Uwe', 'Der Kraterberg teilt Sinnoh in Ost und West. Bereit für die Reise?'), win: say('Wanderer Uwe', 'Du bist bereit, keine Frage.') },
   hiker_kurt2: { name: 'Gerd', cls: 'Wanderer', look: 'hiker', prize: 40, sight: 3, party: [[74, 20], [75, 21]],
@@ -99,8 +105,8 @@ export const TRAINERS2 = {
 // ------------------------------------------------------------------ NPCs
 export const NPCS2 = {
   route_204_north: [
-    { id: 'sina', x: 11, y: 5, dir: 'left', look: 'lass', name: 'Göre Sina', trainer: 'lass_sina' },
-    { id: 'ben', x: 7, y: 10, dir: 'down', look: 'youngster', name: 'Knirps Ben', trainer: 'youngster_ben' }
+    { id: 'sina', x: 11, y: 3, dir: 'left', look: 'lass', name: 'Göre Sina', trainer: 'lass_sina' },
+    { id: 'ben', x: 7, y: 5, dir: 'down', look: 'youngster', name: 'Knirps Ben', trainer: 'youngster_ben' }
   ],
   floaroma_town: [
     { id: 'flo_girl', x: 14, y: 6, dir: 'down', look: 'girl', name: 'Mädchen', show: '!windworks_done', talk: [['Mädchen', 'Mein Papa arbeitet im Windkraftwerk. Seit Leute in Raumanzügen da sind, kommt er nicht mehr nach Hause!']] },
@@ -162,7 +168,10 @@ export const NPCS2 = {
   route_206: [
     { id: 'kai', x: 6, y: 10, dir: 'down', look: 'ace', name: 'Radler Kai', trainer: 'cyclist_kai' },
     { id: 'ela', x: 7, y: 22, dir: 'up', look: 'lass', name: 'Radlerin Ela', trainer: 'cyclist_ela' },
-    { id: 'horst', x: 3, y: 30, dir: 'right', look: 'hiker', name: 'Wanderer Horst', trainer: 'hiker_horst' }
+    { id: 'horst', x: 3, y: 30, dir: 'right', look: 'hiker', name: 'Wanderer Horst', trainer: 'hiker_horst' },
+    { id: 'tom_r', x: 8, y: 44, dir: 'left', look: 'ace', name: 'Radler Tom', trainer: 'cyclist_tom' },
+    { id: 'mona_r', x: 5, y: 58, dir: 'right', look: 'lass', name: 'Radlerin Mona', trainer: 'cyclist_mona' },
+    { id: 'gerd_r', x: 9, y: 72, dir: 'left', look: 'hiker', name: 'Wanderer Gerd', trainer: 'hiker_gerd' }
   ],
   route_207: [{ id: 'uwe', x: 18, y: 7, dir: 'left', look: 'hiker', name: 'Wanderer Uwe', trainer: 'hiker_uwe' }],
   mt_coronet: [

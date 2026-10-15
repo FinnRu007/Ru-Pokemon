@@ -17,34 +17,34 @@ export const MAPS2 = {
   ravaged_path: {
     name: 'Felsige Schneise', indoor: true, theme: 'cave',
     ...grid([
-      'XXXXXXXXXXXXXXXXXXXX',
-      'XXXXXXXGXXXXXXXXXXXX',
-      'XXXXXX:::XXXXXXXXXXX',
-      'XXXXXXXQXXXXXXXXXXXX',
-      'XXXX:::::::::::XXXXX',
-      'XXX:::O:::::::::XXXX',
-      'XX::::::XXXX::::::XX',
-      'XX::O:::XXXX:::O::XX',
-      'XX::::::::::::::::XX',
-      'XXX::::::::XX:::::XX',
-      'XXXXXX:::::XXXXXXXXX',
-      'XXXXXXXXXXGXXXXXXXXX',
-      'XXXXXXXXXXXXXXXXXXXX'
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXGX',
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:::X',
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXQXX',
+      'XXX::::::::::::XXXXX::::::::::::::XXXX:::::::X',
+      'XX::::O::::::::::::::::::O:::::::::::::::::::X',
+      'XX::::::::XXXX:::::::::::::::::XXXXX:::::::::X',
+      'XX::::::::::::::::O:::::::::::::::::::::O::::X',
+      'XXX::::::::::XXX:::::::::::::XXXX:::::::::::XX',
+      'XXX:::::::::XXXXXXXX:::::XXXXXXXXXXXXXXXXXXXXX',
+      'XXX:::XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'XXXXGXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     ]),
     events: [],
     encounters: { caveRate: 10, cave: slots([[41, 8, 10, 45], [74, 8, 10, 35], [54, 8, 10, 20]]) }
   },
   route_204_north: {
-    name: 'Route 204', width: 16, height: 20,
-    tiles: build(16, 20, [
-      ['rect', 1, 0, 14, 19, ','],
-      ['rect', 2, 3, 4, 5, '"'], ['rect', 10, 7, 5, 5, '"'],
-      ['rect', 1, 12, 4, 4, '~'], ['rect', 11, 14, 3, 2, '*'],
-      ['rect', 6, 0, 4, 18, '.'],
-      ['rect', 3, 18, 10, 2, 'X'], ['tile', 7, 18, 'G'],
-      ['tile', 5, 16, 'S']
+    name: 'Route 204', width: 16, height: 12,
+    tiles: build(16, 12, [
+      ['rect', 1, 0, 14, 11, ','],
+      ['rect', 2, 2, 4, 4, '"'], ['rect', 10, 4, 5, 4, '"'],
+      ['rect', 1, 7, 4, 2, '~'], ['rect', 11, 8, 3, 2, '*'],
+      ['rect', 6, 0, 4, 10, '.'],
+      ['rect', 3, 10, 10, 2, 'X'], ['tile', 7, 10, 'G'],
+      ['tile', 5, 9, 'S']
     ]),
-    events: [{ x: 5, y: 16, type: 'text', text: 'Route 204  Nord: Flori, die Stadt der Blumen' }],
+    events: [{ x: 5, y: 9, type: 'text', text: 'Route 204  Nord: Flori, die Stadt der Blumen' }],
     encounters: { ...enc(30, [[406, 8, 10, 25], [265, 8, 9, 20], [396, 8, 10, 20], [399, 8, 10, 15], [401, 9, 10, 10], [403, 9, 10, 10]]), waterRate: 10, water: slots([[54, 10, 14, 60], [129, 8, 12, 40]]) }
   },
   // ------------------------------------------------------------------ Flori
@@ -144,14 +144,19 @@ export const MAPS2 = {
   },
   // ------------------------------------------------------------------ Radweg und Route 207
   route_206: {
-    name: 'Route 206', width: 16, height: 40,
-    tiles: build(16, 40, [
-      ['rect', 1, 0, 14, 40, ','],
+    name: 'Route 206', width: 16, height: 90,
+    tiles: build(16, 90, [
+      ['rect', 1, 0, 14, 90, ','],
       ['rect', 1, 4, 3, 10, '"'], ['rect', 10, 14, 5, 10, '"'], ['rect', 1, 26, 4, 10, '"'], ['rect', 10, 30, 4, 4, 'X'],
-      ['rect', 5, 0, 4, 40, '.'],
-      ['tile', 9, 2, 'S']
+      ['rect', 10, 40, 5, 12, '"'], ['rect', 1, 46, 3, 6, 'X'], ['rect', 1, 56, 4, 12, '"'], ['rect', 10, 60, 4, 4, 'X'],
+      ['rect', 10, 70, 5, 10, '"'], ['rect', 1, 74, 4, 3, 'X'], ['rect', 1, 80, 4, 6, '"'],
+      ['rect', 5, 0, 4, 90, '.'],
+      ['tile', 9, 2, 'S'], ['tile', 9, 86, 'S']
     ]),
-    events: [{ x: 9, y: 2, type: 'text', text: 'Route 206: Radweg. Süden: Route 207 und Kraterberg' }],
+    events: [
+      { x: 9, y: 2, type: 'text', text: 'Route 206: Radweg. Süden: Route 207 und Kraterberg' },
+      { x: 9, y: 86, type: 'text', text: 'Route 206: Radweg. Norden: Ewigenau' }
+    ],
     encounters: enc(30, [[74, 15, 17, 20], [77, 15, 17, 15], [41, 15, 17, 10], [434, 15, 17, 15], [431, 15, 17, 15], [207, 15, 17, 10], [402, 16, 17, 15]])
   },
   route_207: {
@@ -214,10 +219,10 @@ export const MAPS2 = {
 
 // Verbindungen: ['conn', a, Rand, b, Versatz] (beidseitig), ['door', aussen, x, y, innen], ['pass', a, x, y, b, x, y, Richtung]
 export const LINKS2 = [
-  ['pass', 'route_204', 7, 0, 'ravaged_path', 10, 10, 'up'],
-  ['pass', 'ravaged_path', 10, 11, 'route_204', 7, 1, 'down'],
-  ['pass', 'ravaged_path', 7, 1, 'route_204_north', 7, 17, 'up'],
-  ['pass', 'route_204_north', 7, 18, 'ravaged_path', 7, 2, 'down'],
+  ['pass', 'route_204', 7, 0, 'ravaged_path', 4, 10, 'up'],
+  ['pass', 'ravaged_path', 4, 11, 'route_204', 7, 1, 'down'],
+  ['pass', 'ravaged_path', 44, 1, 'route_204_north', 7, 9, 'up'],
+  ['pass', 'route_204_north', 7, 10, 'ravaged_path', 44, 2, 'down'],
   ['conn', 'route_204_north', 'north', 'floaroma_town', 6],
   ['conn', 'floaroma_town', 'north', 'floaroma_meadow', -2],
   ['conn', 'floaroma_town', 'east', 'route_205_south', 0],

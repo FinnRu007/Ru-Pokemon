@@ -122,8 +122,8 @@ export const NPCS4 = {
     { id: 'mars_verity', x: 16, y: 7, dir: 'right', look: 'commander', name: 'Mars', show: ['valor_done', '!verity_done'], trainer: 'mars2' }
   ],
   route_216: [
-    { id: 'ida_s', x: 8, y: 8, dir: 'up', look: 'skier', name: 'Skifahrerin Ina', trainer: 'skier_ida' },
-    { id: 'bo_s', x: 18, y: 5, dir: 'down', look: 'skier', name: 'Skifahrer Bo', trainer: 'skier_bo' }
+    { id: 'ida_s', x: 10, y: 6, dir: 'right', look: 'skier', name: 'Skifahrerin Ina', trainer: 'skier_ida' },
+    { id: 'bo_s', x: 15, y: 3, dir: 'down', look: 'skier', name: 'Skifahrer Bo', trainer: 'skier_bo' }
   ],
   route_217: [
     { id: 'jens', x: 15, y: 16, dir: 'down', look: 'hiker', name: 'Wanderer Jens', trainer: 'hiker_jens' },

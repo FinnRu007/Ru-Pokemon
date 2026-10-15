@@ -56,6 +56,10 @@ export const TRAINERS3 = {
   lady_iris: T('Iris', 'Lady', 'lass', 80, 3, [[203, 31]], 'Am Seeufer zu kämpfen ist so elegant.', 'Wie unelegant von mir.'),
   swimmer_tim: T('Tim', 'Schwimmer', 'swimmer', 20, 3, [[72, 30], [279, 31]], 'Das Meer ist mein Zuhause!', 'Ich schwimme jetzt nach Hause.'),
   swimmer_lea: T('Lea', 'Schwimmerin', 'swimmer', 20, 3, [[423, 32]], 'Hast du schon mal ein Gastrodon gesehen? Hier ist eins!', 'Es ist trotzdem süß.'),
+  psychic_hugo: T('Hugo', 'Psycho', 'psychic', 30, 3, [[64, 31], [203, 31]], 'Ich habe gespürt, dass du kommst. Und dass wir kämpfen!', 'Das hatte ich nicht vorhergesehen.'),
+  beach_nele: T('Nele', 'Strandläuferin', 'lass', 24, 3, [[422, 31], [278, 31]], 'Barfuß im Sand und dann ein Kampf. Perfekt!', 'Jetzt hab ich Sand in den Schuhen.'),
+  swimmer_olaf: T('Olaf', 'Schwimmer', 'swimmer', 20, 3, [[73, 32]], 'Ich schwimme die ganze Küste entlang!', 'Zeit für eine Pause am Strand.'),
+  fisher_piet: T('Piet', 'Angler', 'oldman', 30, 3, [[130, 32]], 'Hier am Ende der Route beißen die Großen!', 'Der Große war wohl ich.'),
   fisher_hans: T('Hans', 'Angler', 'oldman', 30, 3, [[129, 25], [130, 31]], 'Ich habe ein Karpador geangelt. Es ist gewachsen!', 'Das ist der, der davonkam.'),
   gym_water1: T('Jan', 'Angler', 'oldman', 30, 3, [[118, 30], [119, 31]], 'Hier im Becken bin ich der König!', 'Ein König ohne Wasser.'),
   gym_water2: T('Uli', 'Schwimmer', 'swimmer', 20, 4, [[61, 31], [183, 31]], 'Marinus ist der stärkste Wrestler am Wasser!', 'Ich gehe baden.'),
@@ -135,6 +139,7 @@ export const NPCS3 = {
   route_214: [
     { id: 'fritz', x: 7, y: 10, dir: 'down', look: 'hiker', name: 'Wanderer Fritz', trainer: 'hiker_fritz' },
     { id: 'ralf', x: 3, y: 22, dir: 'right', look: 'hiker', name: 'Ruinenforscher Ralf', trainer: 'ruin_maniac' },
+    { id: 'hugo_214', x: 9, y: 45, dir: 'left', look: 'psychic', name: 'Psycho Hugo', trainer: 'psychic_hugo' },
     { id: 'valor_guard', x: 1, y: 18, dir: 'right', look: 'police', name: 'Polizist', show: '!badge_mine', talk: [['Polizist', 'Der See der Kühnheit ist gerade gesperrt. Dort wurden verdächtige Leute gesehen. Wir ermitteln noch.']] }
   ],
   valor_lakefront: [
@@ -146,8 +151,12 @@ export const NPCS3 = {
   route_213: [
     { id: 'tim_s', x: 10, y: 11, dir: 'right', look: 'swimmer', name: 'Schwimmer Tim', trainer: 'swimmer_tim' },
     { id: 'lea_s', x: 24, y: 11, dir: 'left', look: 'swimmer', name: 'Schwimmerin Lea', trainer: 'swimmer_lea' },
-    { id: 'hans_f', x: 16, y: 6, dir: 'down', look: 'oldman', name: 'Angler Hans', trainer: 'fisher_hans' }
+    { id: 'hans_f', x: 16, y: 6, dir: 'down', look: 'oldman', name: 'Angler Hans', trainer: 'fisher_hans' },
+    { id: 'nele_s', x: 50, y: 11, dir: 'up', look: 'lass', name: 'Strandläuferin Nele', trainer: 'beach_nele' },
+    { id: 'olaf_s', x: 66, y: 14, dir: 'left', look: 'swimmer', name: 'Schwimmer Olaf', trainer: 'swimmer_olaf' },
+    { id: 'piet_f', x: 84, y: 6, dir: 'down', look: 'oldman', name: 'Angler Piet', trainer: 'fisher_piet' }
   ],
+  route_213_house: [{ id: 'r213_house', x: 3, y: 4, dir: 'right', look: 'oldman', name: 'Alter Mann', talk: [['Alter Mann', 'Ich wohne seit fünfzig Jahren am Strand. Wer Route 213 ganz entlangläuft, kommt zum Seeufer der Kühnheit.'], ['Alter Mann', 'Früher war der See dort voller Leben. Hoffentlich bleibt das so.']] }],
   pastoria_city: [
     { id: 'cynthia_pa', x: 18, y: 10, dir: 'down', look: 'cynthia', name: 'Cynthia', show: ['badge_fen', '!secret_potion'], talk: 'cynthiaPastoria' },
     { id: 'pa_man', x: 12, y: 11, dir: 'down', look: 'oldman', name: 'Opa', talk: [['Opa', 'Weideburg liegt am großen Moor. Wer weiter nach Norden will, nimmt Route 212 nach Herzhofen.']] }

@@ -284,6 +284,9 @@ await test('Welt: Raender, Warps, Ausloeser und Erreichbarkeit aller Karten', ()
   const errors = world.checkWorld();
   assert.deepEqual(errors, []);
 });
+await test('Weltkarte: alle Gebiete passen zusammen und ueberlappen sich nicht', () => {
+  assert.deepEqual(world.checkLayout(), []);
+});
 await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschritt', () => {
   const steps = (await_ => await_);
   const base = Object.fromEntries(['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done', 'lucia_tip', 'rival2', 'roark_mine'].map((f) => [f, true]));
@@ -415,7 +418,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt und Pokémon Lig
   const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
   let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); return a.wait((m) => m.t === 'moveAck' && m.seq === seq); };
   // Felsbrocken: ohne Zertruemmerer blockiert, mit frei
-  tp('ravaged_path', 7, 4);
+  tp('ravaged_path', 43, 4);
   assert.equal((await step('up')).ok, false);
   s.player.flags.hm_rocksmash = true;
   assert.equal((await step('up')).ok, true);
