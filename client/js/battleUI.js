@@ -10,6 +10,17 @@ const $ = (id) => document.getElementById(id);
 const STATUS = { par: ['PAR', '#c9a400'], slp: ['SLF', '#7a7a7a'], psn: ['GIF', '#a040a0'], tox: ['GIF', '#702070'], brn: ['BRT', '#e05a2a'], frz: ['GFR', '#4bb3d6'] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Kampfmusik wie in Platin: nach Trainerklasse, bei wilden Pokemon nach Legendaeren
+const LEGENDS = new Set([144, 145, 146, 150, 151, 243, 244, 245, 249, 250, 251, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 485, 486, 487, 488, 489, 490, 491, 492, 493]);
+const CLASS_KIND = { 'Top Vier': 'elite', Champ: 'champion', Rivale: 'rival', 'Team Galaktik': 'galactic', Commander: 'commander', 'Galaktik-Boss': 'boss' };
+function foeKindOf(s, leader) {
+  if (s.kind === 'trainer') return CLASS_KIND[s.trainer?.cls] || (leader ? 'leader' : 'trainer');
+  const id = s.foe?.speciesId;
+  if (id >= 480 && id <= 482) return 'lakes';
+  if (id === 483 || id === 484) return 'creation';
+  return LEGENDS.has(id) ? 'legend' : 'wild';
+}
+
 export class BattleUI {
   constructor(net, manifest, hooks) {
     this.net = net;
@@ -36,7 +47,7 @@ export class BattleUI {
     const s = this.state;
     const leader = s.kind === 'trainer' && (s.trainer?.leader || s.trainer?.look === 'leader');
     audio.sfx('encounter');
-    this.foeKind = leader ? 'leader' : s.kind === 'trainer' ? 'trainer' : 'wild';
+    this.foeKind = foeKindOf(s, leader);
     audio.music('battle_' + this.foeKind);
     this.intro = (async () => {
       this.shown = true;
@@ -184,7 +195,7 @@ export class BattleUI {
     this.pendingEnd = null;
     (async () => {
       if (this.intro) await this.intro;
-      if (msg.result === 'win' && !this.caught) audio.music(this.foeKind === 'wild' ? 'victory' : 'victory_' + this.foeKind);
+      if (msg.result === 'win' && !this.caught) audio.music(['wild', 'legend', 'lakes', 'creation'].includes(this.foeKind) ? 'victory' : 'victory_' + this.foeKind);
       for (const t of msg.messages || []) {
         if (/Orden/.test(t) && /erhältst/.test(t)) audio.jingle('badge');
         await this.say(t, 1300);

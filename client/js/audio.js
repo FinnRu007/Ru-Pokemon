@@ -97,6 +97,10 @@ const S = {
 };
 S.battle_leader = { ...S.battle_trainer, bpm: 188, drums: ['kkhsk.hskkhsk.ss'] };
 S.victory_trainer = S.victory_leader = S.victory;
+// Weitere Kampfarten ohne eigenen Chiptune: naechstes passendes Stueck
+for (const k of ['rival', 'galactic']) { S['battle_' + k] = S.battle_trainer; S['victory_' + k] = S.victory; }
+for (const k of ['commander', 'boss', 'elite', 'champion']) { S['battle_' + k] = S.battle_leader; S['victory_' + k] = S.victory; }
+for (const k of ['legend', 'lakes', 'creation']) S['battle_' + k] = S.battle_leader;
 
 // Kurze Fanfaren (spielen einmal, danach laeuft die Musik weiter)
 const J = {

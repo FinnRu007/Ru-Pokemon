@@ -11,7 +11,9 @@ const T = (name) => [`${name} (Day)`, `${name} (Night)`];
 const TOWN = {
   twinleaf: T('Twinleaf Town'), sandgem: T('Sandgem Town'), jubilife: ['Jubilife City (Day)', 'Jubilife City'],
   oreburgh: T('Oreburgh City'), floaroma: T('Floaroma Town'), eterna: T('Eterna City'), hearthome: T('Hearthome City'),
-  solaceon: T('Solaceon Town'), veilstone: T('Veilstone City'), canalave: T('Canalave City'), snowpoint: T('Snowpoint City')
+  solaceon: T('Solaceon Town'), veilstone: T('Veilstone City'), canalave: ['Canalave City', 'Canalave City (Night)'], snowpoint: T('Snowpoint City'),
+  // Ohne eigenen Titel in der Sound Library: naechstes passendes Stueck
+  pastoria: T('Hearthome City'), celestic: T('Solaceon Town'), sunyshore: T('Sunyshore City'), fight: T('Fight Area'), survival: T('Fight Area')
 };
 
 // Musik je Karte (Vorrang vor allem anderen)
@@ -28,7 +30,18 @@ export const MAP_TRACKS = {
   veilstone_city: TOWN.veilstone, galactic_warehouse: 'Team Galactic HQ', route_214: T('Route 209'), route_213: T('Valor Lakefront'),
   valor_lakefront: T('Valor Lakefront'), route_212: T('Route 209'), canalave_city: TOWN.canalave, canalave_library: TOWN.canalave,
   route_216: T('Route 216'), route_217: T('Route 216'), snowpoint_city: TOWN.snowpoint,
-  galactic_hq: 'Team Galactic HQ', spear_pillar: 'Spear Pillar', distortion_world: 'Spear Pillar'
+  galactic_hq: 'Team Galactic HQ', spear_pillar: 'Spear Pillar', distortion_world: 'Spear Pillar',
+  windworks_inside: T('Route 205'), pastoria_city: TOWN.pastoria, celestic_town: TOWN.celestic, route_218: T('Route 206'),
+  route_222: T('Route 209'), sunyshore_city: TOWN.sunyshore, sunyshore_lighthouse: TOWN.sunyshore, route_223: 'Surf',
+  pokemon_league_south: T('Pokémon League'), victory_road: 'Victory Road', pokemon_league: T('Pokémon League'),
+  e4_aaron: 'Decisive Battle! (Pokémon League)', e4_bertha: 'Decisive Battle! (Pokémon League)', e4_flint: 'Decisive Battle! (Pokémon League)',
+  e4_lucian: 'Decisive Battle! (Pokémon League)', champion_room: 'Champion Cynthia', hall_of_fame: 'Hall of Fame',
+  verity_cavern: 'Lake Caverns', valor_cavern: 'Lake Caverns', acuity_cavern: 'Lake Caverns',
+  iron_island: 'Oreburgh Gate', iron_island_deep: 'Oreburgh Gate', wayward_cave: 'Oreburgh Gate', turnback_cave: 'Mt. Coronet',
+  old_chateau: 'Old Chateau', solaceon_ruins: 'Oreburgh Gate', celestic_ruins: 'Oreburgh Gate', canalave_dock: TOWN.canalave,
+  north_sea: 'Surf', fight_area: TOWN.fight, battle_tower: 'Battle Tower', route_225: T('Route 225'), survival_area: TOWN.survival,
+  route_227: T('Route 228'), stark_mountain: 'Stark Mountain', stark_mountain_deep: 'Stark Mountain',
+  snowpoint_temple: 'Lake Caverns', fullmoon_island: 'Lake', lakefront_house: T('Valor Lakefront')
 };
 // Raeume nach Thema, sonst gilt die Musik des Ortes (Praefix der Karten-ID)
 export const THEME_TRACKS = { center: T('Pokémon Center'), mart: 'Poké Mart', gym: 'Pokémon Gym' };
@@ -38,7 +51,12 @@ export const SONG_TRACKS = {
   battle_leader: 'Battle! (Gym Leader)', victory: 'Victory! (Wild Pokémon)', victory_trainer: 'Victory! (Trainer Battle)',
   victory_leader: 'Victory! (Gym Leader)', twinleaf: TOWN.twinleaf, sandgem: TOWN.sandgem, jubilife: TOWN.jubilife,
   oreburgh: TOWN.oreburgh, route1: T('Route 201'), route2: T('Route 203'), lake: 'Lake', cave: 'Oreburgh Gate',
-  center: T('Pokémon Center'), gym: 'Pokémon Gym'
+  center: T('Pokémon Center'), gym: 'Pokémon Gym',
+  battle_rival: 'Battle! (Rival)', battle_galactic: 'Battle! (Team Galactic)', battle_commander: 'Battle! (Team Galactic Commander)',
+  battle_boss: 'Battle! (Team Galactic Boss)', battle_elite: 'Battle! (Elite Four)', battle_champion: 'Battle! (Champion)',
+  battle_legend: 'Battle! (Legendary Pokémon)', battle_lakes: 'Battle! (Azelf/Mesprit/Uxie)', battle_creation: 'Battle! (Dialga/Palkia)',
+  victory_rival: 'Victory! (Trainer Battle)', victory_galactic: 'Victory! (Team Galactic)', victory_commander: 'Victory! (Team Galactic)',
+  victory_boss: 'Victory! (Team Galactic)', victory_elite: 'Victory! (Elite Four)', victory_champion: 'Victory! (Champion)'
 };
 // Fanfaren: erst Sound Library, dann die Gen-4-Sammlung (misc:Dateiname)
 export const JINGLE_TRACKS = {
@@ -59,6 +77,9 @@ export function trackForMap(id, map, night = isNight()) {
   if (!t) {
     const town = Object.keys(TOWN).find((k) => id.startsWith(k + '_'));
     if (town && !/^route_/.test(id)) t = TOWN[town];
+    // Haeuser an Routen: Musik der Route
+    const route = id.match(/^(route_\d+)_/);
+    if (!t && route) t = MAP_TRACKS[route[1]];
   }
   return t ? pick(t, night) : null;
 }
