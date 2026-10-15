@@ -88,8 +88,13 @@ export class GameMenu {
     if (!handled.includes(code)) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (this.msgResolve) {
-      if (this.msgChoices) return this.moveFocus(code, this.root.querySelector('#menuMsg'));
-      if (['KeyZ', 'Enter', 'Space', 'KeyX', 'Escape'].includes(code)) this.msgAdvance?.();
+      const box = this.root.querySelector('#menuMsg');
+      const btns = [...(box?.querySelectorAll('.msg-choices button') || [])];
+      if (!btns.length) { if (['KeyZ', 'Enter', 'Space', 'KeyX', 'Escape', 'Backspace'].includes(code)) this.msgAdvance?.(); return; }
+      if (['KeyX', 'Escape', 'Backspace'].includes(code)) { audio.sfx('back'); return btns[btns.length - 1].click(); }
+      if (['KeyZ', 'Enter', 'Space'].includes(code)) { audio.sfx('select'); return (btns.includes(document.activeElement) ? document.activeElement : btns[0]).click(); }
+      const i = Math.max(0, btns.indexOf(document.activeElement));
+      if (['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(code)) { audio.sfx('click'); btns[(i + (code === 'ArrowDown' || code === 'KeyS' ? 1 : btns.length - 1)) % btns.length].focus(); }
       return;
     }
     const top = this.stack[this.stack.length - 1];

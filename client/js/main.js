@@ -15,10 +15,13 @@ import { Intro } from './intro.js';
 import { terrainFor } from './art/realTerrain.js';
 import { EMOTES } from '/shared/protocol.js';
 import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
+import { GameMenu } from './menu.js';
+import { loadTexts } from './texts.js';
+import { onOptions } from './options.js';
 
 const $ = (id) => document.getElementById(id);
 const manifest = await (await fetch('/assets/sprites/manifest.json')).json();
-await loadRealSprites();
+await Promise.all([loadRealSprites(), loadTexts()]);
 const net = new Net();
 const input = new Input();
 const world = new World(net);
@@ -26,6 +29,8 @@ const renderer = new Renderer($('game'), manifest);
 const hud = new Hud(net, manifest, MAPS);
 const dialog = new Dialog();
 const worldMap = new WorldMap();
+const menu = new GameMenu({ net, hud, world, onClose: () => { updateLock(); setTimeout(processLearnQueue, 50); setTimeout(flushDialogs, 0); } });
+onOptions((o) => { $('stage').dataset.frame = o.frame; audio.setMono(o.sound === 'mono'); });
 let mapOpen = false;
 let introDone = false;
 new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
@@ -42,7 +47,7 @@ let gameOver = false;
 let scriptActive = false;
 let shopOpen = false;
 const pendingDialogs = [];
-function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || mapOpen; }
+function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || mapOpen || menu.isOpen; }
 
 // ------------------------------------------------------------------ Login
 const saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
@@ -117,9 +122,16 @@ net.on('roster', (m) => { worldMap.roster = m.players; $('onlineCount').textCont
 net.on('playerEmote', (m) => { world.playerEmote(m.id, m.kind); audio.sfx('emote'); });
 net.on('notice', (m) => {
   hud.log(m.text, m.kind);
+  if (menu.isOpen && menu.onNotice(m.text)) return;
   if (m.kind === 'dialog') showDialog(m.text);
 });
-net.on('party', (m) => hud.setParty(m));
+net.on('party', (m) => { hud.setParty(m); menu.onParty(); });
+net.on('saved', (m) => menu.onSaved(m));
+net.on('learnPrompt', (m) => { learnQueue.push(m); setTimeout(processLearnQueue, 300); });
+net.on('service', (m) => {
+  if (m.update) { menu.serviceMsg = m; return; }
+  world.locked = true; menu.service(m).then(updateLock);
+});
 net.on('nuzlocke', (m) => hud.setNuzlocke(m));
 net.on('soulDeath', (m) => {
   const txt = m.cause === 'soulbound_failed_encounter'
@@ -134,7 +146,7 @@ net.on('battleStart', (m) => { world.locked = true; world.anim = null; battle.st
 // Story: Dialoge vom Server. Waehrend eines Kampfes warten sie, bis der Kampfbildschirm zu ist.
 net.on('dialog', (m) => { pendingDialogs.push(m); flushDialogs(); });
 net.on('script', (m) => { scriptActive = m.active; updateLock(); });
-net.on('progress', (m) => { world.flags = m.flags || {}; hud.setProgress(m); });
+net.on('progress', (m) => { world.flags = m.flags || {}; hud.setProgress(m); menu.refresh(); });
 net.on('npcEmote', (m) => { world.emote(m.id); audio.sfx('exclaim'); });
 net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
@@ -174,7 +186,7 @@ function showDialog(text, onDone, choices) {
   }, choices);
 }
 function flushDialogs() {
-  if (battle.active || dialog.open || !pendingDialogs.length) return;
+  if (battle.active || dialog.open || menu.isOpen || !pendingDialogs.length) return;
   const m = pendingDialogs.shift();
   if (m.face) world.faceNpc(m.face.id, m.face.dir);
   for (const l of m.lines) hud.log(l.speaker ? `${l.speaker}: ${l.text}` : l.text, 'dialog');
@@ -191,33 +203,33 @@ function openShop(m) {
   document.querySelectorAll('#modalPanel button[data-buy]').forEach((b) => { b.onclick = () => net.send({ t: 'buy', item: b.dataset.buy, count: Number(b.dataset.n) }); });
   $('shopClose').onclick = () => { net.send({ t: 'shopClose' }); closeModal(); shopOpen = false; updateLock(); };
 }
-function processLearnQueue() {
-  if (battle.active || !learnQueue.length) return;
+// Neue Attacke nach dem Kampf: Ablauf wie im Original (vergessen, 1, 2 und ... Schwupp!)
+async function processLearnQueue() {
+  if (battle.active || menu.isOpen || !learnQueue.length) return;
   const ev = learnQueue.shift();
-  const mon = hud.party.find((p) => p.id === ev.pokemonId);
-  if (!mon) return processLearnQueue();
-  openModal(`<h1>Neue Attacke</h1><p>${ev.text}</p><p>Welche Attacke soll vergessen werden?</p><div class="choices">${mon.moves.map((mv, i) =>
-    `<button data-i="${i}">${mv.name}</button>`).join('')}<button data-i="-1" style="background:#555">Nicht erlernen</button></div>`);
-  document.querySelectorAll('#modalPanel button[data-i]').forEach((b) => {
-    b.onclick = () => {
-      const i = Number(b.dataset.i);
-      if (i >= 0) net.send({ t: 'learnMove', pokemonId: ev.pokemonId, moveId: ev.moveId, replaceIndex: i });
-      closeModal();
-      processLearnQueue();
-    };
-  });
+  world.locked = true;
+  await menu.levelUpLearn(ev);
+  updateLock();
+  setTimeout(processLearnQueue, 50);
 }
 
 input.on('action', () => {
   if (!introDone) return;
   if (mapOpen) return toggleMap(false);
-  if (battle.active || starterOpen || gameOver || shopOpen) return;
+  if (battle.active || starterOpen || gameOver || shopOpen || menu.isOpen) return;
   if (dialog.open) return dialog.advance();
   if (world.me && !world.anim && !scriptActive) net.send({ t: 'interact' });
 });
 input.on('chat', () => $('chatInput').focus());
 input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
 input.on('escape', () => { if (mapOpen) toggleMap(false); });
+input.on('menu', () => openMenu());
+$('menuBtn').onclick = () => openMenu();
+function openMenu() {
+  if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;
+  if (mapOpen) toggleMap(false);
+  menu.open(); updateLock();
+}
 input.on('mute', () => toggleMute());
 input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });

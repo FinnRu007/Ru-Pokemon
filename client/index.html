@@ -48,6 +48,7 @@
         </div>
       </section>
 
+      <section id="menu" class="menu hidden"></section>
       <section id="modal" class="modal hidden"><div class="panel" id="modalPanel"></div></section>
 
       <section id="worldmap" class="hidden">
@@ -79,11 +80,12 @@
         <button id="musicBtn" class="tg" title="Musik an/aus (N)">♪ Musik</button>
         <button id="sfxBtn" class="tg" title="Effekte an/aus">Effekte</button>
         <button id="setBtn" class="tg" title="Lautstärke und Tasten">⚙</button>
+        <button id="menuBtn" class="tg" title="Menü (X)">Menü</button>
       </div>
       <div id="log" class="log hidden"></div>
       <div id="setPanel" class="settings hidden">
         <div class="volumes"><label>Musik <input id="musicVol" type="range" min="0" max="100"></label><label>Effekte <input id="sfxVol" type="range" min="0" max="100"></label></div>
-        <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · T: Chat · M: Karte · 1 bis 6: Emotes · N: Musik an/aus</div>
+        <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · X: Menü · T: Chat · M: Karte · 1 bis 6: Emotes · N: Musik an/aus</div>
       </div>
       <form id="chatForm"><input id="chatInput" maxlength="200" placeholder="Chat (T)"></form>
       <div class="toolbar"><div id="emoteBar" class="emotes"></div><span class="online">Online: <b id="onlineCount">0</b></span></div>

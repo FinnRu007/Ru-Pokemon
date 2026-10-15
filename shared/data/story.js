@@ -18,6 +18,7 @@
 // Trainer: flag = zusaetzliches Flag nach dem Sieg, badge = Ordenname. Jeder Sieg setzt beat_<id>.
 
 import { TRAINERS2, NPCS2, TRIGGERS2, SCRIPTS2, BADGES2 } from './story2.js';
+import { SERVICE_NPCS, SERVICE_SCRIPTS } from './services.js';
 
 export function cond(flags, c) {
   if (!c) return true;
@@ -356,6 +357,9 @@ Object.assign(SCRIPTS, SCRIPTS2);
 for (const [m, list] of Object.entries(NPCS2)) NPCS[m] = [...(NPCS[m] || []), ...list];
 for (const [m, list] of Object.entries(TRIGGERS2)) TRIGGERS[m] = [...(TRIGGERS[m] || []), ...list];
 BADGES.push(...BADGES2);
+// Attacken-Lehrer, Erinnerer und Verlerner (services.js)
+Object.assign(SCRIPTS, SERVICE_SCRIPTS);
+for (const [m, list] of Object.entries(SERVICE_NPCS)) NPCS[m] = [...(NPCS[m] || []), ...list];
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

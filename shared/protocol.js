@@ -18,6 +18,10 @@ export const C2S = {
   EMOTE: 'emote',                 // { kind } kleine Sprechblase ueber der eigenen Figur
   FLY: 'fly',                     // { to? } Fliegen: Auswahl besuchter Orte, mit to direkt dorthin (Weltkarte)
   SAVE: 'save',                   // {} Spiel speichern (Menue)
+  TEACH: 'teach',                 // { source: 'tm'|'tutor'|'relearn', item?, pokemonId, moveId, replaceIndex }
+  FORGET: 'forget',               // { pokemonId, index } beim Attacken-Verlerner
+  MOVE_SWAP: 'moveSwap',          // { pokemonId, a, b } Reihenfolge der Attacken (Bericht)
+  SERVICE_DONE: 'serviceDone',    // {} Lehrer, Erinnerer oder Verlerner verlassen
   PING: 'ping'
 };
 
@@ -43,6 +47,8 @@ export const S2C = {
   DIALOG: 'dialog',               // { token, lines: [{ speaker, text }], choices?, face? }
   SCRIPT: 'script',               // { active }
   PROGRESS: 'progress',           // { flags, money, trainerId, playMs, dex: { seen, caught } }
+  SERVICE: 'service',             // { kind: 'tutor'|'relearn'|'deleter', moves: { pokemonId: [{ id, cost? }] } }
+  LEARN_PROMPT: 'learnPrompt',    // { pokemonId, moveId, text } neue Attacke ausserhalb des Kampfes (Sonderbonbon)
   SAVED: 'saved',                 // { at, map, playMs, badges } Bestaetigung nach dem Speichern
   NPC_EMOTE: 'npcEmote',          // { id }
   SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }

@@ -277,6 +277,78 @@ await test('Tuer fuehrt serverseitig ins Haus und wieder hinaus', async () => {
   a.ws.close();
 });
 
+await test('Menue: TM, Lehrer, Erinnerer, Verlerner, Sonderbonbon, Pokedex und Speichern', async () => {
+  const { ITEMS } = await import('../shared/data/items.js');
+  const { TUTORS } = await import('../shared/data/tutors.js');
+  const dex = JSON.parse(fs.readFileSync(new URL('../shared/data/dex/gen4.json', import.meta.url)));
+  const a = client('M');
+  await a.open;
+  a.send({ t: 'hello', name: 'Menu', runCode: 'NETM' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  a.send({ t: 'chooseStarter', speciesId: 390 });
+  const party = await a.wait((m) => m.t === 'party' && m.party.length === 1);
+  const prog = await a.wait((m) => m.t === 'progress' && m.dex?.caught.includes(390));
+  assert.ok(prog.dex.seen.includes(390));
+  const s = game.sessions.get(w.selfId);
+  const mon = s.party[0];
+  const sp = dex.pokemon[390];
+  // TM: wird verbraucht, Attacke kommt dazu
+  const tmId = Object.keys(ITEMS).find((k) => ITEMS[k].kind === 'tm' && !ITEMS[k].hm && sp.tm.includes(ITEMS[k].move) && !mon.moves.some((m) => m.id === ITEMS[k].move));
+  assert.ok(tmId, 'keine passende TM');
+  s.player.items[tmId] = 1;
+  const before = mon.moves.length;
+  a.send({ t: 'teach', source: 'tm', item: tmId, pokemonId: mon.id, moveId: ITEMS[tmId].move, replaceIndex: 9 });
+  await a.wait((m) => m.t === 'party' && m.party[0]?.moves.length === before + 1);
+  assert.equal(s.player.items[tmId], 0);
+  // Ohne Dienst kein Lehrer
+  const offer = TUTORS.route212.moves.find((o) => sp.tutor.includes(o.id));
+  assert.ok(offer, 'kein Lehrerangebot fuer Panflam');
+  a.send({ t: 'teach', source: 'tutor', pokemonId: mon.id, moveId: offer.id, replaceIndex: 0 });
+  await sleep(100);
+  assert.ok(!mon.moves.some((m) => m.id === offer.id));
+  // Lehrer mit Scherben
+  for (const [k, n] of Object.entries(offer.cost)) s.player.items[k] = n;
+  game.openService(s, { service: 'tutor', tutor: 'route212' });
+  const sv = await a.wait((m) => m.t === 'service' && m.kind === 'tutor');
+  assert.ok(sv.moves[mon.id].some((o) => o.id === offer.id));
+  while (mon.moves.length < 4) mon.moves.push({ id: 'growl', pp: 40, maxPp: 40 });
+  a.send({ t: 'teach', source: 'tutor', pokemonId: mon.id, moveId: offer.id, replaceIndex: 3 });
+  await a.wait((m) => m.t === 'party' && m.party[0]?.moves[3].id === offer.id);
+  assert.ok(Object.keys(offer.cost).every((k) => s.player.items[k] === 0));
+  a.send({ t: 'serviceDone' });
+  await sleep(50);
+  assert.equal(s.service, null);
+  // Verlerner
+  game.openService(s, { service: 'deleter' });
+  await a.wait((m) => m.t === 'service' && m.kind === 'deleter');
+  a.send({ t: 'forget', pokemonId: mon.id, index: 3 });
+  await a.wait((m) => m.t === 'party' && m.party[0]?.moves.length === 3);
+  a.send({ t: 'serviceDone' });
+  // Sonderbonbon bis zur neuen Attacke, dann Erinnerer mit Herzschuppe
+  s.player.items['rare-candy'] = 5;
+  const lv = mon.level;
+  a.send({ t: 'useItem', item: 'rare-candy', pokemonId: mon.id });
+  await a.wait((m) => m.t === 'party' && m.party[0]?.level === lv + 1);
+  assert.equal(s.player.items['rare-candy'], 4);
+  mon.moves = mon.moves.slice(0, 1);
+  const rel = game.relearnable(mon);
+  assert.ok(rel.length, 'nichts zum Erinnern');
+  s.player.items['heart-scale'] = 1;
+  game.openService(s, { service: 'relearn' });
+  await a.wait((m) => m.t === 'service' && m.kind === 'relearn');
+  a.send({ t: 'teach', source: 'relearn', pokemonId: mon.id, moveId: rel[0], replaceIndex: 9 });
+  await a.wait((m) => m.t === 'party' && m.party[0]?.moves.some((x) => x.id === rel[0]));
+  assert.equal(s.player.items['heart-scale'], 0);
+  a.send({ t: 'serviceDone' });
+  // Gesehen im Kampf
+  game.dexMark(s, 396);
+  await a.wait((m) => m.t === 'progress' && m.dex.seen.includes(396) && !m.dex.caught.includes(396));
+  a.send({ t: 'save' });
+  const saved = await a.wait((m) => m.t === 'saved');
+  assert.ok(saved.playMs >= 0 && saved.map);
+  a.ws.close();
+});
+
 // ------------------------------------------------------------ Story
 console.log('\nWelt und Story-Blockaden');
 const world = await import('./world.js');

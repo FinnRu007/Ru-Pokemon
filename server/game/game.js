@@ -11,7 +11,10 @@ import { WildBattle, TrainerBattle } from './battle.js';
 import { RulesEngine, DEFAULT_RULES } from './rules.js';
 import { StoryRunner } from './story.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
-import { ITEMS, MART_STOCK, applyItem } from '../../shared/data/items.js';
+import { ITEMS, MART_STOCK, applyItem, HM_FLAGS, isHmMove } from '../../shared/data/items.js';
+import { addExp } from './pokemonFactory.js';
+import { expForLevel } from '../../shared/data/growth.js';
+import { TUTORS, BADGE_TMS, RELEARN_COST } from '../../shared/data/tutors.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
 export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
@@ -81,6 +84,10 @@ export class GameServer {
       case C2S.EMOTE: return this.emote(s, msg);
       case C2S.FLY: return this.fly(s, msg);
       case C2S.SAVE: return this.saveGame(s);
+      case C2S.TEACH: return this.teach(s, msg);
+      case C2S.FORGET: return this.forget(s, msg);
+      case C2S.MOVE_SWAP: return this.moveSwap(s, msg);
+      case C2S.SERVICE_DONE: return this.serviceDone(s);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -125,6 +132,8 @@ export class GameServer {
     if (player.money == null) player.money = 3000;
     if (!player.items) player.items = {};
     if (!player.playMs) player.playMs = 0;
+    // Feldattacken aus der Story gibt es auch als VM im Beutel
+    for (const [flag, hm] of Object.entries(HM_FLAGS)) if (player.flags?.[flag] && !player.items[hm]) player.items[hm] = 1;
     if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
@@ -409,9 +418,112 @@ export class GameServer {
     if (s.battle || s.script) return;
     const mon = s.party.find((m) => m.id === msg.pokemonId);
     if (!mon || !(s.player.items[msg.item] > 0)) return;
+    if (ITEMS[msg.item]?.candy) return this.useCandy(s, mon, msg.item);
     const r = applyItem(msg.item, mon, displayName(mon), { nuzlocke: this.rules.rulesFor(s.player).nuzlocke });
     if (r.ok) { s.player.items[msg.item]--; this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s); }
     this.notice(s, r.text, r.ok ? 'info' : 'error');
+  }
+
+  // Sonderbonbon: ein Level hoeher, mit neuen Attacken und Entwicklung wie im Original
+  useCandy(s, mon, item) {
+    if (mon.alive === false) return this.notice(s, `${displayName(mon)} ist tot. Nichts kann es zurückholen.`, 'error');
+    if (mon.level >= 100) return this.notice(s, 'Es hätte keine Wirkung.', 'error');
+    s.player.items[item]--;
+    const sp = species(mon.speciesId);
+    const events = addExp(mon, Math.max(1, expForLevel(sp.growth, mon.level + 1) - mon.exp));
+    const texts = [];
+    for (const e of events) {
+      if (e.type === 'learnPrompt') this.send(s.ws, { t: S2C.LEARN_PROMPT, ...e });
+      else texts.push(e.text);
+    }
+    if (canEvolve(mon)) { const e = evolve(mon); if (e) { texts.push(e.text); this.dexMark(s, mon.speciesId, true); } }
+    this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s);
+    this.notice(s, texts.join(' '));
+  }
+
+  // ------------------------------------------------------------------ Attacken lernen und vergessen
+  // source: tm (Beutel), tutor (Attacken-Lehrer), relearn (Attacken-Erinnerer). replaceIndex: Platz (>= Anzahl = anhaengen)
+  teach(s, msg) {
+    if (s.battle) return;
+    const mon = s.party.find((m) => m.id === msg.pokemonId);
+    const mv = MOVES[msg.moveId];
+    if (!mon || !mv || mon.alive === false) return;
+    const sp = species(mon.speciesId);
+    const items = s.player.items;
+    let pay = null;
+    if (msg.source === 'tm') {
+      const it = ITEMS[msg.item];
+      if (!it || it.kind !== 'tm' || it.move !== mv.id || !(items[msg.item] > 0) || s.script) return;
+      if (!sp.tm?.includes(mv.id)) return this.notice(s, `${displayName(mon)} kann ${mv.name} nicht erlernen.`, 'error');
+      if (!it.hm) pay = { [msg.item]: 1 };
+    } else if (msg.source === 'tutor') {
+      const offer = s.service?.kind === 'tutor' && TUTORS[s.service.tutor]?.moves.find((o) => o.id === mv.id);
+      if (!offer || !sp.tutor?.includes(mv.id)) return;
+      pay = offer.cost;
+    } else if (msg.source === 'relearn') {
+      if (s.service?.kind !== 'relearn' || !this.relearnable(mon).includes(mv.id)) return;
+      pay = { ...RELEARN_COST };
+    } else return;
+    if (pay && Object.entries(pay).some(([k, n]) => (items[k] || 0) < n)) return this.notice(s, 'Dafür fehlen dir die nötigen Gegenstände.', 'error');
+    if (mon.moves.some((m) => m.id === mv.id)) return this.notice(s, `${displayName(mon)} kennt ${mv.name} bereits.`, 'error');
+    const idx = Number(msg.replaceIndex);
+    const entry = { id: mv.id, pp: mv.pp, maxPp: mv.pp };
+    if (mon.moves.length < 4) mon.moves.push(entry);
+    else if (mon.moves[idx] && !isHmMove(mon.moves[idx].id)) mon.moves[idx] = entry;
+    else return;
+    if (pay) for (const [k, n] of Object.entries(pay)) items[k] -= n;
+    this.repo.savePokemon(mon); this.savePlayerNow(s);
+    this.sendParty(s);
+    if (s.service) this.sendService(s);
+  }
+
+  // Attacken-Erinnerer: alle Level-Attacken bis zum aktuellen Level, die es gerade nicht kann
+  relearnable(mon) {
+    const known = new Set(mon.moves.map((m) => m.id));
+    return [...new Set(species(mon.speciesId).learnset.filter(([lv, id]) => lv <= mon.level && MOVES[id] && !known.has(id)).map(([, id]) => id))];
+  }
+
+  // Attacken-Verlerner (Fleetburg): auch VM-Attacken lassen sich hier vergessen
+  forget(s, msg) {
+    if (s.service?.kind !== 'deleter') return;
+    const mon = s.party.find((m) => m.id === msg.pokemonId);
+    const i = Number(msg.index);
+    if (!mon || !mon.moves[i] || mon.moves.length <= 1) return;
+    mon.moves.splice(i, 1);
+    this.repo.savePokemon(mon); this.sendParty(s); this.sendService(s);
+  }
+
+  moveSwap(s, msg) {
+    if (s.battle) return;
+    const mon = [...s.party, ...s.box].find((m) => m.id === msg.pokemonId);
+    const a = Number(msg.a); const b = Number(msg.b);
+    if (!mon || !mon.moves[a] || !mon.moves[b]) return;
+    [mon.moves[a], mon.moves[b]] = [mon.moves[b], mon.moves[a]];
+    this.repo.savePokemon(mon); this.sendParty(s);
+  }
+
+  // Dienste aus der Story ({ service: 'tutor', tutor: 'route212' } usw.): Skript wartet, bis der Spieler fertig ist
+  openService(s, step) {
+    s.service = { kind: step.service, tutor: step.tutor || null };
+    this.sendService(s);
+  }
+  sendService(s) {
+    const sv = s.service; if (!sv) return;
+    const moves = {};
+    for (const mon of s.party) {
+      if (mon.alive === false) { moves[mon.id] = []; continue; }
+      const sp = species(mon.speciesId); const known = new Set(mon.moves.map((m) => m.id));
+      if (sv.kind === 'tutor') moves[mon.id] = (TUTORS[sv.tutor]?.moves || []).filter((o) => sp.tutor?.includes(o.id) && !known.has(o.id) && MOVES[o.id]);
+      else if (sv.kind === 'relearn') moves[mon.id] = this.relearnable(mon).map((id) => ({ id }));
+      else moves[mon.id] = mon.moves.map((m) => ({ id: m.id }));
+    }
+    this.send(s.ws, { t: S2C.SERVICE, kind: sv.kind, moves, update: !!sv.sent });
+    sv.sent = true;
+  }
+  serviceDone(s) {
+    if (!s.service) return;
+    s.service = null;
+    this.story.serviceDone(s);
   }
 
   // Weltkarte: wer ist wo. Wird nur verschickt, wenn sich etwas geaendert hat.
@@ -651,6 +763,13 @@ export class GameServer {
       flags['beat_' + meta.trainerId] = true;
       if (tr.flag) flags[tr.flag] = true;
       if (tr.badge) extra.push(`Du erhältst den ${tr.badge}!`);
+      // Wie im Original gibt jeder Arenaleiter nach dem Orden eine TM
+      const tm = tr.flag && BADGE_TMS[tr.flag];
+      if (tm && !flags['tm_' + tr.flag]) {
+        flags['tm_' + tr.flag] = true;
+        s.player.items[tm] = (s.player.items[tm] || 0) + 1;
+        extra.push(`${tr.name}: Nimm auch diese TM. Du erhältst ${ITEMS[tm].name} ${MOVES[ITEMS[tm].move]?.name || ''}!`);
+      }
       this.sendProgress(s);
     }
 

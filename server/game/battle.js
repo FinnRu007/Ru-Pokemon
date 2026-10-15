@@ -72,7 +72,7 @@ export class WildBattle {
       foe: { ...publicPokemon(this.wild.mon), stages: this.wild.stages, moves: undefined, stats: undefined },
       party: this.party.map(publicPokemon),
       balls: Object.fromEntries(Object.keys(BALLS).map((k) => [k, this.items[k] || 0])),
-      bag: Object.fromEntries(Object.entries(ITEMS).filter(([k, it]) => it.kind === 'med' && this.items[k] > 0).map(([k, it]) => [k, { name: it.name, count: this.items[k] }])),
+      bag: Object.fromEntries(Object.entries(ITEMS).filter(([k, it]) => it.kind === 'med' && !it.candy && this.items[k] > 0).map(([k, it]) => [k, { name: it.name, count: this.items[k] }])),
       kind: 'wild'
     };
   }

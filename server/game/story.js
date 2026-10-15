@@ -1,7 +1,7 @@
 // Fuehrt Story-Skripte serverseitig aus: Dialoge (mit Token), Flags, Gegenstaende, Kaempfe und
 // Ausloeser. Pro Sitzung laeuft hoechstens ein Skript; waehrenddessen ist die Bewegung gesperrt.
 import { SCRIPTS, TRAINERS, TRIGGERS, cond, visibleNpcs, npcAt } from '../../shared/data/story.js';
-import { ITEMS } from '../../shared/data/items.js';
+import { ITEMS, HM_FLAGS } from '../../shared/data/items.js';
 import { MAPS } from '../../shared/data/maps.js';
 import { DIRS, tileAt, SOLID } from '../../shared/world.js';
 import { S2C } from '../../shared/protocol.js';
@@ -45,7 +45,13 @@ export class StoryRunner {
 
   exec(s, step, lines, sc) {
     const g = this.game; const p = s.player; const flags = this.flags(s);
-    if (step.flag) { flags[step.flag] = true; g.sendProgress(s); return; }
+    if (step.flag) {
+      flags[step.flag] = true;
+      // Feldattacke erhalten: die passende VM kommt in den Beutel
+      if (HM_FLAGS[step.flag] && !p.items[HM_FLAGS[step.flag]]) { p.items[HM_FLAGS[step.flag]] = 1; g.sendParty(s); }
+      g.sendProgress(s); return;
+    }
+    if (step.service) { g.openService(s, step); sc.waiting = 'service'; return 'wait'; }
     if (step.unflag) { delete flags[step.unflag]; g.sendProgress(s); return; }
     if (step.give) {
       const n = step.count || 1;
@@ -107,6 +113,13 @@ export class StoryRunner {
       sc.ask = null;
       sc.stack.push({ steps: branch || [], i: 0 });
     }
+    this.run(s);
+  }
+
+  serviceDone(s) {
+    const sc = s.script;
+    if (sc?.waiting !== 'service') return;
+    sc.waiting = null;
     this.run(s);
   }
 
