@@ -1,6 +1,6 @@
 // Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd), die Typ-Schilder
 // aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites sowie die Trainerbilder
-// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
+// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites und die Overworld-Figuren aus pret/pokeplatinum nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
 // Nintendo und werden nicht mit dem Code verteilt. Fehlen sie, zeichnet der Client die eigene Pixelgrafik.
 // Aufruf: npm run sprites   (bereits vorhandene Dateien werden uebersprungen)
 import fs from 'node:fs';
@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../shared/data/items.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
+import { OW_FILES } from '../client/js/art/realOverworld.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
@@ -50,6 +51,11 @@ for (const dir of ['types', 'items', 'trainers']) fs.mkdirSync(path.join(OUT, di
 TYPE_IDS.forEach((t, i) => jobs.push({ url: `${BASE}/types/generation-iv/platinum/${i + 1}.png`, file: path.join(OUT, 'types', `${t}.png`) }));
 for (const id of Object.keys(ITEMS)) jobs.push({ url: `${BASE}/items/${id}.png`, file: path.join(OUT, 'items', `${id}.png`) });
 for (const name of TRAINER_FILES) jobs.push({ url: `${TRAINER_BASE}/${encodeURIComponent(name)}.png`, file: path.join(OUT, 'trainers', `${name}.png`) });
+const OW_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res/graphics/field_sprites';
+for (const f of OW_FILES) {
+  fs.mkdirSync(path.join(OUT, 'overworld', path.dirname(f)), { recursive: true });
+  jobs.push({ url: `${OW_BASE}/${f}.png`, file: path.join(OUT, 'overworld', `${f}.png`) });
+}
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -63,15 +69,16 @@ async function worker() {
     if (++done % 250 === 0) process.stdout.write(`\r${done} / ${total} Bilder`);
   }
 }
-console.log('Lade Sprites aus github.com/PokeAPI/sprites und github.com/smogon/sprites ...');
+console.log('Lade Sprites aus github.com/PokeAPI/sprites und github.com/smogon/sprites und github.com/pret/pokeplatinum ...');
 await Promise.all(Array.from({ length: useCurl ? 8 : 24 }, worker));
 
 // Verzeichnis, welche Bilder vorhanden sind (der Client fragt nur diese Datei ab)
-const index = { source: ['https://github.com/PokeAPI/sprites', 'https://github.com/smogon/sprites'], kinds: {} };
+const index = { source: ['https://github.com/PokeAPI/sprites', 'https://github.com/smogon/sprites', 'https://github.com/pret/pokeplatinum'], kinds: {} };
 for (const kind of Object.keys(KINDS)) {
   index.kinds[kind] = fs.readdirSync(path.join(OUT, kind)).filter((f) => f.endsWith('.png')).map((f) => +f.slice(0, -4)).sort((a, b) => a - b);
 }
 for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
+index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld })) console.log(`  ${k}: ${ids.length}`);

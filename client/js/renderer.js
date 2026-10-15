@@ -8,6 +8,7 @@ import { paintTile, findBuildings, isIndoor } from './art/tileset.js';
 import { paintBuilding } from './art/buildings.js';
 import { paintTallOverlay, paintTree } from './art/tiles.js';
 import { characterSheet, DIR_ROW } from './art/characters.js';
+import { overworldSheet } from './art/realSheets.js';
 import { FIELD } from '/shared/world.js';
 
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
@@ -139,16 +140,26 @@ export class Renderer {
       const parity = (anim.toX + anim.toY) % 2;
       frameIdx = p.t < 0.55 ? 1 + parity : 0;
     }
-    const sheet = e.kind === 'npc' ? characterSheet(o.look || 'youngster') : (this.images.player || characterSheet(o.look || 'player', o.color));
     const row = DIR_ROW[o.dir] ?? 0;
-    g.drawImage(sheet, frameIdx * 16, row * 20, 16, 20, sx, sy + T - 20 * S - 3, 16 * S, 20 * S);
+    // Original-Sprites (npm run sprites) haben Vorrang, sonst die eigene Figur
+    const real = !this.images.player && overworldSheet(o, e.kind !== 'npc');
+    let headY = sy + T - 20 * S - 3;
+    if (real) {
+      const { sheet, fw } = real;
+      headY = sy + T - (fw - 2) * S;
+      g.drawImage(sheet, frameIdx * fw, row * fw, fw, fw, sx + T / 2 - (fw / 2) * S, headY, fw * S, fw * S);
+      headY += Math.round(fw * 0.25 * S);
+    } else {
+      const sheet = e.kind === 'npc' ? characterSheet(o.look || 'youngster') : (this.images.player || characterSheet(o.look || 'player', o.color));
+      g.drawImage(sheet, frameIdx * 16, row * 20, 16, 20, sx, headY, 16 * S, 20 * S);
+    }
 
     // Hohes Gras verdeckt die Fuesse
     const tx = anim && p.t < 0.5 ? anim.fromX : Math.round(p.x);
     const ty = anim && p.t < 0.5 ? anim.fromY : Math.round(p.y);
     if (!p.hop && map.tiles[ty]?.[tx] === '"') g.drawImage(this.tallOverlay, 0, 8, 16, 8, Math.round(ox + tx * T), Math.round(oy + ty * T) + T / 2, T, T / 2);
 
-    if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, sy + T - 20 * S - 6);
+    if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, headY - 3);
   }
 
   drawSurfer(x, y, now) {
