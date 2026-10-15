@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Platin Multiplayer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <main id="stage">
+      <canvas id="game" width="720" height="528"></canvas>
+      <div id="mapName" class="banner hidden"></div>
+      <div id="dialog" class="dialog hidden"></div>
+
+      <section id="battle" class="hidden">
+        <div class="field">
+          <div id="foeBox" class="infobox foe"></div>
+          <div id="foeSprite" class="mon-sprite foe"></div>
+          <div id="allySprite" class="mon-sprite ally"></div>
+          <div id="allyBox" class="infobox ally"></div>
+        </div>
+        <div class="bottom">
+          <div id="battleText" class="battle-text"></div>
+          <div id="battleMenu" class="battle-menu"></div>
+        </div>
+      </section>
+
+      <section id="login" class="modal">
+        <div class="panel">
+          <h1>Pokemon Platin <small>Multiplayer</small></h1>
+          <label>Trainername <input id="loginName" maxlength="16" autocomplete="off"></label>
+          <label>Run-Code (leer = Solo) <input id="loginRun" maxlength="12" placeholder="z. B. SOUL1" autocomplete="off"></label>
+          <fieldset id="ruleSet">
+            <legend>Regeln (nur beim Erstellen eines neuen Runs)</legend>
+            <label><input type="checkbox" data-rule="nuzlocke" checked> Nuzlocke (Permadeath, 1 Fang pro Route)</label>
+            <label><input type="checkbox" data-rule="soulbound" checked> Linked Soulbound</label>
+            <label><input type="checkbox" data-rule="dupesClause" checked> Dupes Clause</label>
+            <label><input type="checkbox" data-rule="shinyClause" checked> Shiny Clause</label>
+            <label><input type="checkbox" data-rule="failedEncounterBreaksLink" checked> Gescheiterter Encounter bricht Seelenband</label>
+          </fieldset>
+          <button id="loginBtn">Spielen</button>
+          <p id="loginSaved" class="hint"></p>
+          <p id="loginError" class="error"></p>
+        </div>
+      </section>
+
+      <section id="modal" class="modal hidden"><div class="panel" id="modalPanel"></div></section>
+    </main>
+
+    <aside id="hud">
+      <div class="tabs">
+        <button data-tab="party" class="active">Team</button>
+        <button data-tab="nuzlocke">Nuzlocke</button>
+        <button data-tab="links">Seelenband</button>
+        <button data-tab="box">Box</button>
+      </div>
+      <div id="tab-party" class="tab"></div>
+      <div id="tab-nuzlocke" class="tab hidden"></div>
+      <div id="tab-links" class="tab hidden"></div>
+      <div id="tab-box" class="tab hidden"></div>
+      <div id="log" class="log"></div>
+      <form id="chatForm"><input id="chatInput" maxlength="200" placeholder="Chat (T)"></form>
+      <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Interagieren · T: Chat</div>
+    </aside>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

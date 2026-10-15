@@ -1,0 +1,587 @@
+// Rundenbasierte Wildkampf-Engine nach Generation-4-Regeln (serverautoritativ).
+// Der Client sendet nur Aktionen, der Server berechnet alles und liefert Ereignisse.
+import { MOVES } from '../../shared/data/moves.js';
+import { TYPE_NAMES_DE } from '../../shared/data/types.js';
+import {
+  calcDamage, typeEffectiveness, stageMultiplier, accStageMultiplier, critChance,
+  catchAttempt, BALLS, expGain, escapeAttempt
+} from '../../shared/formulas.js';
+import { species, displayName, addExp, gainEvs, publicPokemon } from './pokemonFactory.js';
+
+const rnd = (n) => Math.floor(Math.random() * n);
+const chance = (pct) => Math.random() * 100 < pct;
+const STAT_DE = { atk: 'Angriff', def: 'Verteidigung', spa: 'Spezial-Angriff', spd: 'Spezial-Verteidigung', spe: 'Initiative', acc: 'Genauigkeit', eva: 'Fluchtwert' };
+const STATUS_DE = { par: 'paralysiert', slp: 'eingeschlafen', psn: 'vergiftet', tox: 'schwer vergiftet', brn: 'verbrannt', frz: 'eingefroren' };
+const PINCH = { overgrow: 'grass', blaze: 'fire', torrent: 'water', swarm: 'bug' };
+
+function makeBattler(mon) {
+  return {
+    mon,
+    stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
+    vol: { confused: 0, flinch: false, leechSeed: false, trap: 0, focus: false, charged: false, endure: false, furyCutter: 0, toxic: 1, sleep: 0, hitThisTurn: false, lastMove: null }
+  };
+}
+
+export class WildBattle {
+  /**
+   * @param {object} o
+   * @param {object[]} o.party Live-Referenzen auf das Team des Spielers (Reihenfolge = Slots)
+   * @param {object} o.wild Das wilde Pokemon
+   * @param {boolean} o.catchable Nuzlocke-Freigabe fuer Baelle
+   * @param {string} o.catchBlockReason Text, falls nicht fangbar
+   * @param {object} o.items Inventar des Spielers (Baelle werden verbraucht)
+   * @param {function} o.onFaint (mon) => events[]  Nuzlocke/Soulbound-Hook
+   */
+  constructor(o) {
+    this.id = o.id;
+    this.party = o.party;
+    this.items = o.items;
+    this.route = o.route;
+    this.catchable = o.catchable;
+    this.catchBlockReason = o.catchBlockReason;
+    this.onFaint = o.onFaint;
+    this.nuzlocke = o.nuzlocke;
+    this.wild = makeBattler(o.wild);
+    const first = this.party.find((p) => p.alive !== false && p.hp > 0);
+    this.ally = makeBattler(first);
+    this.participants = new Set([first.id]);
+    this.escapeAttempts = 0;
+    this.state = 'action'; // action | switch | ended
+    this.result = null;
+    this.turn = 0;
+  }
+
+  intro() {
+    const ev = [];
+    const w = this.wild.mon;
+    ev.push({ type: 'text', text: `Ein wildes ${displayName(w)} erscheint!${w.shiny ? ' (Schillernd!)' : ''}` });
+    if (!this.catchable) ev.push({ type: 'text', text: this.catchBlockReason });
+    ev.push({ type: 'text', text: `Los, ${displayName(this.ally.mon)}!` });
+    ev.push(...this.switchInAbility(this.ally, this.wild));
+    ev.push(...this.switchInAbility(this.wild, this.ally));
+    return ev;
+  }
+
+  snapshot() {
+    return {
+      id: this.id,
+      state: this.state,
+      catchable: this.catchable,
+      ally: { ...publicPokemon(this.ally.mon), stages: this.ally.stages },
+      foe: { ...publicPokemon(this.wild.mon), stages: this.wild.stages, moves: undefined, stats: undefined },
+      party: this.party.map(publicPokemon),
+      balls: Object.fromEntries(Object.keys(BALLS).map((k) => [k, this.items[k] || 0]))
+    };
+  }
+
+  side(b) { return b === this.ally ? 'ally' : 'foe'; }
+  other(b) { return b === this.ally ? this.wild : this.ally; }
+  name(b) { return b === this.ally ? displayName(b.mon) : `Das wilde ${displayName(b.mon)}`; }
+
+  // ---------------------------------------------------------------- Aktionen
+  act(action) {
+    if (this.state === 'ended') return { events: [], error: 'Kampf ist beendet' };
+    const ev = [];
+    if (this.state === 'switch') {
+      if (action.type !== 'switch') return { events: [], error: 'Du musst ein Pokemon einwechseln' };
+      const r = this.doSwitch(action.index, ev);
+      if (r) return { events: [], error: r };
+      this.state = 'action';
+      return { events: ev };
+    }
+
+    this.turn++;
+    this.ally.vol.hitThisTurn = false;
+    this.wild.vol.hitThisTurn = false;
+    this.ally.vol.flinch = false;
+    this.wild.vol.flinch = false;
+    this.ally.vol.endure = false;
+    this.wild.vol.endure = false;
+
+    const foeMove = this.pickWildMove();
+
+    if (action.type === 'run') {
+      if (this.ally.vol.trap > 0 && this.ally.mon.ability !== 'run-away') {
+        ev.push({ type: 'text', text: 'Du kannst nicht fliehen!' });
+      } else {
+        this.escapeAttempts++;
+        const ok = this.ally.mon.ability === 'run-away' || escapeAttempt(this.effSpeed(this.ally), this.effSpeed(this.wild), this.escapeAttempts);
+        if (ok) {
+          ev.push({ type: 'text', text: 'Du bist entkommen!' });
+          return { events: this.end('fled', ev) };
+        }
+        ev.push({ type: 'text', text: 'Flucht gescheitert!' });
+      }
+      this.useMove(this.wild, foeMove, ev, false);
+    } else if (action.type === 'ball') {
+      const ball = BALLS[action.ball];
+      if (!ball) return { events: [], error: 'Unbekannter Ball' };
+      if (!this.catchable) return { events: [{ type: 'text', text: this.catchBlockReason }] };
+      if (!this.items[action.ball]) return { events: [{ type: 'text', text: `Du hast keine ${ball.name}s mehr.` }] };
+      this.items[action.ball]--;
+      ev.push({ type: 'text', text: `Du wirfst einen ${ball.name}!` });
+      const w = this.wild.mon;
+      const r = catchAttempt({ maxHp: w.stats.hp, hp: w.hp, catchRate: species(w.speciesId).catchRate, ballBonus: ball.bonus, status: w.status });
+      ev.push({ type: 'shake', count: r.shakes, caught: r.caught });
+      if (r.caught) {
+        ev.push({ type: 'text', text: `Toll! ${displayName(w)} wurde gefangen!` });
+        w.metRoute = this.route;
+        w.ball = action.ball;
+        return { events: this.end('caught', ev) };
+      }
+      ev.push({ type: 'text', text: ['Oh nein! Es hat sich befreit!', 'Mist! Fast hätte es geklappt!', 'Argh! Beinahe!', 'Verflixt! Es war so knapp!'][r.shakes] });
+      this.useMove(this.wild, foeMove, ev, false);
+    } else if (action.type === 'switch') {
+      const err = this.doSwitch(action.index, ev);
+      if (err) return { events: [], error: err };
+      this.useMove(this.wild, foeMove, ev, false);
+    } else if (action.type === 'move') {
+      const slot = this.ally.mon.moves[action.index];
+      const usable = this.ally.mon.moves.some((m) => m.pp > 0);
+      let allyMove;
+      if (!usable) allyMove = 'struggle';
+      else if (!slot || slot.pp <= 0) return { events: [], error: 'Keine AP mehr fuer diese Attacke' };
+      else allyMove = slot.id;
+      const order = this.turnOrder(allyMove, foeMove);
+      for (let i = 0; i < order.length; i++) {
+        const [b, mv] = order[i];
+        if (this.state === 'ended' || b.mon.hp <= 0 || this.other(b).mon.hp <= 0) continue;
+        this.useMove(b, mv, ev, i === 0);
+        if (this.checkFaints(ev)) break;
+      }
+    } else {
+      return { events: [], error: 'Unbekannte Aktion' };
+    }
+
+    if (this.state === 'action') {
+      if (!this.checkFaints(ev)) this.endOfTurn(ev);
+      this.checkFaints(ev);
+    }
+    return { events: ev };
+  }
+
+  pickWildMove() {
+    const usable = this.wild.mon.moves.filter((m) => m.pp > 0);
+    if (!usable.length) return 'struggle';
+    return usable[rnd(usable.length)].id;
+  }
+
+  effSpeed(b) {
+    let s = b.mon.stats.spe * stageMultiplier(b.stages.spe);
+    if (b.mon.status === 'par') s /= 4;
+    return Math.floor(s);
+  }
+
+  turnOrder(allyMove, foeMove) {
+    const a = [this.ally, allyMove];
+    const f = [this.wild, foeMove];
+    const pa = MOVES[allyMove].prio;
+    const pf = MOVES[foeMove].prio;
+    if (pa !== pf) return pa > pf ? [a, f] : [f, a];
+    const sa = this.effSpeed(this.ally);
+    const sf = this.effSpeed(this.wild);
+    if (sa !== sf) return sa > sf ? [a, f] : [f, a];
+    return Math.random() < 0.5 ? [a, f] : [f, a];
+  }
+
+  doSwitch(index, ev) {
+    const mon = this.party[index];
+    if (!mon) return 'Ungueltiger Slot';
+    if (mon.alive === false || mon.hp <= 0) return `${displayName(mon)} kann nicht kaempfen`;
+    if (mon === this.ally.mon) return `${displayName(mon)} kaempft bereits`;
+    if (this.ally.mon.hp > 0) {
+      if (this.ally.mon.ability === 'natural-cure') this.ally.mon.status = null;
+      ev.push({ type: 'text', text: `${displayName(this.ally.mon)}, komm zurueck!` });
+    }
+    this.ally = makeBattler(mon);
+    this.wild.vol.leechSeed = this.wild.vol.leechSeed; // Egelsamen bleibt beim Gegner
+    this.participants.add(mon.id);
+    ev.push({ type: 'switch', side: 'ally', mon: publicPokemon(mon) });
+    ev.push({ type: 'text', text: `Los, ${displayName(mon)}!` });
+    ev.push(...this.switchInAbility(this.ally, this.wild));
+    return null;
+  }
+
+  switchInAbility(b, target) {
+    const ev = [];
+    if (b.mon.ability === 'intimidate') {
+      ev.push({ type: 'text', text: `Bedroher von ${this.name(b)}!` });
+      this.changeStages(target, { atk: -1 }, ev, b);
+    }
+    return ev;
+  }
+
+  // ---------------------------------------------------------------- Attacke ausfuehren
+  useMove(user, moveId, ev, movedFirst) {
+    const target = this.other(user);
+    const move = MOVES[moveId];
+    const uName = this.name(user);
+
+    // Statusprobleme vor dem Angriff
+    if (user.mon.status === 'slp') {
+      if (user.vol.sleep > 0) {
+        user.vol.sleep--;
+        ev.push({ type: 'text', text: `${uName} schläft tief und fest.` });
+        user.vol.furyCutter = 0;
+        return;
+      }
+      user.mon.status = null;
+      ev.push({ type: 'text', text: `${uName} ist aufgewacht!` }, this.statusEvent(user));
+    }
+    if (user.mon.status === 'frz') {
+      if (chance(20)) {
+        user.mon.status = null;
+        ev.push({ type: 'text', text: `${uName} ist wieder aufgetaut!` }, this.statusEvent(user));
+      } else {
+        ev.push({ type: 'text', text: `${uName} ist eingefroren!` });
+        return;
+      }
+    }
+    if (user.vol.flinch) {
+      ev.push({ type: 'text', text: `${uName} schreckt zurück!` });
+      user.vol.flinch = false;
+      return;
+    }
+    if (user.vol.confused > 0) {
+      user.vol.confused--;
+      if (user.vol.confused === 0) {
+        ev.push({ type: 'text', text: `${uName} ist nicht mehr verwirrt!` });
+      } else {
+        ev.push({ type: 'text', text: `${uName} ist verwirrt!` });
+        if (chance(50)) {
+          const dmg = calcDamage({ level: user.mon.level, power: 40, attack: this.statFor(user, 'atk', false), defense: this.statFor(user, 'def', false), stab: false, typeMult: 1, crit: false, burned: false, physical: true });
+          ev.push({ type: 'text', text: 'Es hat sich vor Verwirrung selbst verletzt!' });
+          this.applyDamage(user, dmg, ev);
+          return;
+        }
+      }
+    }
+    if (user.mon.status === 'par' && chance(25)) {
+      ev.push({ type: 'text', text: `${uName} ist paralysiert! Es kann nicht angreifen!` });
+      return;
+    }
+
+    // AP verbrauchen
+    if (moveId !== 'struggle') {
+      const slot = user.mon.moves.find((m) => m.id === moveId);
+      if (slot) slot.pp = Math.max(0, slot.pp - 1);
+    }
+    ev.push({ type: 'text', text: `${uName} setzt ${move.name} ein!` });
+    ev.push({ type: 'anim', side: this.side(user), move: moveId, moveType: move.type });
+    if (move.id !== 'fury-cutter') user.vol.furyCutter = 0;
+    user.vol.lastMove = moveId;
+
+    // Genauigkeit
+    if (move.acc !== null && !(move.cat === 'status' && move.effect?.target === 'self')) {
+      const stage = Math.max(-6, Math.min(6, user.stages.acc - target.stages.eva));
+      const hitChance = move.acc * accStageMultiplier(stage);
+      if (Math.random() * 100 >= hitChance) {
+        ev.push({ type: 'text', text: `Die Attacke von ${uName} ging daneben!` });
+        user.vol.furyCutter = 0;
+        return;
+      }
+    }
+
+    if (move.cat === 'status') {
+      this.applyStatusMove(user, target, move, ev);
+      return;
+    }
+
+    // Schadensattacke
+    const typeMult = move.type === '???' ? 1 : typeEffectiveness(move.type, species(target.mon.speciesId).types);
+    if (typeMult === 0) {
+      ev.push({ type: 'text', text: `Es hat keine Wirkung auf ${this.name(target)}...` });
+      return;
+    }
+
+    const e = move.effect || {};
+    let hits = 1;
+    if (e.kind === 'multihit') {
+      const r = rnd(8);
+      hits = r < 3 ? 2 : r < 6 ? 3 : r < 7 ? 4 : 5;
+    }
+    let total = 0;
+    let landed = 0;
+    for (let h = 0; h < hits && target.mon.hp > 0 && user.mon.hp > 0; h++) {
+      const { damage, crit } = this.computeDamage(user, target, move, typeMult);
+      if (crit) ev.push({ type: 'text', text: 'Ein Volltreffer!' });
+      total += this.applyDamage(target, damage, ev);
+      landed++;
+      target.vol.hitThisTurn = true;
+      this.contactAbility(user, target, move, ev);
+    }
+    if (hits > 1) ev.push({ type: 'text', text: `${landed}-mal getroffen!` });
+    if (e.kind !== 'fixed' && e.kind !== 'endeavor') {
+      if (typeMult > 1) ev.push({ type: 'text', text: 'Das ist sehr effektiv!' });
+      if (typeMult < 1) ev.push({ type: 'text', text: 'Das ist nicht sehr effektiv...' });
+    }
+    if (user.vol.charged && move.type === 'electric') user.vol.charged = false;
+
+    // Zusatzeffekte
+    if (e.kind === 'drain' && total > 0) this.heal(user, Math.max(1, Math.floor(total * e.ratio)), ev, `${this.name(target)} wurde Energie abgesaugt!`);
+    if (e.kind === 'recoil' && total > 0) {
+      const rec = e.ofMaxHp ? Math.floor(user.mon.stats.hp * e.ratio) : Math.floor(total * e.ratio);
+      ev.push({ type: 'text', text: `${uName} wird durch den Rückstoß getroffen!` });
+      this.applyDamage(user, Math.max(1, rec), ev);
+    }
+    if (e.kind === 'trap' && target.mon.hp > 0 && !target.vol.trap) {
+      target.vol.trap = 2 + rnd(4);
+      ev.push({ type: 'text', text: `${this.name(target)} wurde gefangen!` });
+    }
+    if (target.mon.hp > 0 && target.mon.ability !== 'shield-dust') {
+      if (e.kind === 'status' && chance(e.chance)) this.inflictStatus(target, e.status, ev, false);
+      if ((e.kind === 'flinch' && chance(e.chance)) || (e.flinch && chance(e.flinch))) {
+        if (movedFirst && target.mon.ability !== 'inner-focus') target.vol.flinch = true;
+      }
+      if (e.kind === 'confuse' && chance(e.chance)) this.confuse(target, ev, false);
+      if (e.kind === 'stat' && e.target === 'foe' && chance(e.chance ?? 100)) this.changeStages(target, e.stats, ev, user);
+    }
+    if (e.kind === 'stat' && e.target === 'self' && chance(e.chance ?? 100)) this.changeStages(user, e.stats, ev, user);
+  }
+
+  statFor(b, key, crit, isAttacker = true) {
+    let stage = b.stages[key];
+    if (crit && isAttacker && stage < 0) stage = 0;
+    if (crit && !isAttacker && stage > 0) stage = 0;
+    return Math.max(1, Math.floor(b.mon.stats[key] * stageMultiplier(stage)));
+  }
+
+  computeDamage(user, target, move, typeMult) {
+    const e = move.effect || {};
+    if (e.kind === 'fixed') return { damage: e.damage === 'level' ? user.mon.level : e.damage, crit: false };
+    if (e.kind === 'endeavor') return { damage: Math.max(0, target.mon.hp - user.mon.hp), crit: false };
+
+    let power = move.power;
+    if (e.kind === 'magnitude') {
+      const r = rnd(100);
+      const table = [[5, 4, 10], [15, 5, 30], [35, 6, 50], [65, 7, 70], [85, 8, 90], [95, 9, 110], [100, 10, 150]];
+      const [, mag, pw] = table.find(([lim]) => r < lim);
+      power = pw;
+      this._pendingText = `Intensität ${mag}!`;
+    }
+    if (e.kind === 'facade' && ['psn', 'tox', 'brn', 'par'].includes(user.mon.status)) power *= 2;
+    if (e.kind === 'brine' && target.mon.hp <= target.mon.stats.hp / 2) power *= 2;
+    if (e.kind === 'revenge' && user.vol.hitThisTurn) power *= 2;
+    if (e.kind === 'furyCutter') { power = Math.min(160, 10 * 2 ** user.vol.furyCutter); user.vol.furyCutter = Math.min(4, user.vol.furyCutter + 1); }
+    if (user.vol.charged && move.type === 'electric') power *= 2;
+    const pinch = PINCH[user.mon.ability];
+    if (pinch === move.type && user.mon.hp <= Math.floor(user.mon.stats.hp / 3)) power = Math.floor(power * 1.5);
+
+    const physical = move.cat === 'physical';
+    const critStage = (move.highCrit ? 1 : 0) + (user.vol.focus ? 2 : 0);
+    const crit = Math.random() < critChance(critStage);
+    let attack = this.statFor(user, physical ? 'atk' : 'spa', crit, true);
+    const defense = this.statFor(target, physical ? 'def' : 'spd', crit, false);
+    const guts = user.mon.ability === 'guts' && user.mon.status;
+    if (guts && physical) attack = Math.floor(attack * 1.5);
+    const stab = species(user.mon.speciesId).types.includes(move.type);
+    const damage = calcDamage({ level: user.mon.level, power, attack, defense, stab, typeMult, crit, burned: user.mon.status === 'brn' && !guts, physical });
+    return { damage, crit };
+  }
+
+  applyDamage(b, dmg, ev) {
+    if (this._pendingText) { ev.push({ type: 'text', text: this._pendingText }); this._pendingText = null; }
+    let d = Math.min(dmg, b.mon.hp);
+    if (b.vol.endure && d >= b.mon.hp) {
+      d = b.mon.hp - 1;
+      ev.push({ type: 'text', text: `${this.name(b)} übersteht den Angriff!` });
+    }
+    b.mon.hp -= d;
+    ev.push({ type: 'hp', side: this.side(b), hp: b.mon.hp, maxHp: b.mon.stats.hp, damage: d });
+    return d;
+  }
+
+  heal(b, amount, ev, text) {
+    const before = b.mon.hp;
+    b.mon.hp = Math.min(b.mon.stats.hp, b.mon.hp + amount);
+    if (text) ev.push({ type: 'text', text });
+    if (b.mon.hp !== before) ev.push({ type: 'hp', side: this.side(b), hp: b.mon.hp, maxHp: b.mon.stats.hp, damage: before - b.mon.hp });
+  }
+
+  contactAbility(user, target, move, ev) {
+    if (!move.contact || user.mon.hp <= 0) return;
+    if (target.mon.ability === 'static' && chance(30)) this.inflictStatus(user, 'par', ev, false);
+  }
+
+  applyStatusMove(user, target, move, ev) {
+    const e = move.effect || { kind: 'nothing' };
+    const fail = () => ev.push({ type: 'text', text: 'Es schlug fehl!' });
+    switch (e.kind) {
+      case 'stat':
+        if (e.target === 'self') this.changeStages(user, e.stats, ev, user);
+        else this.changeStages(target, e.stats, ev, user);
+        break;
+      case 'status': this.inflictStatus(target, e.status, ev, true); break;
+      case 'confuse': this.confuse(target, ev, true); break;
+      case 'swagger': this.changeStages(target, { atk: 2 }, ev, user); this.confuse(target, ev, true); break;
+      case 'heal':
+        if (user.mon.hp >= user.mon.stats.hp) fail();
+        else this.heal(user, Math.floor(user.mon.stats.hp * e.amount), ev, `${this.name(user)} regeneriert KP!`);
+        break;
+      case 'focus':
+        if (user.vol.focus) fail();
+        else { user.vol.focus = true; ev.push({ type: 'text', text: `${this.name(user)} konzentriert sich!` }); }
+        break;
+      case 'charge':
+        user.vol.charged = true;
+        ev.push({ type: 'text', text: `${this.name(user)} lädt sich auf!` });
+        this.changeStages(user, { spd: 1 }, ev, user);
+        break;
+      case 'endure': user.vol.endure = true; ev.push({ type: 'text', text: `${this.name(user)} macht sich bereit!` }); break;
+      case 'leechSeed':
+        if (target.vol.leechSeed || species(target.mon.speciesId).types.includes('grass')) fail();
+        else { target.vol.leechSeed = true; ev.push({ type: 'text', text: `${this.name(target)} wurde bepflanzt!` }); }
+        break;
+      case 'escape':
+        // Im Wildkampf beenden Teleport, Wirbelwind und Bruellen den Kampf sofort.
+        if (user === this.ally) {
+          ev.push({ type: 'text', text: move.id === 'teleport' ? `${this.name(user)} ist entkommen!` : `${this.name(target)} wurde weggeweht!` });
+          this.end('fled', ev);
+        } else {
+          ev.push({ type: 'text', text: move.id === 'teleport' ? `${this.name(user)} ist geflohen!` : `${this.name(target)} wurde weggeweht!` });
+          this.end('foeFled', ev);
+        }
+        break;
+      case 'nothing':
+      default:
+        ev.push({ type: 'text', text: move.simplified ? 'Aber es passierte nichts (Effekt noch nicht umgesetzt).' : 'Aber nichts geschah!' });
+    }
+  }
+
+  changeStages(b, stats, ev, source) {
+    for (const [k, raw] of Object.entries(stats)) {
+      let delta = raw;
+      if (b.mon.ability === 'simple') delta *= 2;
+      if (delta < 0 && source !== b && (b.mon.ability === 'clear-body' || (k === 'acc' && b.mon.ability === 'keen-eye'))) {
+        ev.push({ type: 'text', text: `${this.name(b)} verhindert die Senkung!` });
+        continue;
+      }
+      const before = b.stages[k];
+      b.stages[k] = Math.max(-6, Math.min(6, before + delta));
+      const diff = b.stages[k] - before;
+      if (diff === 0) ev.push({ type: 'text', text: `${STAT_DE[k]} von ${this.name(b)} kann nicht weiter ${delta > 0 ? 'steigen' : 'sinken'}!` });
+      else ev.push({ type: 'text', text: `${STAT_DE[k]} von ${this.name(b)} ${Math.abs(diff) >= 2 ? (diff > 0 ? 'steigt stark' : 'sinkt stark') : diff > 0 ? 'steigt' : 'sinkt'}!` });
+    }
+  }
+
+  inflictStatus(b, status, ev, primary) {
+    const types = species(b.mon.speciesId).types;
+    const immune =
+      (status === 'brn' && types.includes('fire')) ||
+      (status === 'frz' && types.includes('ice')) ||
+      ((status === 'psn' || status === 'tox') && (types.includes('poison') || types.includes('steel')));
+    if (b.mon.status || immune || b.mon.hp <= 0) {
+      if (primary) ev.push({ type: 'text', text: 'Es schlug fehl!' });
+      return false;
+    }
+    b.mon.status = status;
+    if (status === 'slp') b.vol.sleep = 1 + rnd(4);
+    if (status === 'tox') b.vol.toxic = 1;
+    ev.push({ type: 'text', text: `${this.name(b)} wurde ${STATUS_DE[status]}!` }, this.statusEvent(b));
+    return true;
+  }
+
+  confuse(b, ev, primary) {
+    if (b.vol.confused > 0) { if (primary) ev.push({ type: 'text', text: `${this.name(b)} ist bereits verwirrt!` }); return; }
+    b.vol.confused = 2 + rnd(4);
+    ev.push({ type: 'text', text: `${this.name(b)} wurde verwirrt!` });
+  }
+
+  statusEvent(b) { return { type: 'status', side: this.side(b), status: b.mon.status }; }
+
+  endOfTurn(ev) {
+    for (const b of [this.ally, this.wild]) {
+      if (this.state === 'ended' || b.mon.hp <= 0) continue;
+      const max = b.mon.stats.hp;
+      if (b.mon.status === 'brn') { ev.push({ type: 'text', text: `${this.name(b)} wird durch Verbrennungen geschwächt!` }); this.applyDamage(b, Math.max(1, Math.floor(max / 8)), ev); }
+      if (b.mon.status === 'psn') { ev.push({ type: 'text', text: `${this.name(b)} wird durch Gift geschwächt!` }); this.applyDamage(b, Math.max(1, Math.floor(max / 8)), ev); }
+      if (b.mon.status === 'tox') { ev.push({ type: 'text', text: `${this.name(b)} wird durch Gift geschwächt!` }); this.applyDamage(b, Math.max(1, Math.floor((max * b.vol.toxic) / 16)), ev); b.vol.toxic++; }
+      if (b.vol.leechSeed && b.mon.hp > 0) {
+        const d = this.applyDamage(b, Math.max(1, Math.floor(max / 8)), ev);
+        const o = this.other(b);
+        if (o.mon.hp > 0) this.heal(o, d, ev, `Egelsamen saugt ${this.name(b)} Energie ab!`);
+      }
+      if (b.vol.trap > 0 && b.mon.hp > 0) {
+        b.vol.trap--;
+        ev.push({ type: 'text', text: `${this.name(b)} ist gefangen!` });
+        this.applyDamage(b, Math.max(1, Math.floor(max / 16)), ev);
+        if (b.vol.trap === 0) ev.push({ type: 'text', text: `${this.name(b)} wurde befreit!` });
+      }
+      if (b.mon.ability === 'shed-skin' && b.mon.status && chance(30)) {
+        b.mon.status = null;
+        ev.push({ type: 'text', text: `${this.name(b)} heilt sich durch Expidermis!` }, this.statusEvent(b));
+      }
+    }
+  }
+
+  // Liefert true, wenn der Zug durch K.O. unterbrochen werden muss.
+  checkFaints(ev) {
+    if (this.state === 'ended') return true;
+    let stop = false;
+    if (this.wild.mon.hp <= 0 && !this.wild.fainted) {
+      this.wild.fainted = true;
+      ev.push({ type: 'faint', side: 'foe' }, { type: 'text', text: `${this.name(this.wild)} wurde besiegt!` });
+      this.awardExp(ev);
+      this.end('win', ev);
+      stop = true;
+    }
+    if (this.ally.mon.hp <= 0 && !this.ally.fainted) {
+      this.ally.fainted = true;
+      ev.push({ type: 'faint', side: 'ally' }, { type: 'text', text: `${displayName(this.ally.mon)} wurde besiegt!` });
+      ev.push(...(this.onFaint ? this.onFaint(this.ally.mon) : []));
+      stop = true;
+      this.afterAllyLoss(ev);
+    }
+    return stop;
+  }
+
+  afterAllyLoss(ev) {
+    if (this.state === 'ended') return;
+    const anyLeft = this.party.some((p) => p.alive !== false && p.hp > 0);
+    if (!anyLeft) {
+      ev.push({ type: 'text', text: 'Du hast keine kampffähigen Pokemon mehr!' });
+      this.end('lose', ev);
+    } else {
+      this.state = 'switch';
+      ev.push({ type: 'needSwitch' });
+    }
+  }
+
+  // Wird vom Soulbound-System aufgerufen, wenn ein verlinktes Pokemon ausserhalb dieses Kampfes stirbt.
+  externalDeath(pokemonId, text) {
+    const ev = [];
+    if (this.state === 'ended') return ev;
+    const mon = this.party.find((p) => p.id === pokemonId);
+    if (!mon) return ev;
+    mon.hp = 0;
+    ev.push({ type: 'text', text });
+    if (this.ally.mon.id === pokemonId && !this.ally.fainted) {
+      this.ally.fainted = true;
+      ev.push({ type: 'hp', side: 'ally', hp: 0, maxHp: mon.stats.hp, damage: 0 }, { type: 'faint', side: 'ally' });
+      this.afterAllyLoss(ev);
+    }
+    return ev;
+  }
+
+  awardExp(ev) {
+    const sp = species(this.wild.mon.speciesId);
+    const parts = this.party.filter((p) => this.participants.has(p.id) && p.alive !== false && p.hp > 0);
+    for (const p of parts) {
+      const amount = expGain({ baseExp: sp.baseExp, level: this.wild.mon.level, participants: parts.length });
+      ev.push({ type: 'text', text: `${displayName(p)} erhält ${amount} Erfahrungspunkte!` });
+      gainEvs(p, this.wild.mon.speciesId);
+      const lv = addExp(p, amount);
+      ev.push({ type: 'exp', pokemonId: p.id, exp: p.exp }, ...lv);
+      if (p === this.ally.mon) ev.push({ type: 'hp', side: 'ally', hp: p.hp, maxHp: p.stats.hp, damage: 0 });
+    }
+  }
+
+  end(result, ev) {
+    if (this.state === 'ended') return ev;
+    this.state = 'ended';
+    this.result = result;
+    // Kampfstatus (Verwirrung etc.) verfaellt, Statusprobleme bleiben wie im Original.
+    ev.push({ type: 'end', result });
+    return ev;
+  }
+}

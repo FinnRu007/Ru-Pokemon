@@ -1,0 +1,147 @@
+// Attacken nach Generation 4 (Platin). cat: physical | special | status.
+// acc: null = trifft immer. prio: Prioritaet. contact: Kontakt-Attacke.
+// effect beschreibt die Zusatzwirkung, siehe server/game/battle.js (applyMoveEffect).
+// simplified: true markiert Attacken, deren Spezialmechanik noch nicht komplett nachgebaut ist.
+const M = (id, name, type, cat, power, acc, pp, extra = {}) => ({
+  id, name, type, cat, power, acc, pp, prio: 0, contact: false, effect: null, ...extra
+});
+const C = { contact: true };
+
+export const MOVES = Object.fromEntries([
+  // Normal
+  M('tackle', 'Tackle', 'normal', 'physical', 35, 95, 35, C),
+  M('scratch', 'Kratzer', 'normal', 'physical', 40, 100, 35, C),
+  M('pound', 'Pfund', 'normal', 'physical', 40, 100, 35, C),
+  M('quick-attack', 'Ruckzuckhieb', 'normal', 'physical', 40, 100, 30, { ...C, prio: 1 }),
+  M('growl', 'Heuler', 'normal', 'status', 0, 100, 40, { effect: { kind: 'stat', target: 'foe', stats: { atk: -1 } } }),
+  M('leer', 'Silberblick', 'normal', 'status', 0, 100, 30, { effect: { kind: 'stat', target: 'foe', stats: { def: -1 } } }),
+  M('tail-whip', 'Rutenschlag', 'normal', 'status', 0, 100, 30, { effect: { kind: 'stat', target: 'foe', stats: { def: -1 } } }),
+  M('screech', 'Kreideschrei', 'normal', 'status', 0, 85, 40, { effect: { kind: 'stat', target: 'foe', stats: { def: -2 } } }),
+  M('scary-face', 'Grimasse', 'normal', 'status', 0, 90, 10, { effect: { kind: 'stat', target: 'foe', stats: { spe: -2 } } }),
+  M('charm', 'Charme', 'normal', 'status', 0, 100, 20, { effect: { kind: 'stat', target: 'foe', stats: { atk: -2 } } }),
+  M('double-team', 'Doppelteam', 'normal', 'status', 0, null, 15, { effect: { kind: 'stat', target: 'self', stats: { eva: 1 } } }),
+  M('defense-curl', 'Einigler', 'normal', 'status', 0, null, 40, { effect: { kind: 'stat', target: 'self', stats: { def: 1 } } }),
+  M('harden', 'Härtner', 'normal', 'status', 0, null, 30, { effect: { kind: 'stat', target: 'self', stats: { def: 1 } } }),
+  M('growth', 'Wachstum', 'normal', 'status', 0, null, 40, { effect: { kind: 'stat', target: 'self', stats: { spa: 1 } } }),
+  M('sweet-scent', 'Lockduft', 'normal', 'status', 0, 100, 20, { effect: { kind: 'stat', target: 'foe', stats: { eva: -1 } } }),
+  M('focus-energy', 'Energiefokus', 'normal', 'status', 0, null, 30, { effect: { kind: 'focus' } }),
+  M('supersonic', 'Superschall', 'normal', 'status', 0, 55, 20, { effect: { kind: 'confuse', chance: 100 } }),
+  M('sing', 'Gesang', 'normal', 'status', 0, 55, 15, { effect: { kind: 'status', status: 'slp', chance: 100 } }),
+  M('swagger', 'Angeberei', 'normal', 'status', 0, 90, 15, { effect: { kind: 'swagger' } }),
+  M('slack-off', 'Tagedieb', 'normal', 'status', 0, null, 10, { effect: { kind: 'heal', amount: 0.5 } }),
+  M('endure', 'Ausdauer', 'normal', 'status', 0, null, 10, { prio: 3, effect: { kind: 'endure' } }),
+  M('whirlwind', 'Wirbelwind', 'normal', 'status', 0, 100, 20, { prio: -6, effect: { kind: 'escape' } }),
+  M('roar', 'Brüller', 'normal', 'status', 0, 100, 20, { prio: -6, effect: { kind: 'escape' } }),
+  M('splash', 'Platscher', 'normal', 'status', 0, null, 40, { effect: { kind: 'nothing' } }),
+  M('fury-swipes', 'Kratzfurie', 'normal', 'physical', 18, 80, 15, { ...C, effect: { kind: 'multihit', min: 2, max: 5 } }),
+  M('fury-attack', 'Furienschlag', 'normal', 'physical', 15, 85, 20, { ...C, effect: { kind: 'multihit', min: 2, max: 5 } }),
+  M('headbutt', 'Kopfnuss', 'normal', 'physical', 70, 100, 15, { ...C, effect: { kind: 'flinch', chance: 30 } }),
+  M('hyper-fang', 'Hyperzahn', 'normal', 'physical', 80, 90, 15, { ...C, effect: { kind: 'flinch', chance: 10 } }),
+  M('stomp', 'Stampfer', 'normal', 'physical', 65, 100, 20, { ...C, effect: { kind: 'flinch', chance: 30 } }),
+  M('slash', 'Schlitzer', 'normal', 'physical', 70, 100, 20, { ...C, highCrit: true }),
+  M('take-down', 'Bodycheck', 'normal', 'physical', 90, 85, 20, { ...C, effect: { kind: 'recoil', ratio: 1 / 4 } }),
+  M('facade', 'Fassade', 'normal', 'physical', 70, 100, 20, { ...C, effect: { kind: 'facade' } }),
+  M('endeavor', 'Notsituation', 'normal', 'physical', 0, 100, 5, { ...C, effect: { kind: 'endeavor' } }),
+  M('swift', 'Sternschauer', 'normal', 'special', 60, null, 20),
+  M('sonic-boom', 'Ultraschall', 'normal', 'special', 0, 90, 20, { effect: { kind: 'fixed', damage: 20 } }),
+  M('constrict', 'Umklammerung', 'normal', 'physical', 10, 100, 35, { ...C, effect: { kind: 'stat', target: 'foe', stats: { spe: -1 }, chance: 10 } }),
+  M('wrap', 'Wickel', 'normal', 'physical', 15, 85, 20, { ...C, effect: { kind: 'trap' } }),
+  M('bide', 'Geduld', 'normal', 'status', 0, null, 10, { effect: { kind: 'nothing' }, simplified: true }),
+  M('foresight', 'Gesichte', 'normal', 'status', 0, null, 40, { effect: { kind: 'nothing' }, simplified: true }),
+  M('disable', 'Aussetzer', 'normal', 'status', 0, 80, 20, { effect: { kind: 'nothing' }, simplified: true }),
+  // Feuer
+  M('ember', 'Glut', 'fire', 'special', 40, 100, 25, { effect: { kind: 'status', status: 'brn', chance: 10 } }),
+  M('flame-wheel', 'Flammenrad', 'fire', 'physical', 60, 100, 25, { ...C, effect: { kind: 'status', status: 'brn', chance: 10 } }),
+  M('fire-spin', 'Feuerwirbel', 'fire', 'special', 15, 70, 15, { effect: { kind: 'trap' } }),
+  M('flamethrower', 'Flammenwurf', 'fire', 'special', 95, 100, 15, { effect: { kind: 'status', status: 'brn', chance: 10 } }),
+  M('fire-fang', 'Feuerzahn', 'fire', 'physical', 65, 95, 15, { ...C, effect: { kind: 'status', status: 'brn', chance: 10, flinch: 10 } }),
+  // Wasser
+  M('withdraw', 'Panzerschutz', 'water', 'status', 0, null, 40, { effect: { kind: 'stat', target: 'self', stats: { def: 1 } } }),
+  M('bubble', 'Blubber', 'water', 'special', 20, 100, 30, { effect: { kind: 'stat', target: 'foe', stats: { spe: -1 }, chance: 10 } }),
+  M('bubble-beam', 'Blubbstrahl', 'water', 'special', 65, 100, 20, { effect: { kind: 'stat', target: 'foe', stats: { spe: -1 }, chance: 10 } }),
+  M('water-gun', 'Aquaknarre', 'water', 'special', 40, 100, 25),
+  M('water-pulse', 'Aquawelle', 'water', 'special', 60, 100, 20, { effect: { kind: 'confuse', chance: 20 } }),
+  M('brine', 'Lake', 'water', 'special', 65, 100, 10, { effect: { kind: 'brine' } }),
+  M('whirlpool', 'Whirlpool', 'water', 'special', 15, 70, 15, { effect: { kind: 'trap' } }),
+  M('hydro-pump', 'Hydropumpe', 'water', 'special', 120, 80, 5),
+  M('aqua-jet', 'Wasserdüse', 'water', 'physical', 40, 100, 20, { ...C, prio: 1 }),
+  M('aqua-tail', 'Nassschweif', 'water', 'physical', 90, 90, 10, C),
+  M('water-sport', 'Nassmacher', 'water', 'status', 0, null, 15, { effect: { kind: 'nothing' }, simplified: true }),
+  // Pflanze
+  M('absorb', 'Absorber', 'grass', 'special', 20, 100, 25, { effect: { kind: 'drain', ratio: 0.5 } }),
+  M('mega-drain', 'Megasauger', 'grass', 'special', 40, 100, 15, { effect: { kind: 'drain', ratio: 0.5 } }),
+  M('razor-leaf', 'Rasierblatt', 'grass', 'physical', 55, 95, 25, { highCrit: true }),
+  M('magical-leaf', 'Zauberblatt', 'grass', 'special', 60, null, 20),
+  M('leech-seed', 'Egelsamen', 'grass', 'status', 0, 90, 10, { effect: { kind: 'leechSeed' } }),
+  M('synthesis', 'Synthese', 'grass', 'status', 0, null, 5, { effect: { kind: 'heal', amount: 0.5 } }),
+  M('stun-spore', 'Stachelspore', 'grass', 'status', 0, 75, 30, { effect: { kind: 'status', status: 'par', chance: 100 } }),
+  M('grass-whistle', 'Grasflöte', 'grass', 'status', 0, 55, 15, { effect: { kind: 'status', status: 'slp', chance: 100 } }),
+  M('seed-bomb', 'Samenbomben', 'grass', 'physical', 80, 100, 15),
+  // Elektro
+  M('charge', 'Ladevorgang', 'electric', 'status', 0, null, 20, { effect: { kind: 'charge' } }),
+  M('spark', 'Funkensprung', 'electric', 'physical', 65, 100, 20, { ...C, effect: { kind: 'status', status: 'par', chance: 30 } }),
+  M('thunder-fang', 'Donnerzahn', 'electric', 'physical', 65, 95, 15, { ...C, effect: { kind: 'status', status: 'par', chance: 10, flinch: 10 } }),
+  M('discharge', 'Ladungsstoß', 'electric', 'special', 80, 100, 15, { effect: { kind: 'status', status: 'par', chance: 30 } }),
+  M('thunder-shock', 'Donnerschock', 'electric', 'special', 40, 100, 30, { effect: { kind: 'status', status: 'par', chance: 10 } }),
+  // Eis
+  M('ice-fang', 'Eiszahn', 'ice', 'physical', 65, 95, 15, { ...C, effect: { kind: 'status', status: 'frz', chance: 10, flinch: 10 } }),
+  // Kampf
+  M('mach-punch', 'Tempohieb', 'fighting', 'physical', 40, 100, 30, { ...C, prio: 1 }),
+  M('karate-chop', 'Karateschlag', 'fighting', 'physical', 50, 100, 25, { ...C, highCrit: true }),
+  M('low-kick', 'Fußkick', 'fighting', 'physical', 50, 100, 20, { ...C, simplified: true }),
+  M('seismic-toss', 'Geowurf', 'fighting', 'physical', 0, 100, 20, { ...C, effect: { kind: 'fixed', damage: 'level' } }),
+  M('revenge', 'Vergeltung', 'fighting', 'physical', 60, 100, 10, { ...C, prio: -4, effect: { kind: 'revenge' } }),
+  M('jump-kick', 'Sprungkick', 'fighting', 'physical', 85, 95, 25, C),
+  M('close-combat', 'Nahkampf', 'fighting', 'physical', 120, 100, 5, { ...C, effect: { kind: 'stat', target: 'self', stats: { def: -1, spd: -1 } } }),
+  // Gift
+  M('poison-sting', 'Giftstachel', 'poison', 'physical', 15, 100, 35, { effect: { kind: 'status', status: 'psn', chance: 30 } }),
+  M('acid', 'Säure', 'poison', 'special', 40, 100, 30, { effect: { kind: 'stat', target: 'foe', stats: { spd: -1 }, chance: 10 } }),
+  M('toxic-spikes', 'Giftspitzen', 'poison', 'status', 0, null, 20, { effect: { kind: 'nothing' }, simplified: true }),
+  // Boden
+  M('mud-slap', 'Lehmschelle', 'ground', 'special', 20, 100, 10, { effect: { kind: 'stat', target: 'foe', stats: { acc: -1 }, chance: 100 } }),
+  M('mud-bomb', 'Schlammbombe', 'ground', 'special', 65, 85, 10, { effect: { kind: 'stat', target: 'foe', stats: { acc: -1 }, chance: 30 } }),
+  M('magnitude', 'Intensität', 'ground', 'physical', 0, 100, 30, { effect: { kind: 'magnitude' } }),
+  M('earthquake', 'Erdbeben', 'ground', 'physical', 100, 100, 10),
+  M('mud-sport', 'Lehmsuhler', 'ground', 'status', 0, null, 15, { effect: { kind: 'nothing' }, simplified: true }),
+  // Flug
+  M('peck', 'Pikser', 'flying', 'physical', 35, 100, 35, C),
+  M('wing-attack', 'Flügelschlag', 'flying', 'physical', 60, 100, 35, C),
+  M('drill-peck', 'Bohrschnabel', 'flying', 'physical', 80, 100, 20, C),
+  M('aerial-ace', 'Aero-Ass', 'flying', 'physical', 60, null, 20, C),
+  M('brave-bird', 'Sturzflug', 'flying', 'physical', 120, 100, 15, { ...C, effect: { kind: 'recoil', ratio: 1 / 3 } }),
+  M('air-cutter', 'Windschnitt', 'flying', 'special', 55, 95, 25, { highCrit: true }),
+  M('gust', 'Windstoß', 'flying', 'special', 40, 100, 35),
+  // Psycho
+  M('confusion', 'Konfusion', 'psychic', 'special', 50, 100, 25, { effect: { kind: 'confuse', chance: 10 } }),
+  M('psybeam', 'Psystrahl', 'psychic', 'special', 65, 100, 20, { effect: { kind: 'confuse', chance: 10 } }),
+  M('extrasensory', 'Sondersensor', 'psychic', 'special', 80, 100, 30, { effect: { kind: 'flinch', chance: 10 } }),
+  M('teleport', 'Teleport', 'psychic', 'status', 0, null, 20, { effect: { kind: 'escape' } }),
+  M('agility', 'Agilität', 'psychic', 'status', 0, null, 30, { effect: { kind: 'stat', target: 'self', stats: { spe: 2 } } }),
+  M('amnesia', 'Amnesie', 'psychic', 'status', 0, null, 20, { effect: { kind: 'stat', target: 'self', stats: { spd: 2 } } }),
+  // Kaefer
+  M('string-shot', 'Fadenschuss', 'bug', 'status', 0, 95, 40, { effect: { kind: 'stat', target: 'foe', stats: { spe: -1 } } }),
+  M('leech-life', 'Blutsauger', 'bug', 'physical', 20, 100, 15, { ...C, effect: { kind: 'drain', ratio: 0.5 } }),
+  M('fury-cutter', 'Zornklinge', 'bug', 'physical', 10, 95, 20, { ...C, effect: { kind: 'furyCutter' } }),
+  M('x-scissor', 'Kreuzschere', 'bug', 'physical', 80, 100, 15, C),
+  // Gestein
+  M('rock-throw', 'Steinwurf', 'rock', 'physical', 50, 90, 15),
+  M('rock-polish', 'Steinpolitur', 'rock', 'status', 0, null, 20, { effect: { kind: 'stat', target: 'self', stats: { spe: 2 } } }),
+  M('rollout', 'Walzer', 'rock', 'physical', 30, 90, 20, { ...C, simplified: true }),
+  // Geist
+  M('astonish', 'Erstauner', 'ghost', 'physical', 30, 100, 15, { ...C, effect: { kind: 'flinch', chance: 30 } }),
+  M('confuse-ray', 'Konfustrahl', 'ghost', 'status', 0, 100, 10, { effect: { kind: 'confuse', chance: 100 } }),
+  M('curse', 'Fluch', '???', 'status', 0, null, 10, { effect: { kind: 'stat', target: 'self', stats: { atk: 1, def: 1, spe: -1 } } }),
+  // Drache
+  M('dragon-rage', 'Drachenwut', 'dragon', 'special', 0, 100, 10, { effect: { kind: 'fixed', damage: 40 } }),
+  M('twister', 'Windhose', 'dragon', 'special', 40, 100, 20, { effect: { kind: 'flinch', chance: 20 } }),
+  // Unlicht
+  M('bite', 'Biss', 'dark', 'physical', 60, 100, 25, { ...C, effect: { kind: 'flinch', chance: 30 } }),
+  M('crunch', 'Knirscher', 'dark', 'physical', 80, 100, 15, { ...C, effect: { kind: 'stat', target: 'foe', stats: { def: -1 }, chance: 20 } }),
+  M('pursuit', 'Verfolgung', 'dark', 'physical', 40, 100, 20, { ...C, simplified: true }),
+  M('nasty-plot', 'Ränkeschmied', 'dark', 'status', 0, null, 20, { effect: { kind: 'stat', target: 'self', stats: { spa: 2 } } }),
+  M('taunt', 'Verhöhner', 'dark', 'status', 0, 100, 20, { effect: { kind: 'nothing' }, simplified: true }),
+  M('torment', 'Folterknecht', 'dark', 'status', 0, 100, 15, { effect: { kind: 'nothing' }, simplified: true }),
+  // Stahl
+  M('metal-claw', 'Metallklaue', 'steel', 'physical', 50, 95, 35, { ...C, effect: { kind: 'stat', target: 'self', stats: { atk: 1 }, chance: 10 } }),
+  M('struggle', 'Verzweifler', '???', 'physical', 50, null, 1, { ...C, effect: { kind: 'recoil', ratio: 1 / 4, ofMaxHp: true } })
+].map((m) => [m.id, m]));

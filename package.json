@@ -1,0 +1,20 @@
+{
+  "name": "platin-multiplayer",
+  "version": "0.1.0",
+  "description": "Pokemon Platin Klon mit Multiplayer-Overworld, Nuzlocke und Linked Soulbound",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "dev": "node --no-warnings --watch server/index.js",
+    "fetch-data": "node scripts/fetch-pokeapi.js",
+    "test": "node --no-warnings test/smoke.js"
+  },
+  "engines": { "node": ">=22.5" },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.0.0"
+  }
+}

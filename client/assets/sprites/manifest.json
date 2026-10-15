@@ -1,0 +1,24 @@
+{
+  "_info": "Platzhalter-Konfiguration. Fuer echte Grafiken einfach 'image' setzen (Pfad relativ zu /assets/sprites/). Fehlt das Bild, wird die Farbe gezeichnet.",
+  "tileSize": 16,
+  "tiles": {
+    "#": { "color": "#2f6b32", "detail": "tree", "image": null },
+    ".": { "color": "#d8c48e", "image": null },
+    ",": { "color": "#8fd16a", "image": null },
+    "\"": { "color": "#3f9d3a", "detail": "grass", "image": null },
+    "~": { "color": "#4a8fe0", "detail": "water", "image": null },
+    "H": { "color": "#b5533c", "detail": "roof", "image": null },
+    "D": { "color": "#6b4226", "image": null },
+    "C": { "color": "#e04848", "detail": "center", "image": null },
+    "S": { "color": "#9b7a4a", "detail": "sign", "image": null },
+    "F": { "color": "#cfcfcf", "image": null },
+    "L": { "color": "#a9c97a", "detail": "ledge", "image": null }
+  },
+  "player": { "image": null, "frameWidth": 16, "frameHeight": 16 },
+  "pokemon": { "useImages": false, "pathPattern": "pokemon/{id}.png", "backPathPattern": "pokemon/back/{id}.png" },
+  "typeColors": {
+    "normal": "#a8a878", "fire": "#f08030", "water": "#6890f0", "electric": "#f8d030", "grass": "#78c850", "ice": "#98d8d8",
+    "fighting": "#c03028", "poison": "#a040a0", "ground": "#e0c068", "flying": "#a890f0", "psychic": "#f85888", "bug": "#a8b820",
+    "rock": "#b8a038", "ghost": "#705898", "dragon": "#7038f8", "dark": "#705848", "steel": "#b8b8d0", "???": "#68a090"
+  }
+}
