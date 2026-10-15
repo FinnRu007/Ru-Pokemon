@@ -16,6 +16,12 @@ Mehrere Spieler: Browserfenster öffnen (oder andere Rechner im Netz auf `http:/
 
 Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren, T Chat. Kurzes Antippen dreht nur die Blickrichtung.
 
+### Online mit Freunden spielen
+
+Doppelklick auf **`Online spielen.bat`**. Das Skript startet den Server, lädt beim ersten Mal das kostenlose Programm `cloudflared` nach `tools/` und öffnet einen Cloudflare Quick Tunnel. Danach steht eine Adresse wie `https://irgendwas.trycloudflare.com` im Fenster, in der Zwischenablage und in `Online-Adresse.txt`. Diese Adresse an Freunde schicken: Sie öffnen sie im Browser, geben ihren Namen und denselben Run-Code ein.
+
+Kein Konto, keine Kosten, keine Router-Einstellungen. Die Spielstände bleiben auf deinem Rechner. Das Fenster muss offen bleiben, solange gespielt wird, und die Adresse ist bei jedem Start eine neue.
+
 ### Umgebungsvariablen
 
 | Variable | Standard | Bedeutung |

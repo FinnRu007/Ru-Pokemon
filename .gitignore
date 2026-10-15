@@ -3,3 +3,5 @@ data/*.db
 data/*.db-*
 data/save.json
 shared/data/generated/
+tools/
+Online-Adresse.txt
