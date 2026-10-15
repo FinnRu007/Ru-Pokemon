@@ -107,6 +107,7 @@ function noise2(x, y, seed) {
 }
 const fbm = (x, y, seed) => noise2(x / 18, y / 18, seed) * 0.6 + noise2(x / 7, y / 7, seed + 1) * 0.3 + noise2(x / 3, y / 3, seed + 2) * 0.1;
 
+let FIELD = null; // { W, H, dist, owner, ids, coast } fuer Gelaende und Nebel
 function bakeTerrain() {
   const L = layout();
   const W = L.w + PAD * 2, H = L.h + PAD * 2;
@@ -128,13 +129,14 @@ function bakeTerrain() {
       dist[j] = dist[i] + 1; owner[j] = owner[i]; q.push(j);
     }
   }
+  FIELD = { W, H, dist, owner, ids };
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d'); const img = g.createImageData(W, H);
   const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   const P = {
     deep: rgb('#2c5a9c'), sea: rgb('#3f78c0'), shallow: rgb('#5c9ad6'), foam: rgb('#a8d0f0'), sand: rgb('#e4d49a'),
     grass: rgb('#86bc5c'), grass2: rgb('#76b050'), forest: rgb('#3c7a40'), forest2: rgb('#2e6634'), hill: rgb('#9c8e66'),
-    rock: rgb('#8a7e70'), rock2: rgb('#6c6258'), snow: rgb('#f0f4fa'), snowg: rgb('#d8e2ee'), dusk: rgb('#2e5a3a')
+    rock: rgb('#8a7e70'), rock2: rgb('#6c6258'), snow: rgb('#f0f4fa'), snowg: rgb('#d8e2ee'), dusk: rgb('#2e5a3a'), peak: rgb('#aaa298')
   };
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x; const d = dist[i];
@@ -150,12 +152,32 @@ function bakeTerrain() {
     else {
       const e = n2 * 0.9 + Math.min(1, d / 8) * 0.35 - Math.max(0, d - coast + 6) * 0.07; // Berge im Inland, flache Kuesten // Hoehe waechst weg von den Wegen
       const snow = tint === 'snow';
-      if (e > 0.86) col = snow || e > 0.97 ? P.snow : (x + y) % 3 ? P.rock : P.rock2;
+      // Schnee nur im verschneiten Norden, sonst graue Gipfel
+      if (e > 0.86) col = snow ? P.snow : e > 0.97 ? P.peak : (x + y) % 3 ? P.rock : P.rock2;
       else if (e > 0.72) col = snow ? P.snowg : P.hill;
       else if (e > 0.5) col = snow ? P.snowg : tint === 'dusk' ? P.dusk : ((x * 3 + y * 5) % 4 === 0 ? P.forest2 : P.forest);
       else col = snow ? P.snow : (noise2(x / 3, y / 3, 7) > 0.55 ? P.grass2 : P.grass);
     }
     img.data.set([col[0], col[1], col[2], 255], i * 4);
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+
+// Nebel ueber dem Land unbekannter Gebiete (das Meer bleibt frei), damit man nicht vorab sieht,
+// was einen erwartet. Bekannte Gebiete und ihr Umland bleiben klar.
+function bakeFog(visited) {
+  if (!FIELD) bakeTerrain();
+  const { W, H, dist, owner, ids } = FIELD;
+  const known = ids.map((id) => visited.has(id));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); const img = g.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const o = owner[i];
+    if (o < 0 || known[o]) continue;
+    const coast = 9 + fbm(i % W, (i / W) | 0, 3) * 20;
+    if (dist[i] > coast + 1) continue;
+    img.data.set([26, 30, 52, 205], i * 4);
   }
   g.putImageData(img, 0, 0);
   return c;
@@ -176,6 +198,7 @@ function bakeWorld(visited) {
   const ids = Object.keys(L.pos).sort((a, b) => (L.pos[b].cave ? 1 : 0) - (L.pos[a].cave ? 1 : 0));
   for (const id of ids) {
     const m = MAPS[id]; const p = L.pos[id]; const cave = p.cave;
+    if (cave && visited && !visited.has(id)) continue; // unbekannte Hoehlen bleiben verborgen
     for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
       const t = m.tiles[y][x];
       const wx = p.x + x - L.minX; const wy = p.y + y - L.minY;
@@ -187,12 +210,13 @@ function bakeWorld(visited) {
     }
   }
   g.putImageData(img, 0, 0);
-  // Unbekannte Gebiete: leicht vernebelt, aber als Landschaft erkennbar
+  // Unbekannte Gebiete: nur als Umriss unter dem Nebel, ohne Einzelheiten
   if (visited) {
-    g.fillStyle = 'rgba(30,34,60,.5)';
     for (const id of ids) {
       if (visited.has(id) || L.pos[id].cave) continue;
       const m = MAPS[id]; const p = L.pos[id];
+      g.clearRect(p.x - L.minX, p.y - L.minY, m.width, m.height);
+      g.fillStyle = '#3a3f62';
       g.fillRect(p.x - L.minX, p.y - L.minY, m.width, m.height);
     }
   }
@@ -234,7 +258,8 @@ export class WorldMap {
     try { localStorage.setItem(this.key, JSON.stringify([...this.visited])); } catch { /* privat */ }
   }
 
-  image() { return (this.baked ||= bakeWorld(this.visited)); }
+  image() { if (!this.baked) { this.baked = bakeWorld(this.visited); this.fogImg = null; } return this.baked; }
+  fog() { return (this.fogImg ||= bakeFog(this.visited)); }
   terrain() { return (this.land ||= bakeTerrain()); }
 
   // Zoomstufe, bei der die ganze Welt hineinpasst
@@ -287,7 +312,10 @@ export class WorldMap {
     }
     const ox = W / 2 - cx * k; const oy = H / 2 - cy * k;
     g.fillStyle = '#2c5a9c'; g.fillRect(0, 0, W, H);
-    g.drawImage(this.terrain(), Math.round(ox - PAD * k), Math.round(oy - PAD * k), Math.round((L.w + PAD * 2) * k), Math.round((L.h + PAD * 2) * k));
+    const tr = [Math.round(ox - PAD * k), Math.round(oy - PAD * k), Math.round((L.w + PAD * 2) * k), Math.round((L.h + PAD * 2) * k)];
+    g.drawImage(this.terrain(), ...tr);
+    this.image();
+    g.drawImage(this.fog(), ...tr);
     // Schatten und Rahmen der Karten, dann die Karten selbst
     g.fillStyle = 'rgba(0,0,0,.22)';
     for (const [id, p] of Object.entries(L.pos)) {
