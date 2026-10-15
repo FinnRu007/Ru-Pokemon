@@ -51,6 +51,10 @@ export class WildBattle {
     this.state = 'action'; // action | switch | ended
     this.result = null;
     this.turn = 0;
+    // Partner wie Heide, Urs oder Buck: kämpft an deiner Seite und greift jede Runde mit an
+    this.partner = o.partner ? { name: o.partner.name, b: makeBattler(o.partner.mon) } : null;
+    // Wanderndes Pokémon (Vesprit, Cresselia): flieht, sobald es an der Reihe ist
+    this.roamer = !!o.roamer;
   }
 
   intro() {
@@ -59,9 +63,39 @@ export class WildBattle {
     ev.push({ type: 'text', text: `Ein wildes ${displayName(w)} erscheint!${w.shiny ? ' (Schillernd!)' : ''}` });
     if (!this.catchable) ev.push({ type: 'text', text: this.catchBlockReason });
     ev.push({ type: 'text', text: `Los, ${displayName(this.ally.mon)}!` });
+    ev.push(...this.partnerIntro());
     ev.push(...this.switchInAbility(this.ally, this.wild));
     ev.push(...this.switchInAbility(this.wild, this.ally));
     return ev;
+  }
+
+  partnerIntro() {
+    return this.partner ? [{ type: 'text', text: `${this.partner.name} schickt ${displayName(this.partner.b.mon)} in den Kampf!` }] : [];
+  }
+
+  // Der Partner greift den Gegner mit seiner stärksten Attacke an (Doppelkampf nachempfunden)
+  partnerTurn(ev) {
+    const pb = this.partner?.b;
+    if (!pb || this.state !== 'action' || this.wild.mon.hp <= 0) return;
+    const foeTypes = species(this.wild.mon.speciesId).types;
+    const own = species(pb.mon.speciesId).types;
+    const best = pb.mon.moves.map((m) => MOVES[m.id]).filter((mv) => mv && mv.cat !== 'status' && mv.power)
+      .map((mv) => ({ mv, eff: mv.type === '???' ? 1 : typeEffectiveness(mv.type, foeTypes) }))
+      .sort((a, b) => b.mv.power * b.eff * (own.includes(b.mv.type) ? 1.5 : 1) - a.mv.power * a.eff * (own.includes(a.mv.type) ? 1.5 : 1))[0];
+    if (!best) return;
+    const { mv, eff } = best;
+    ev.push({ type: 'text', text: `${this.partner.name}s ${displayName(pb.mon)} setzt ${mv.name} ein!` });
+    ev.push({ type: 'anim', side: 'ally', move: mv.id, moveType: mv.type, cat: mv.cat, power: mv.power || 0 });
+    if (mv.acc !== null && Math.random() * 100 >= mv.acc * accStageMultiplier(-this.wild.stages.eva)) {
+      ev.push({ type: 'text', text: 'Die Attacke ging daneben!' });
+      return;
+    }
+    if (eff === 0) { ev.push({ type: 'text', text: `Es hat keine Wirkung auf ${this.nameAcc(this.wild)}...` }); return; }
+    const { damage, crit } = this.computeDamage(pb, this.wild, mv, eff);
+    if (crit) ev.push({ type: 'text', text: 'Ein Volltreffer!' });
+    this.applyDamage(this.wild, damage, ev);
+    if (eff > 1) ev.push({ type: 'text', text: 'Das ist sehr effektiv!' });
+    if (eff < 1) ev.push({ type: 'text', text: 'Das ist nicht sehr effektiv...' });
   }
 
   snapshot() {
@@ -187,13 +221,17 @@ export class WildBattle {
     }
 
     if (this.state === 'action') {
-      if (!this.checkFaints(ev)) this.endOfTurn(ev);
+      if (!this.checkFaints(ev)) {
+        this.partnerTurn(ev);
+        if (!this.checkFaints(ev)) this.endOfTurn(ev);
+      }
       this.checkFaints(ev);
     }
     return { events: ev };
   }
 
   pickWildMove() {
+    if (this.roamer && !this.wild.vol.trap) return 'flee';
     const usable = this.wild.mon.moves.filter((m) => m.pp > 0);
     if (!usable.length) return 'struggle';
     return usable[rnd(usable.length)].id;
@@ -208,8 +246,8 @@ export class WildBattle {
   turnOrder(allyMove, foeMove) {
     const a = [this.ally, allyMove];
     const f = [this.wild, foeMove];
-    const pa = MOVES[allyMove].prio;
-    const pf = MOVES[foeMove].prio;
+    const pa = MOVES[allyMove]?.prio || 0;
+    const pf = MOVES[foeMove]?.prio || 0;
     if (pa !== pf) return pa > pf ? [a, f] : [f, a];
     const sa = this.effSpeed(this.ally);
     const sf = this.effSpeed(this.wild);
@@ -246,6 +284,11 @@ export class WildBattle {
 
   // ---------------------------------------------------------------- Attacke ausfuehren
   useMove(user, moveId, ev, movedFirst) {
+    if (moveId === 'flee') {
+      ev.push({ type: 'text', text: `${this.name(user)} ist geflohen!` });
+      this.end('fled', ev);
+      return;
+    }
     const target = this.other(user);
     const move = MOVES[moveId];
     const uName = this.name(user);
@@ -635,13 +678,14 @@ export class TrainerBattle extends WildBattle {
     this.expBonus = 1.5;
   }
 
-  get trainerName() { return `${this.trainer.cls} ${this.trainer.name}`; }
+  get trainerName() { return this.trainer.cls ? `${this.trainer.cls} ${this.trainer.name}` : this.trainer.name; }
 
   intro() {
     const ev = [];
     ev.push({ type: 'text', text: `${this.trainerName} möchte kämpfen!` });
     ev.push({ type: 'text', text: `${this.trainerName} schickt ${displayName(this.wild.mon)} in den Kampf!` });
     ev.push({ type: 'text', text: `Los, ${displayName(this.ally.mon)}!` });
+    ev.push(...this.partnerIntro());
     ev.push(...this.switchInAbility(this.ally, this.wild));
     ev.push(...this.switchInAbility(this.wild, this.ally));
     return ev;

@@ -7,6 +7,8 @@ import { MAPS } from '../../shared/data/maps.js';
 import { DIRS, tileAt, SOLID } from '../../shared/world.js';
 import { S2C } from '../../shared/protocol.js';
 
+// Nacht wie in Platin: 20 bis 4 Uhr (Uhr des Servers)
+export const isNight = (d = new Date()) => d.getHours() >= 20 || d.getHours() < 4;
 const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
 
 export class StoryRunner {
@@ -52,6 +54,16 @@ export class StoryRunner {
       if (HM_FLAGS[step.flag] && !p.items[HM_FLAGS[step.flag]]) { p.items[HM_FLAGS[step.flag]] = 1; g.sendParty(s); }
       g.sendProgress(s); return;
     }
+    if ('partner' in step) { g.setPartner(s, step.partner); return; }
+    if (step.roam) { g.startRoaming(s, step.roam); return; }
+    if (step.egg) { lines.push({ speaker: null, text: g.giftEgg(s, step.egg) }); return; }
+    if (step.ifNight) { sc.stack.push({ steps: (isNight() ? step.then : step.else) || [], i: 0 }); return; }
+    if (step.ifParty) {
+      const have = step.ifParty.every((id) => s.party.some((m) => m.speciesId === id && !m.egg));
+      sc.stack.push({ steps: (have ? step.then : step.else) || [], i: 0 });
+      return;
+    }
+    if (step.tower) return g.towerStep(s, step, sc, lines);
     if (step.service) { g.openService(s, step); sc.waiting = 'service'; return 'wait'; }
     if (step.unflag) { delete flags[step.unflag]; g.sendProgress(s); return; }
     if (step.give) {
@@ -150,6 +162,7 @@ export class StoryRunner {
     const sc = s.script;
     if (!sc || sc.waiting !== 'battle') return;
     sc.waiting = null;
+    sc.lastResult = result;
     if (result === 'win' || meta?.safe || result === 'caught' || (meta?.script && result === 'fled')) return this.run(s);
     this.finish(s);
   }

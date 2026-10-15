@@ -74,6 +74,7 @@ export function stageOf(id) {
 }
 
 export function displayName(p) {
+  if (p.egg) return 'Ei';
   return p.nickname || species(p.speciesId).name;
 }
 
@@ -141,7 +142,7 @@ export function evolve(p) {
 }
 
 export function healPokemon(p) {
-  if (!p.alive) return p; // Nuzlocke: Tote bleiben tot
+  if (!p.alive || p.egg) return p; // Nuzlocke: Tote bleiben tot, Eier brauchen keine Pflege
   p.hp = p.stats.hp;
   p.status = null;
   for (const m of p.moves) m.pp = m.maxPp;
@@ -157,6 +158,7 @@ export function publicPokemon(p) {
     shiny: p.shiny, gender: p.gender, nature: NATURES[p.nature].name, ability: p.ability, stats: p.stats,
     exp: p.exp, expThis: expForLevel(sp.growth, p.level), expNext: expForLevel(sp.growth, Math.min(100, p.level + 1)),
     moves: p.moves.map((m) => ({ ...m, name: MOVES[m.id].name, type: MOVES[m.id].type, cat: MOVES[m.id].cat, power: MOVES[m.id].power })),
-    location: p.location, slot: p.slot, metRoute: p.metRoute
+    location: p.location, slot: p.slot, metRoute: p.metRoute, form: p.form || null,
+    ...(p.egg ? { egg: true, species: 'Ei', eggHint: p.eggSteps > 2560 ? 'Es scheint noch eine Weile zu dauern.' : p.eggSteps > 1280 ? 'Manchmal bewegt es sich. Bald ist es so weit.' : 'Man hört Geräusche von innen. Es schlüpft gleich!' } : {})
   };
 }

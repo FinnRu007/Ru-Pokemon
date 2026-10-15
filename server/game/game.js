@@ -8,13 +8,14 @@ import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
 import { WildBattle, TrainerBattle } from './battle.js';
-import { RulesEngine, DEFAULT_RULES } from './rules.js';
+import { RulesEngine, sanitizeRules } from './rules.js';
 import { StoryRunner } from './story.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
 import { ITEMS, MART_STOCK, STORE_STOCK, sellPrice, applyItem, HM_FLAGS, isHmMove } from '../../shared/data/items.js';
 import { addExp } from './pokemonFactory.js';
 import { expForLevel } from '../../shared/data/growth.js';
 import { TUTORS, BADGE_TMS, RELEARN_COST } from '../../shared/data/tutors.js';
+import { Extras } from './extras.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
 export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
@@ -107,9 +108,7 @@ export class GameServer {
       if (code) {
         if (!/^[A-Z0-9]{3,12}$/.test(code)) return this.send(conn.ws, { t: S2C.ERROR, message: 'Run-Code: 3 bis 12 Zeichen A-Z/0-9' });
         if (!this.repo.getRun(code)) {
-          const rules = { ...DEFAULT_RULES };
-          for (const k of Object.keys(DEFAULT_RULES)) if (msg.rules && typeof msg.rules[k] === typeof DEFAULT_RULES[k]) rules[k] = msg.rules[k];
-          this.repo.createRun({ id: code, name: `Run ${code}`, rules });
+          this.repo.createRun({ id: code, name: `Run ${code}`, rules: sanitizeRules(msg.rules) });
         }
         runId = code;
       }
@@ -122,6 +121,8 @@ export class GameServer {
         // Mit Story gibt es die ersten Baelle erst im Labor
         items: this.storyOn ? {} : { 'poke-ball': 10, 'great-ball': 0, 'ultra-ball': 0 },
         money: 3000, flags: {},
+        // Solo: eigene Regeln am Spielstand (im Run gelten die Regeln des Runs)
+        ...(runId ? {} : { rules: sanitizeRules(msg.rules, true) }),
         lastHeal: { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y }
       };
       this.repo.savePlayer(player);
@@ -327,7 +328,9 @@ export class GameServer {
     s.posDirty = true;
     ack(true);
 
+    if (this.storyOn) this.eggStep(s);
     if (oldMap !== p.map) {
+      this.onMapChange(s, oldMap);
       if (MAPS[p.map].fly && !p.flags['visit_' + p.map]) { p.flags['visit_' + p.map] = true; this.sendProgress(s); }
       this.broadcastMap(oldMap, { t: S2C.PLAYER_LEFT, id: p.id });
       this.broadcastMap(p.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(p) }, p.id);
@@ -365,6 +368,7 @@ export class GameServer {
     if (!ev) return;
     if (ev.type === 'heal') return this.healAt(s, ev);
     if (ev.type === 'shop') return this.openShop(s, ev);
+    if (ev.type === 'script' && this.storyOn) return this.story.runNamed(s, ev.script);
     if (this.storyOn) return this.story.start(s, [[null, ev.text]]);
     this.notice(s, ev.text, 'dialog');
   }
@@ -615,6 +619,7 @@ export class GameServer {
     Object.assign(p, { map, x, y, dir });
     s.posDirty = true; s.prev = null;
     if (MAPS[map].fly) p.flags['visit_' + map] = true;
+    if (old !== map) this.onMapChange(s, old);
     this.broadcastMap(old, { t: S2C.PLAYER_LEFT, id: p.id });
     this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
     this.broadcastMap(p.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(p) }, p.id);
@@ -658,6 +663,8 @@ export class GameServer {
     if (!list?.length) return;
     if (!s.party.some((m) => m.alive && m.hp > 0)) return;
     if (!encounterRoll(tile === GRASS ? table.grassRate : tile === WATER ? (table.waterRate || 10) : table.caveRate)) return;
+    const roamer = tile !== CAVE_FLOOR && this.roamerHere(s);
+    if (roamer) return this.startWildBattle(s, roamer, s.player.roamers[roamer].level, s.player.map, { roamer });
     const total = list.reduce((a, e) => a + e.weight, 0);
     let r = Math.random() * total;
     const slot = list.find((e) => (r -= e.weight) < 0) || list[0];
@@ -669,7 +676,7 @@ export class GameServer {
 
   startWildBattle(s, speciesId, level, route, meta = null) {
     if (!s.party.some((m) => m.alive !== false && m.hp > 0)) return false;
-    const wild = createPokemon(speciesId, level, { metRoute: route });
+    const wild = meta?.roamer ? this.makeRoamer(s, speciesId) : this.applyForm(createPokemon(speciesId, level, { metRoute: route }), s.player.flags);
     const families = new Set([...s.party, ...s.box].map((m) => species(m.speciesId).family));
     // Vor den ersten Pokebaellen zaehlt keine Begegnung fuer Nuzlocke (wie die gaengige Regel)
     const gate = this.storyOn && !s.player.flags.got_balls
@@ -681,7 +688,7 @@ export class GameServer {
       id: crypto.randomUUID(), party: s.party, wild, route, items: s.player.items,
       catchable: gate.catchable, catchBlockReason: gate.reason, nuzlocke: this.rules.rulesFor(s.player).nuzlocke,
       ballCtx: { caught: s.player.dex?.caught || {}, cave: MAPS[s.player.map]?.theme === 'cave', water: tileAt(MAPS[s.player.map], s.player.x, s.player.y) === WATER, night: ((h) => h >= 20 || h < 6)(new Date().getHours()) },
-      onFaint: (mon) => this.onAllyFaint(s, mon)
+      onFaint: (mon) => this.onAllyFaint(s, mon), partner: this.storyOn ? this.partnerFor(s) : null, roamer: !!meta?.roamer
     });
     const events = s.battle.intro();
     this.dexMark(s, speciesId);
@@ -699,7 +706,7 @@ export class GameServer {
     s.battleMeta = { safe: true, script: true };
     s.battle = new WildBattle({
       id: crypto.randomUUID(), party: s.party, wild, route: 'story', items: s.player.items,
-      catchable: false, catchBlockReason: 'Jetzt ist keine Zeit zum Fangen!', nuzlocke: false, onFaint: () => []
+      catchable: false, catchBlockReason: 'Jetzt ist keine Zeit zum Fangen!', nuzlocke: false, onFaint: () => [], partner: this.partnerFor(s)
     });
     this.beginBattle(s);
     return true;
@@ -720,7 +727,7 @@ export class GameServer {
     s.battle = new TrainerBattle({
       id: crypto.randomUUID(), party: s.party, foeParty, route: 'trainer', items: s.player.items,
       trainer: { name: tr.name, cls: tr.cls, look: tr.look, leader: !!tr.leader }, nuzlocke: nuz && !tr.safe,
-      onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon)
+      onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon), partner: this.partnerFor(s, tr)
     });
     this.beginBattle(s);
     return true;
@@ -833,7 +840,10 @@ export class GameServer {
       this.sendProgress(s);
     }
 
-    if (result === 'lose' && meta?.safe) {
+    this.afterBattleExtras(s, b, result, meta, extra);
+    if (meta?.tower) {
+      // Kampfturm: eigenes Team bleibt unberuehrt, der Turm fuehrt die Serie
+    } else if (result === 'lose' && meta?.safe) {
       // Story-Kaempfe ohne Risiko: Team wird geheilt, es geht einfach weiter
       for (const m of s.party) healPokemon(m);
       extra.push(tr ? `${tr.name}: Ha! Aber keine Sorge, das war nur ein Übungskampf.` : 'Dein Pokémon hat sich zum Glück schnell erholt.');
@@ -937,3 +947,6 @@ export class GameServer {
 
   stop() { clearInterval(this.saveTimer); clearInterval(this.rosterTimer); this.flushPositions(); }
 }
+
+// Begleiter, Wanderer, Eier, Icognito-Formen und Kampfturm (extras.js)
+Object.assign(GameServer.prototype, Extras);
