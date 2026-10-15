@@ -108,7 +108,8 @@ export class WildBattle {
       party: this.party.map(publicPokemon),
       balls: Object.fromEntries(Object.keys(BALLS).map((k) => [k, this.items[k] || 0])),
       bag: Object.fromEntries(Object.entries(ITEMS).filter(([k, it]) => (it.kind === 'med' || it.kind === 'battle') && !it.candy && !it.ev && !it.ppUp && this.items[k] > 0).map(([k, it]) => [k, { name: it.name, count: this.items[k], kind: it.kind, pp: !!it.pp && !it.all }])),
-      kind: 'wild'
+      kind: 'wild',
+      shiftOffer: !!this.shiftOffer
     };
   }
 
@@ -129,6 +130,13 @@ export class WildBattle {
       const r = this.doSwitch(action.index, ev);
       if (r) return { events: [], error: r };
       this.state = 'action';
+      return { events: ev };
+    }
+    // Kampfstil Wechsel: nach einem besiegten Gegner einmal frei wechseln
+    const offer = this.shiftOffer; this.shiftOffer = false;
+    if (offer && action.type === 'switch' && action.free) {
+      const r = this.doSwitch(action.index, ev);
+      if (r) return { events: [], error: r };
       return { events: ev };
     }
 
@@ -737,5 +745,6 @@ export class TrainerBattle extends WildBattle {
     ev.push({ type: 'text', text: `${this.trainerName} schickt ${displayName(next)} in den Kampf!` });
     ev.push({ type: 'foeSwitch', mon: { ...publicPokemon(next), moves: undefined, stats: undefined } });
     ev.push(...this.switchInAbility(this.wild, this.ally));
+    this.shiftOffer = !this.partner && this.ally.mon.hp > 0 && this.party.some((m) => m.alive !== false && m.hp > 0 && m !== this.ally.mon);
   }
 }

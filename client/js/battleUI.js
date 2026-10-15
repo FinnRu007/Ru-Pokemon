@@ -105,7 +105,19 @@ export class BattleUI {
     this.playing = false;
     if (this.pendingEnd) return this.finish();
     if (this.state && this.state.state === 'switch') return this.partyMenu(true);
-    if (this.state && this.state.state === 'action') this.mainMenu();
+    if (this.state && this.state.state === 'action') {
+      if (this.state.shiftOffer && options.battleStyle === 'shift' && this.shiftFor !== this.state.foe.id) return this.shiftPrompt();
+      this.mainMenu();
+    }
+  }
+  // Kampfstil Wechsel: wie in Platin vor dem naechsten Gegner fragen
+  shiftPrompt() {
+    this.shiftFor = this.state.foe.id;
+    $('battleText').textContent = `${this.state.trainer?.name || 'Der Trainer'} setzt ${this.state.foe.name} ein. Möchtest du dein Pokémon wechseln?`;
+    this.menu([
+      { label: 'Ja', color: '#3fa34d', fn: () => this.partyMenu(false, true) },
+      { label: 'Nein', color: '#d9534f', fn: () => this.mainMenu() }
+    ]);
   }
 
   async say(text, ms = 900, log = true) {
@@ -350,14 +362,14 @@ export class BattleUI {
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.itemTarget(item, name, true) });
     this.menu(btns);
   }
-  partyMenu(forced) {
+  partyMenu(forced, free = false) {
     $('battleText').textContent = forced ? 'Welches Pokémon soll kämpfen?' : 'Pokémon wechseln';
     const btns = this.state.party.map((p, i) => ({
       html: `${p.alive ? '' : '† '}${p.name} Lv${p.level}<small>${p.hp}/${p.maxHp}</small>`, cls: 'mv',
       disabled: !p.alive || p.hp <= 0 || p.id === this.state.ally.id,
-      fn: () => this.act({ type: 'switch', index: i })
+      fn: () => this.act(free ? { type: 'switch', index: i, free: true } : { type: 'switch', index: i })
     }));
-    if (!forced) btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
+    if (!forced) btns.push({ label: 'Zurück', cls: 'back', fn: () => (free ? this.shiftPrompt() : this.mainMenu()) });
     this.menu(btns);
   }
 }

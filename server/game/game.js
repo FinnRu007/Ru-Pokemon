@@ -743,7 +743,7 @@ export class GameServer {
   battleAction(s, msg) {
     const b = s.battle;
     if (!b) return this.notice(s, 'Kein aktiver Kampf', 'error');
-    const action = { type: msg.type, index: Number(msg.index), ball: msg.ball, item: msg.item };
+    const action = { type: msg.type, index: Number(msg.index), ball: msg.ball, item: msg.item, moveIndex: msg.moveIndex == null ? undefined : Number(msg.moveIndex), free: !!msg.free };
     const { events, error } = b.act(action);
     if (error) return this.send(s.ws, { t: S2C.BATTLE_EVENTS, events: [{ type: 'text', text: error }], state: b.snapshot(), error: true });
     for (const e of events) if (e.type === 'foeSwitch') this.dexMark(s, e.mon.speciesId);

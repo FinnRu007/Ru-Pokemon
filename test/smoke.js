@@ -7,7 +7,7 @@ import path from 'node:path';
 import { openStorage } from '../server/db/storage.js';
 import { RulesEngine, DEFAULT_RULES } from '../server/game/rules.js';
 import { createPokemon } from '../server/game/pokemonFactory.js';
-import { WildBattle } from '../server/game/battle.js';
+import { WildBattle, TrainerBattle } from '../server/game/battle.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'platin-'));
 let failures = 0;
@@ -91,6 +91,21 @@ await test('Wildkampf laeuft bis zum Ende und vergibt EP', () => {
     if (b.result === 'win') assert.ok(mon.exp > 0);
   }
 });
+await test('Kampfstil Wechsel: nach besiegtem Gegner freier Wechsel ohne Gegenangriff', () => {
+  const a = createPokemon(392, 60); const c = createPokemon(395, 60);
+  const b = new TrainerBattle({ id: 't', party: [a, c], foeParty: [createPokemon(396, 2), createPokemon(396, 2)], trainer: { name: 'Test', cls: 'Top Vier' }, items: {}, onFaint: () => [] });
+  b.intro();
+  let guard = 0;
+  while (!b.shiftOffer && b.state !== 'ended' && guard++ < 20) b.act({ type: 'move', index: 0 });
+  assert.ok(b.snapshot().shiftOffer, 'Angebot');
+  assert.equal(b.snapshot().trainer.cls, 'Top Vier');
+  const hp = c.hp; const turn = b.turn;
+  const r = b.act({ type: 'switch', index: 1, free: true });
+  assert.ok(!r.error, r.error);
+  assert.equal(b.ally.mon, c); assert.equal(c.hp, hp); assert.equal(b.turn, turn);
+  assert.ok(!b.snapshot().shiftOffer);
+});
+
 await test('Fangen mit Ball', () => {
   let caught = 0;
   for (let i = 0; i < 40; i++) {
