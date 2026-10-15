@@ -343,6 +343,31 @@ await test('Menue: TM, Lehrer, Erinnerer, Verlerner, Sonderbonbon, Pokedex und S
   // Gesehen im Kampf
   game.dexMark(s, 396);
   await a.wait((m) => m.t === 'progress' && m.dex.seen.includes(396) && !m.dex.caught.includes(396));
+  // Gegenstaende: Vitamin, Aether, Schutz, Entwicklungsstein, Verkaufen
+  s.player.items.protein = 1;
+  const atk = mon.stats.atk;
+  a.send({ t: 'useItem', item: 'protein', pokemonId: mon.id });
+  await a.wait((m) => m.t === 'notice' && /stieg/.test(m.text));
+  assert.equal(mon.evs.atk, 10); assert.ok(mon.stats.atk >= atk);
+  mon.moves[0].pp = 0; s.player.items.ether = 1;
+  a.send({ t: 'useItem', item: 'ether', pokemonId: mon.id, moveIndex: 0 });
+  await a.wait((m) => m.t === 'notice' && /AP/.test(m.text));
+  assert.equal(mon.moves[0].pp, Math.min(10, mon.moves[0].maxPp));
+  s.player.items.repel = 1;
+  a.send({ t: 'useItem', item: 'repel' });
+  await a.wait((m) => m.t === 'notice' && /Schutz/.test(m.text));
+  assert.equal(s.player.repel, 100);
+  const { recalc } = await import('../server/game/pokemonFactory.js');
+  mon.speciesId = 25; recalc(mon); s.player.items['thunder-stone'] = 1;
+  a.send({ t: 'useItem', item: 'thunder-stone', pokemonId: mon.id });
+  await a.wait((m) => m.t === 'notice' && /entwickelt/.test(m.text));
+  assert.equal(mon.speciesId, 26);
+  s.player.items.nugget = 2; const money = s.player.money;
+  game.openShop(s, null);
+  await a.wait((m) => m.t === 'shop');
+  a.send({ t: 'sell', item: 'nugget', count: 2 });
+  await a.wait((m) => m.t === 'shop' && m.money === money + 10000);
+  a.send({ t: 'shopClose' });
   a.send({ t: 'save' });
   const saved = await a.wait((m) => m.t === 'saved');
   assert.ok(saved.playMs >= 0 && saved.map);

@@ -13,7 +13,7 @@ const OUT = path.join(ROOT, 'shared', 'data', 'dex', 'gen4.json');
 const BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/';
 const FILES = ['pokemon_species', 'pokemon', 'pokemon_stats', 'pokemon_stats_past', 'pokemon_types', 'pokemon_types_past', 'pokemon_abilities',
   'abilities', 'pokemon_moves', 'moves', 'move_changelog', 'move_meta', 'move_meta_stat_changes', 'move_names', 'move_flag_map',
-  'pokemon_species_names', 'pokemon_evolution', 'growth_rates', 'types', 'pokemon_dex_numbers', 'machines', 'ability_names'];
+  'pokemon_species_names', 'pokemon_evolution', 'growth_rates', 'types', 'pokemon_dex_numbers', 'machines', 'ability_names', 'items'];
 
 const MAX_ID = 493;
 const GERMAN = '6';
@@ -151,6 +151,7 @@ function buildPokemon(t, moveIds) {
   const sinnoh = new Map(t.pokemon_dex_numbers.filter((r) => r.pokedex_id === SINNOH_DEX).map((r) => [r.species_id, Number(r.pokedex_number)]));
   const familyOf = (id) => { let cur = species.get(String(id)); while (cur?.evolves_from_species_id) cur = species.get(cur.evolves_from_species_id); return Number(cur.id); };
 
+  const itemName = new Map(t.items.map((r) => [r.id, r.identifier]));
   const evos = new Map();
   for (const e of t.pokemon_evolution) {
     const to = Number(e.evolved_species_id);
@@ -166,6 +167,9 @@ function buildPokemon(t, moveIds) {
     else if (e.evolution_trigger_id === '1') { how = 'other'; level = Number(e.minimum_level) || FALLBACK.other; }
     else continue; // z. B. Ninjask/Ninjatom
     const ev = { to, level, how };
+    // Stein (Ausloeser 3) oder getragener Gegenstand beim Tausch bzw. Levelaufstieg
+    const itemNo = e.trigger_item_id || e.held_item_id;
+    if (itemNo) ev.item = itemName.get(itemNo);
     if (e.gender_id) ev.gender = e.gender_id === '1' ? 'f' : 'm';
     if (!evos.has(from)) evos.set(from, []);
     const list = evos.get(from);

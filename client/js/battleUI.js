@@ -1,4 +1,5 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
+import { ITEMS } from '/shared/data/items.js';
 import { monsterDataUrl, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
 import { terrainImage } from './art/realTerrain.js';
 import { characterSheet } from './art/characters.js';
@@ -310,23 +311,32 @@ export class BattleUI {
     this.menu(btns);
   }
   bagMenu() {
-    const names = { 'poke-ball': 'Pokéball', 'great-ball': 'Superball', 'ultra-ball': 'Hyperball' };
     const btns = [];
     if (this.state.kind !== 'trainer') {
-      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ html: `${itemIcon(k)}${names[k]} x${n}`, disabled: !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k }) });
+      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ html: `${itemIcon(k)}${ITEMS[k]?.name || k} x${n}`, disabled: !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k }) });
     }
-    for (const [k, it] of Object.entries(this.state.bag || {})) btns.push({ html: `${itemIcon(k)}${it.name} x${it.count}`, color: '#3f8a7a', fn: () => this.itemTarget(k, it.name) });
+    for (const [k, it] of Object.entries(this.state.bag || {})) {
+      btns.push({ html: `${itemIcon(k)}${it.name} x${it.count}`, color: it.kind === 'battle' ? '#a0522d' : '#3f8a7a', fn: () => (it.kind === 'battle' ? this.act({ type: 'item', item: k, index: 0 }) : this.itemTarget(k, it.name, it.pp)) });
+    }
     $('battleText').textContent = !btns.length ? 'Dein Beutel ist leer.' : this.state.kind === 'trainer' ? 'Welchen Gegenstand?' : !this.state.catchable ? 'Dieses Pokémon kannst du nicht fangen.' : 'Welchen Gegenstand?';
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
     this.menu(btns);
   }
-  itemTarget(item, name) {
+  itemTarget(item, name, pickMove) {
     $('battleText').textContent = `${name}: Für welches Pokémon?`;
     const btns = this.state.party.map((p, i) => ({
       html: `${p.alive ? '' : '† '}${p.name} Lv${p.level}<small>${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}</small>`, cls: 'mv',
-      disabled: !p.alive, fn: () => this.act({ type: 'item', item, index: i })
+      disabled: !p.alive, fn: () => (pickMove ? this.itemMove(item, name, i) : this.act({ type: 'item', item, index: i }))
     }));
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.bagMenu() });
+    this.menu(btns);
+  }
+  // Äther und Top-Äther: Attacke wählen
+  itemMove(item, name, index) {
+    const p = this.state.party[index];
+    $('battleText').textContent = `${name}: Welche Attacke?`;
+    const btns = (p.moves || []).map((m, j) => ({ html: `${m.name}<small>AP ${m.pp}/${m.maxPp}</small>`, cls: 'mv', fn: () => this.act({ type: 'item', item, index, moveIndex: j }) }));
+    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.itemTarget(item, name, true) });
     this.menu(btns);
   }
   partyMenu(forced) {

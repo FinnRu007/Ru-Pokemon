@@ -2,6 +2,7 @@
 // Ausloeser. Pro Sitzung laeuft hoechstens ein Skript; waehrenddessen ist die Bewegung gesperrt.
 import { SCRIPTS, TRAINERS, TRIGGERS, cond, visibleNpcs, npcAt } from '../../shared/data/story.js';
 import { ITEMS, HM_FLAGS } from '../../shared/data/items.js';
+import { MOVES } from '../../shared/data/moves.js';
 import { MAPS } from '../../shared/data/maps.js';
 import { DIRS, tileAt, SOLID } from '../../shared/world.js';
 import { S2C } from '../../shared/protocol.js';
@@ -61,6 +62,15 @@ export class StoryRunner {
       return;
     }
     if (step.pokemon) { lines.push({ speaker: null, text: g.giftPokemon(s, step.pokemon, step.level || 5) }); return; }
+    if (step.find) {
+      const it = ITEMS[step.find];
+      p.items[step.find] = (p.items[step.find] || 0) + 1;
+      const pocket = { med: 'Medizin', ball: 'Bälle', tm: 'TM/VM', battle: 'Kampf-Items', key: 'Basis-Items' }[it?.kind] || 'Items';
+      lines.push({ speaker: null, text: `${p.name} hat ${it?.kind === 'tm' ? `${it.name} ${MOVES[it.move]?.name || ''}` : it?.name || step.find} gefunden!` });
+      lines.push({ speaker: null, text: `${p.name} verstaut es in der Tasche „${pocket}“.` });
+      g.sendParty(s);
+      return;
+    }
     if (step.money) { p.money = (p.money || 0) + step.money; lines.push({ speaker: null, text: `Du erhältst ${step.money} ¥.` }); g.sendProgress(s); return; }
     if (step.heal) { g.healParty(s, step.heal === 'center'); return; }
     if (step.emote) { g.send(s.ws, { t: S2C.NPC_EMOTE, id: step.emote }); return; }

@@ -186,7 +186,7 @@ export const MAPS3 = {
   solaceon_daycare: houseRoom('Pension', 1, [{ x: 3, y: 2, type: 'text', text: 'Ein Foto von vielen glücklichen Pokémon, die hier schon gewohnt haben.' }]),
   solaceon_house: houseRoom('Trostu', 2),
   veilstone_center: centerRoom(),
-  veilstone_store: { ...martRoom(), name: 'Kaufhaus Schleiede' },
+  veilstone_store: (() => { const r = martRoom(); return { ...r, name: 'Kaufhaus Schleiede', events: r.events.map((e) => (e.type === 'shop' ? { ...e, stock: 'store' } : e)) }; })(),
   veilstone_gym: gymRoom('Arena Schleiede', 2, GYM_PALETTES.fight),
   veilstone_house: houseRoom('Schleiede', 1),
   galactic_warehouse: {

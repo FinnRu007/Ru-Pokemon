@@ -67,11 +67,22 @@ export function catchAttempt({ maxHp, hp, catchRate, ballBonus, status }) {
   return { caught: true, shakes: 3 };
 }
 
+// bonus: fester Faktor oder Funktion (ctx) mit { types, level, turn, water, cave, night, caught } wie in Platin
 export const BALLS = {
-  'poke-ball': { name: 'Pokeball', bonus: 1 },
+  'poke-ball': { name: 'Pokéball', bonus: 1 },
   'great-ball': { name: 'Superball', bonus: 1.5 },
-  'ultra-ball': { name: 'Hyperball', bonus: 2 }
+  'ultra-ball': { name: 'Hyperball', bonus: 2 },
+  'heal-ball': { name: 'Heilball', bonus: 1, heal: true },
+  'luxury-ball': { name: 'Luxusball', bonus: 1 },
+  'net-ball': { name: 'Netzball', bonus: (c) => (c.types.includes('water') || c.types.includes('bug') ? 3 : 1) },
+  'nest-ball': { name: 'Nestball', bonus: (c) => Math.max(1, (40 - c.level) / 10) },
+  'dive-ball': { name: 'Tauchball', bonus: (c) => (c.water ? 3.5 : 1) },
+  'dusk-ball': { name: 'Finsterball', bonus: (c) => (c.night || c.cave ? 3.5 : 1) },
+  'quick-ball': { name: 'Flottball', bonus: (c) => (c.turn <= 1 ? 4 : 1) },
+  'timer-ball': { name: 'Timerball', bonus: (c) => Math.min(4, (c.turn - 1 + 10) / 10) },
+  'repeat-ball': { name: 'Wiederball', bonus: (c) => (c.caught ? 3 : 1) }
 };
+export const ballBonus = (id, ctx) => { const b = BALLS[id]; return typeof b?.bonus === 'function' ? b.bonus(ctx) : b?.bonus || 1; };
 
 // EP Gen 4: floor((a * b * L) / 7) / Teilnehmer; a = 1 wild, 1.5 Trainer. Getauscht: x1.5
 export function expGain({ baseExp, level, trainer = false, participants = 1, traded = false }) {

@@ -54,7 +54,7 @@ export class Hud {
     const alive = this.party.filter((p) => p.alive);
     $('tab-bag').innerHTML = entries.length ? entries.map(([k, n]) => {
       const it = ITEMS[k];
-      const use = it.kind === 'med' && alive.length ? `<div class="use">${alive.map((p) => `<button data-item="${k}" data-id="${p.id}" title="${esc(p.name)}"><img class="icon" src="${monsterIcon(p)}" alt=""></button>`).join('')}</div>` : '';
+      const use = it.kind === 'med' && (it.heal || it.cure || it.revive) && alive.length ? `<div class="use">${alive.map((p) => `<button data-item="${k}" data-id="${p.id}" title="${esc(p.name)}"><img class="icon" src="${monsterIcon(p)}" alt=""></button>`).join('')}</div>` : '';
       return `<div class="bag-row"><span>${itemIcon(k)}${esc(it.name)}</span><span>x${n}</span>${use}</div>`;
     }).join('') + '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll.</div>' : '<div class="hint">Dein Beutel ist leer.</div>';
     for (const b of document.querySelectorAll('#tab-bag button[data-item]')) b.onclick = () => this.net.send({ t: 'useItem', item: b.dataset.item, pokemonId: b.dataset.id });

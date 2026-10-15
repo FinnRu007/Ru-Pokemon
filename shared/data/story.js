@@ -19,6 +19,7 @@
 
 import { TRAINERS2, NPCS2, TRIGGERS2, SCRIPTS2, BADGES2 } from './story2.js';
 import { SERVICE_NPCS, SERVICE_SCRIPTS } from './services.js';
+import { FIELD_ITEMS } from './fieldItems.js';
 
 export function cond(flags, c) {
   if (!c) return true;
@@ -360,6 +361,13 @@ BADGES.push(...BADGES2);
 // Attacken-Lehrer, Erinnerer und Verlerner (services.js)
 Object.assign(SCRIPTS, SERVICE_SCRIPTS);
 for (const [m, list] of Object.entries(SERVICE_NPCS)) NPCS[m] = [...(NPCS[m] || []), ...list];
+// Itembaelle: einmal pro Spieler aufhebbar
+for (const [m, list] of Object.entries(FIELD_ITEMS)) {
+  NPCS[m] = [...(NPCS[m] || []), ...list.map(([x, y, item], i) => {
+    const id = `ball_${m}_${i}`;
+    return { id, x, y, dir: 'down', look: 'item_ball', name: 'Gegenstand', item: true, show: `!got_${id}`, talk: [{ find: item }, { flag: `got_${id}` }] };
+  })];
+}
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

@@ -20,7 +20,7 @@ const TYPE_DE = {
 };
 const CAT_DE = { physical: 'Physisch', special: 'Spezial', status: 'Status' };
 const STAT_ROWS = [['hp', 'KP'], ['atk', 'Angriff'], ['def', 'Verteidigung'], ['spa', 'Sp.-Angriff'], ['spd', 'Sp.-Vert.'], ['spe', 'Initiative']];
-const POCKETS = [['item', 'Items'], ['med', 'Medizin'], ['ball', 'Bälle'], ['tm', 'TM/VM'], ['berry', 'Beeren'], ['key', 'Basis-Items']];
+const POCKETS = [['item', 'Items'], ['med', 'Medizin'], ['ball', 'Bälle'], ['tm', 'TM/VM'], ['berry', 'Beeren'], ['battle', 'Kampf-Items'], ['key', 'Basis-Items']];
 const typeTag = (t) => typeBadge(t) || `<span class="type-tag t-${t}">${TYPE_DE[t] || t}</span>`;
 const pad3 = (n) => String(n).padStart(3, '0');
 export const fmtTime = (ms) => { const m = Math.floor((ms || 0) / 60000); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
@@ -446,21 +446,33 @@ export class GameMenu {
     const it = ITEMS[k];
     const c = await this.say(`${it.kind === 'tm' ? it.name + ' ' + (moveOf(it.move)?.name || '') : it.name}: Was tun?`, ['Benutzen', 'Zurück']);
     if (c !== 0) return;
-    if (it.kind === 'med') {
-      if (!this.party.length) return this.say('Du hast keine Pokémon.');
-      return this.push(this.partyScreen({
-        title: `${it.name} bei welchem Pokémon anwenden?`,
-        onPick: async (mon) => {
-          this.ctx.net.send({ t: 'useItem', item: k, pokemonId: mon.id });
-          const n = await this.waitNotice();
-          await this.waitParty();
-          if (n) await this.say(n);
-          if (!(this.items[k] > 0)) this.back();
-        }
-      }));
-    }
     if (it.kind === 'tm') return this.teachTm(k);
-    return this.say('Das kann man hier nicht benutzen.');
+    // Schutz und Fluchtseil wirken ohne Pokemon
+    if (it.repel || it.rope) {
+      this.ctx.net.send({ t: 'useItem', item: k });
+      const n = await this.waitNotice();
+      if (n && it.rope && !/nicht benutzen/.test(n)) { this.close(); return; }
+      return n && this.say(n);
+    }
+    if (!(it.kind === 'med' || it.evo)) return this.say(it.kind === 'battle' ? 'Das kann man nur im Kampf benutzen.' : 'Das kann man hier nicht benutzen.');
+    if (!this.party.length) return this.say('Du hast keine Pokémon.');
+    const evoTo = (mon) => (speciesOf(mon.speciesId)?.evos || []).find((e) => e.item === k);
+    return this.push(this.partyScreen({
+      title: `${it.name} bei welchem Pokémon anwenden?`,
+      label: it.evo ? (p) => (p.alive && evoTo(p) ? 'Möglich' : 'Unmöglich') : null,
+      onPick: async (mon) => {
+        let moveIndex;
+        if ((it.pp && !it.all) || it.ppUp) {
+          moveIndex = await this.pickMove(mon, mon.moves.map((m) => ({ id: m.id, note: `AP ${m.pp}/${m.maxPp}` })), it.ppUp ? 'AP welcher Attacke erhöhen?' : 'AP welcher Attacke auffüllen?');
+          if (moveIndex == null) return;
+        }
+        this.ctx.net.send({ t: 'useItem', item: k, pokemonId: mon.id, moveIndex });
+        const n = await this.waitNotice();
+        await this.waitParty();
+        if (n) await this.say(n);
+        if (!(this.items[k] > 0)) this.back();
+      }
+    }));
   }
   waitNotice() { return new Promise((r) => { this.noticeWaiter = r; setTimeout(() => { if (this.noticeWaiter === r) { this.noticeWaiter = null; r(null); } }, 1500); }); }
   onNotice(text) { const r = this.noticeWaiter; this.noticeWaiter = null; if (r) { r(text); return true; } return false; }
@@ -600,7 +612,7 @@ export class GameMenu {
         html: () => {
           const md = moveOf(opts[st.sel]?.id);
           return `<div class="forget"><div class="dex-head"><b>${esc(mon.name)}</b><span>${esc(title)}</span></div>
-            <div class="sum-moves scroll">${opts.map((o, i) => { const d = moveOf(o.id); return `<button data-nav data-f="${i}" class="mrow">${typeTag(d?.type)}<span>${esc(d?.name || o.id)}</span><small>${o.cost ? Object.entries(o.cost).filter(([, n]) => n).map(([k, n]) => `${SH[k]} ${n}`).join(' ') : 'AP ' + (d?.pp ?? '')}</small></button>`; }).join('')}</div>
+            <div class="sum-moves scroll">${opts.map((o, i) => { const d = moveOf(o.id); return `<button data-nav data-f="${i}" class="mrow">${typeTag(d?.type)}<span>${esc(d?.name || o.id)}</span><small>${o.note ? esc(o.note) : o.cost ? Object.entries(o.cost).filter(([, n]) => n).map(([k, n]) => `${SH[k]} ${n}`).join(' ') : 'AP ' + (d?.pp ?? '')}</small></button>`; }).join('')}</div>
             <div class="sum-memo move-info">${md ? `<div class="mfacts"><span>Kategorie <b>${CAT_DE[md.cat]}</b></span><span>Stärke <b>${md.power || '---'}</b></span><span>Genauigkeit <b>${md.acc ?? '---'}</b></span></div>${esc(moveText(md.id))}` : ''}
             ${opts[0]?.cost ? `<div class="hint">Deine Scherben: ${Object.entries(SH).map(([k, l]) => `${l} ${this.items[k] || 0}`).join(' · ')}</div>` : ''}</div></div>`;
         },

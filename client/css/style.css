@@ -113,6 +113,9 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .shop { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
 .shop-row { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 6px; align-items: center; padding: 6px 8px; background: var(--panel2); border-radius: 8px; }
 .shop-row .nm small { display: block; color: var(--muted); font-size: 11px; }
+.shop-tabs { display: flex; gap: 6px; margin-top: 8px; }
+.shop-tabs button.on { background: var(--accent, #e85d4a); color: #fff; }
+.shop { max-height: 52vh; overflow-y: auto; }
 .shop-row .pr { font-weight: 700; } .shop-row button { padding: 4px 10px; }
 .shop-row.locked { opacity: .55; } .shop-row.locked .hint { grid-column: span 3; text-align: right; }
 .battle-menu button:disabled { opacity: .45; }

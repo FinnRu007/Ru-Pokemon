@@ -31,7 +31,7 @@ export const OW_BY_LOOK = {
   jupiter: 'npc/jupiter', saturn: 'npc/saturn', gardenia: 'npc/gardenia', fantina: 'npc/fantina', maylene: 'npc/maylene',
   wake: 'npc/crasher_wake', byron: 'npc/byron', candice: 'npc/candice', volkner: 'npc/volkner', aaron: 'npc/aaron',
   bertha: 'npc/bertha', flint: 'npc/flint', lucian: 'npc/lucian', cynthia: 'npc/cynthia', police: 'npc/policeman',
-  swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic'
+  item_ball: 'objects/pokeball', swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic'
 };
 export const OW_FILES = [...new Set([OW_PLAYER, ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])];
 

@@ -4,7 +4,7 @@ import { MOVES } from '../../shared/data/moves.js';
 import { TYPE_NAMES_DE } from '../../shared/data/types.js';
 import {
   calcDamage, typeEffectiveness, stageMultiplier, accStageMultiplier, critChance,
-  catchAttempt, BALLS, expGain, escapeAttempt
+  catchAttempt, BALLS, ballBonus, expGain, escapeAttempt
 } from '../../shared/formulas.js';
 import { species, displayName, addExp, gainEvs, publicPokemon } from './pokemonFactory.js';
 import { ITEMS, applyItem } from '../../shared/data/items.js';
@@ -42,6 +42,7 @@ export class WildBattle {
     this.catchBlockReason = o.catchBlockReason;
     this.onFaint = o.onFaint;
     this.nuzlocke = o.nuzlocke;
+    this.ballCtx = o.ballCtx || {};
     this.wild = makeBattler(o.wild);
     const first = this.party.find((p) => p.alive !== false && p.hp > 0);
     this.ally = makeBattler(first);
@@ -72,7 +73,7 @@ export class WildBattle {
       foe: { ...publicPokemon(this.wild.mon), stages: this.wild.stages, moves: undefined, stats: undefined },
       party: this.party.map(publicPokemon),
       balls: Object.fromEntries(Object.keys(BALLS).map((k) => [k, this.items[k] || 0])),
-      bag: Object.fromEntries(Object.entries(ITEMS).filter(([k, it]) => it.kind === 'med' && !it.candy && this.items[k] > 0).map(([k, it]) => [k, { name: it.name, count: this.items[k] }])),
+      bag: Object.fromEntries(Object.entries(ITEMS).filter(([k, it]) => (it.kind === 'med' || it.kind === 'battle') && !it.candy && !it.ev && !it.ppUp && this.items[k] > 0).map(([k, it]) => [k, { name: it.name, count: this.items[k], kind: it.kind, pp: !!it.pp && !it.all }])),
       kind: 'wild'
     };
   }
@@ -128,26 +129,40 @@ export class WildBattle {
       this.items[action.ball]--;
       ev.push({ type: 'text', text: `Du wirfst einen ${ball.name}!` });
       const w = this.wild.mon;
-      const r = catchAttempt({ maxHp: w.stats.hp, hp: w.hp, catchRate: species(w.speciesId).catchRate, ballBonus: ball.bonus, status: w.status });
+      const sp = species(w.speciesId);
+      const bonus = ballBonus(action.ball, { ...this.ballCtx, types: sp.types, level: w.level, turn: this.turn, caught: !!this.ballCtx?.caught?.[sp.id] });
+      const r = catchAttempt({ maxHp: w.stats.hp, hp: w.hp, catchRate: sp.catchRate, ballBonus: bonus, status: w.status });
       ev.push({ type: 'shake', count: r.shakes, caught: r.caught, ball: action.ball });
       if (r.caught) {
         ev.push({ type: 'text', text: `Toll! ${displayName(w)} wurde gefangen!` });
         w.metRoute = this.route;
         w.ball = action.ball;
+        // Heilball: gefangenes Pokemon ist sofort wieder fit
+        if (ball.heal) { w.hp = w.stats.hp; w.status = null; for (const m of w.moves) m.pp = m.maxPp; }
         return { events: this.end('caught', ev) };
       }
       ev.push({ type: 'text', text: ['Oh nein! Es hat sich befreit!', 'Mist! Fast hätte es geklappt!', 'Argh! Beinahe!', 'Verflixt! Es war so knapp!'][r.shakes] });
       this.useMove(this.wild, foeMove, ev, false);
     } else if (action.type === 'item') {
       const it = ITEMS[action.item];
-      const mon = this.party[action.index];
-      if (!it || it.kind !== 'med' || !mon) return { events: [], error: 'Ungültiger Gegenstand' };
+      const mon = it?.kind === 'battle' ? this.ally.mon : this.party[action.index];
+      if (!it || !(it.kind === 'med' || it.kind === 'battle') || it.candy || it.ev || it.ppUp || !mon) return { events: [], error: 'Ungültiger Gegenstand' };
       if (!this.items[action.item]) return { events: [{ type: 'text', text: `Du hast keinen ${it.name} mehr.` }] };
-      const r = applyItem(action.item, mon, displayName(mon), { nuzlocke: this.nuzlocke });
-      if (!r.ok) return { events: [{ type: 'text', text: r.text }] };
-      this.items[action.item]--;
-      ev.push({ type: 'text', text: `Du setzt ${it.name} ein.` }, { type: 'text', text: r.text });
-      if (mon === this.ally.mon) ev.push({ type: 'hp', side: 'ally', hp: mon.hp, maxHp: mon.stats.hp, damage: 0 }, this.statusEvent(this.ally));
+      if (it.kind === 'battle') {
+        const b = this.ally;
+        if ((it.stage && b.stages[it.stage] >= 6) || (it.crit && b.vol.focus) || (it.mist && b.vol.mist > 0)) return { events: [{ type: 'text', text: 'Es hätte keine Wirkung.' }] };
+        this.items[action.item]--;
+        ev.push({ type: 'text', text: `Du setzt ${it.name} ein.` });
+        if (it.stage) this.changeStages(b, { [it.stage]: 1 }, ev, b);
+        if (it.crit) { b.vol.focus = true; ev.push({ type: 'text', text: `${this.name(b)} ist in Topform!` }); }
+        if (it.mist) { b.vol.mist = 5; ev.push({ type: 'text', text: `Megablock hüllt dein Team ein!` }); }
+      } else {
+        const r = applyItem(action.item, mon, displayName(mon), { nuzlocke: this.nuzlocke, moveIndex: Number(action.moveIndex) || 0, moveBasePp: (id) => MOVES[id]?.pp, moveName: (id) => MOVES[id]?.name });
+        if (!r.ok) return { events: [{ type: 'text', text: r.text }] };
+        this.items[action.item]--;
+        ev.push({ type: 'text', text: `Du setzt ${it.name} ein.` }, { type: 'text', text: r.text });
+        if (mon === this.ally.mon) ev.push({ type: 'hp', side: 'ally', hp: mon.hp, maxHp: mon.stats.hp, damage: 0 }, this.statusEvent(this.ally));
+      }
       this.useMove(this.wild, foeMove, ev, false);
     } else if (action.type === 'switch') {
       const err = this.doSwitch(action.index, ev);
@@ -470,6 +485,7 @@ export class WildBattle {
     for (const [k, raw] of Object.entries(stats)) {
       let delta = raw;
       if (b.mon.ability === 'simple') delta *= 2;
+      if (delta < 0 && source !== b && b.vol.mist > 0) { ev.push({ type: 'text', text: `${this.name(b)} ist durch Megablock geschützt!` }); continue; }
       if (delta < 0 && source !== b && (b.mon.ability === 'clear-body' || (k === 'acc' && b.mon.ability === 'keen-eye'))) {
         ev.push({ type: 'text', text: `${this.name(b)} verhindert die Senkung!` });
         continue;
@@ -508,6 +524,7 @@ export class WildBattle {
   statusEvent(b) { return { type: 'status', side: this.side(b), status: b.mon.status }; }
 
   endOfTurn(ev) {
+    if (this.ally.vol.mist > 0 && --this.ally.vol.mist === 0) ev.push({ type: 'text', text: 'Megablock hat keine Wirkung mehr.' });
     for (const b of [this.ally, this.wild]) {
       if (this.state === 'ended' || b.mon.hp <= 0) continue;
       const max = b.mon.stats.hp;

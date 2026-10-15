@@ -17,6 +17,7 @@ export const C2S = {
   USE_ITEM: 'useItem',            // { item, pokemonId }
   EMOTE: 'emote',                 // { kind } kleine Sprechblase ueber der eigenen Figur
   FLY: 'fly',                     // { to? } Fliegen: Auswahl besuchter Orte, mit to direkt dorthin (Weltkarte)
+  SELL: 'sell',                   // { item, count } im Markt verkaufen (halber Preis)
   SAVE: 'save',                   // {} Spiel speichern (Menue)
   TEACH: 'teach',                 // { source: 'tm'|'tutor'|'relearn', item?, pokemonId, moveId, replaceIndex }
   FORGET: 'forget',               // { pokemonId, index } beim Attacken-Verlerner

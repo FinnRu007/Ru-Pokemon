@@ -1,5 +1,6 @@
 // Einstiegspunkt des Clients: verbindet Netzwerk, Overworld, Renderer, Kampf und HUD.
 import { MAPS } from '/shared/data/maps.js';
+import { ITEMS, sellPrice } from '/shared/data/items.js';
 import { Net } from './net.js';
 import { Input } from './input.js';
 import { World } from './world.js';
@@ -192,15 +193,26 @@ function flushDialogs() {
   for (const l of m.lines) hud.log(l.speaker ? `${l.speaker}: ${l.text}` : l.text, 'dialog');
   const all = m.lines.map((l) => l.text || l).join(' ');
   if (/wieder gesund/.test(all)) audio.jingle('heal');
-  else if (/(erhältst|bekommst) (den|die|das|einen|eine|\d)/.test(all)) audio.jingle('item');
+  else if (/(erhältst|bekommst) (den|die|das|einen|eine|\d)/.test(all) || / hat .+ gefunden!/.test(all)) audio.jingle('item');
   showDialog(m.lines, (v) => { net.send({ t: 'dialogDone', token: m.token, choice: v ?? 0 }); setTimeout(flushDialogs, 0); }, m.choices);
 }
+let shopTab = 'buy';
 function openShop(m) {
+  if (!shopOpen) shopTab = 'buy';
   shopOpen = true; updateLock();
-  const rows = m.stock.map((it) => `<div class="shop-row${it.locked ? ' locked' : ''}"><span class="nm">${itemIcon(it.id)}${it.name}<small>Im Beutel: ${it.have}</small></span><span class="pr">${it.price} ¥</span>
-    ${it.locked ? '<span class="hint">ab Orden 1</span>' : `<button data-buy="${it.id}" data-n="1" ${m.money < it.price ? 'disabled' : ''}>1</button><button data-buy="${it.id}" data-n="5" ${m.money < it.price * 5 ? 'disabled' : ''}>5</button><button data-buy="${it.id}" data-n="10" ${m.money < it.price * 10 ? 'disabled' : ''}>10</button>`}</div>`).join('');
-  openModal(`<h1>Pokémon-Markt</h1><p>Dein Geld: <b>${m.money} ¥</b></p><div class="shop">${rows}</div><button id="shopClose">Fertig</button>`);
+  const items = hud.items || {};
+  const buyRows = m.stock.map((it) => `<div class="shop-row${it.locked ? ' locked' : ''}"><span class="nm">${itemIcon(it.id)}${it.name}<small>Im Beutel: ${it.have}</small></span><span class="pr">${it.price} ¥</span>
+    ${it.locked ? '<span class="hint">später</span>' : [1, 5, 10].map((n) => `<button data-buy="${it.id}" data-n="${n}" ${m.money < it.price * n ? 'disabled' : ''}>${n}</button>`).join('')}</div>`).join('');
+  const sellable = Object.entries(items).filter(([k, n]) => n > 0 && sellPrice(k) > 0);
+  const sellRows = sellable.map(([k, n]) => `<div class="shop-row"><span class="nm">${itemIcon(k)}${ITEMS[k].name}<small>Im Beutel: ${n}</small></span><span class="pr">${sellPrice(k)} ¥</span>
+    ${[1, 5, n].filter((c, i, a) => c <= n && a.indexOf(c) === i).map((c) => `<button data-sell="${k}" data-n="${c}">${c === n && c > 5 ? 'Alle' : c}</button>`).join('')}</div>`).join('') || '<p class="hint">Du hast nichts, das du verkaufen kannst.</p>';
+  openModal(`<h1>${MAPS[world.me?.map]?.name || 'Pokémon-Markt'}</h1><p>Dein Geld: <b>${m.money} ¥</b></p>
+    <div class="shop-tabs"><button id="tabBuy" class="${shopTab === 'buy' ? 'on' : ''}">Kaufen</button><button id="tabSell" class="${shopTab === 'sell' ? 'on' : ''}">Verkaufen</button></div>
+    <div class="shop">${shopTab === 'buy' ? buyRows : sellRows}</div><button id="shopClose">Fertig</button>`);
   document.querySelectorAll('#modalPanel button[data-buy]').forEach((b) => { b.onclick = () => net.send({ t: 'buy', item: b.dataset.buy, count: Number(b.dataset.n) }); });
+  document.querySelectorAll('#modalPanel button[data-sell]').forEach((b) => { b.onclick = () => net.send({ t: 'sell', item: b.dataset.sell, count: Number(b.dataset.n) }); });
+  $('tabBuy').onclick = () => { shopTab = 'buy'; openShop(m); };
+  $('tabSell').onclick = () => { shopTab = 'sell'; openShop(m); };
   $('shopClose').onclick = () => { net.send({ t: 'shopClose' }); closeModal(); shopOpen = false; updateLock(); };
 }
 // Neue Attacke nach dem Kampf: Ablauf wie im Original (vergessen, 1, 2 und ... Schwupp!)

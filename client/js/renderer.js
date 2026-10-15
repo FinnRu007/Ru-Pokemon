@@ -127,6 +127,7 @@ export class Renderer {
     const g = this.g; const T = this.T;
     const { o, p, anim } = e;
     const sx = Math.round(ox + p.x * T); const sy = Math.round(oy + (p.y - (p.hop || 0)) * T);
+    if (o.look === 'item_ball') return this.drawItemBall(o, sx, sy);
     // Auf dem Wasser: Spieler reitet auf seinem Pokemon (Surfer), sonst Schatten
     const fx = Math.round(p.x); const fy = Math.round(p.y);
     if (e.kind !== 'npc' && map.tiles[fy]?.[fx] === '~') this.drawSurfer(sx, Math.round(oy + p.y * T), now);
@@ -160,6 +161,23 @@ export class Renderer {
     if (!p.hop && map.tiles[ty]?.[tx] === '"') g.drawImage(this.tallOverlay, 0, 8, 16, 8, Math.round(ox + tx * T), Math.round(oy + ty * T) + T / 2, T, T / 2);
 
     if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, headY - 3);
+  }
+
+  // Itemball: Original-Sprite (npm run sprites), sonst eigener Pokeball
+  drawItemBall(o, sx, sy) {
+    const g = this.g; const T = this.T;
+    const real = overworldSheet(o);
+    g.fillStyle = 'rgba(0,0,0,.2)';
+    g.beginPath(); g.ellipse(sx + T / 2, sy + T - 6, T * 0.24, 4, 0, 0, Math.PI * 2); g.fill();
+    if (real) { g.drawImage(real.sheet, 0, 0, real.fw, real.fw, sx + T / 2 - (real.fw / 2) * S, sy + T - real.fw * S - 2, real.fw * S, real.fw * S); return; }
+    const cx = sx + T / 2; const cy = sy + T / 2 + 3; const r = T * 0.26;
+    g.fillStyle = '#202020'; g.beginPath(); g.arc(cx, cy, r + 1.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e83838'; g.beginPath(); g.arc(cx, cy, r, Math.PI, 0); g.fill();
+    g.fillStyle = '#f4f4f4'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI); g.fill();
+    g.fillStyle = '#202020'; g.fillRect(cx - r, cy - 1.5, r * 2, 3);
+    g.fillStyle = '#f4f4f4'; g.beginPath(); g.arc(cx, cy, 3.5, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#202020'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(cx - r * 0.55, cy - r * 0.7, 3, 3);
   }
 
   drawSurfer(x, y, now) {

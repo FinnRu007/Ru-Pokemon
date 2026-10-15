@@ -11,7 +11,7 @@ import { WildBattle, TrainerBattle } from './battle.js';
 import { RulesEngine, DEFAULT_RULES } from './rules.js';
 import { StoryRunner } from './story.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
-import { ITEMS, MART_STOCK, applyItem, HM_FLAGS, isHmMove } from '../../shared/data/items.js';
+import { ITEMS, MART_STOCK, STORE_STOCK, sellPrice, applyItem, HM_FLAGS, isHmMove } from '../../shared/data/items.js';
 import { addExp } from './pokemonFactory.js';
 import { expForLevel } from '../../shared/data/growth.js';
 import { TUTORS, BADGE_TMS, RELEARN_COST } from '../../shared/data/tutors.js';
@@ -79,6 +79,7 @@ export class GameServer {
       case C2S.LEARN_MOVE: return this.learnMove(s, msg);
       case C2S.DIALOG_DONE: return this.story.dialogDone(s, msg);
       case C2S.BUY: return this.buy(s, msg);
+      case C2S.SELL: return this.sell(s, msg);
       case C2S.SHOP_CLOSE: s.shop = false; return;
       case C2S.USE_ITEM: return this.useItem(s, msg);
       case C2S.EMOTE: return this.emote(s, msg);
@@ -335,6 +336,9 @@ export class GameServer {
       this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir, running: !!msg.running, jump: r.jump }, p.id);
     }
 
+    // Fluchtseil merkt sich den Platz vor dem Hoehleneingang
+    if (oldMap !== p.map && MAPS[p.map].theme === 'cave' && MAPS[oldMap].theme !== 'cave') p.escape = { map: oldMap, x: s.prev.x, y: s.prev.y };
+    if (p.repel > 0 && --p.repel === 0) this.notice(s, 'Die Wirkung des Schutzes ließ nach.', 'dialog');
     if (this.storyOn && this.story.afterMove(s)) return;
     if (!r.warp) this.tryEncounter(s, tileAt(MAPS[p.map], p.x, p.y));
   }
@@ -360,7 +364,7 @@ export class GameServer {
     const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y);
     if (!ev) return;
     if (ev.type === 'heal') return this.healAt(s, ev);
-    if (ev.type === 'shop') return this.openShop(s);
+    if (ev.type === 'shop') return this.openShop(s, ev);
     if (this.storyOn) return this.story.start(s, [[null, ev.text]]);
     this.notice(s, ev.text, 'dialog');
   }
@@ -390,17 +394,29 @@ export class GameServer {
 
   // ------------------------------------------------------------------ Markt und Beutel
   shopStock(s) {
-    return MART_STOCK.map((id) => ({ id, name: ITEMS[id].name, price: ITEMS[id].price, locked: !!ITEMS[id].requires && !s.player.flags?.[ITEMS[id].requires], have: s.player.items[id] || 0 }));
+    return (s.shop || MART_STOCK).map((id) => ({ id, name: ITEMS[id].name, price: ITEMS[id].price, locked: !!ITEMS[id].requires && !s.player.flags?.[ITEMS[id].requires], have: s.player.items[id] || 0 }));
   }
-  openShop(s) {
-    s.shop = true;
+  openShop(s, ev) {
+    s.shop = ev?.stock === 'store' ? STORE_STOCK : MART_STOCK;
+    this.send(s.ws, { t: S2C.SHOP, stock: this.shopStock(s), money: s.player.money });
+  }
+  // Verkaufen wie im Original: halber Preis, Basis-Items und VMs nicht
+  sell(s, msg) {
+    if (!s.shop || s.battle || s.script) return;
+    const count = Math.floor(Number(msg.count));
+    const price = sellPrice(msg.item);
+    if (!price || !(count >= 1 && count <= 99) || !((s.player.items[msg.item] || 0) >= count)) return;
+    s.player.items[msg.item] -= count;
+    s.player.money = (s.player.money || 0) + price * count;
+    this.notice(s, `${ITEMS[msg.item].name} (${count}x) für ${price * count} ¥ verkauft.`);
+    this.savePlayerNow(s); this.sendParty(s); this.sendProgress(s);
     this.send(s.ws, { t: S2C.SHOP, stock: this.shopStock(s), money: s.player.money });
   }
   buy(s, msg) {
     if (!s.shop || s.battle || s.script) return;
     const it = ITEMS[msg.item];
     const count = Math.floor(Number(msg.count));
-    if (!it || !MART_STOCK.includes(msg.item) || !(count >= 1 && count <= 99)) return;
+    if (!it || !s.shop.includes(msg.item) || !(count >= 1 && count <= 99)) return;
     if (it.requires && !s.player.flags[it.requires]) return this.notice(s, 'Das gibt es erst mit dem passenden Orden.', 'error');
     const cost = it.price * count;
     if (s.player.money < cost) return this.notice(s, 'Du hast nicht genug Geld.', 'error');
@@ -416,12 +432,51 @@ export class GameServer {
   }
   useItem(s, msg) {
     if (s.battle || s.script) return;
+    const it = ITEMS[msg.item];
+    if (!it || !(s.player.items[msg.item] > 0)) return;
+    if (it.repel) return this.useRepel(s, msg.item);
+    if (it.rope) return this.useRope(s, msg.item);
     const mon = s.party.find((m) => m.id === msg.pokemonId);
-    if (!mon || !(s.player.items[msg.item] > 0)) return;
-    if (ITEMS[msg.item]?.candy) return this.useCandy(s, mon, msg.item);
-    const r = applyItem(msg.item, mon, displayName(mon), { nuzlocke: this.rules.rulesFor(s.player).nuzlocke });
-    if (r.ok) { s.player.items[msg.item]--; this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s); }
+    if (!mon) return;
+    if (it.candy) return this.useCandy(s, mon, msg.item);
+    if (it.evo) return this.useEvoItem(s, mon, msg.item);
+    const r = applyItem(msg.item, mon, displayName(mon), {
+      nuzlocke: this.rules.rulesFor(s.player).nuzlocke, moveIndex: Number(msg.moveIndex) || 0,
+      moveBasePp: (id) => MOVES[id]?.pp, moveName: (id) => MOVES[id]?.name
+    });
+    if (r.ok) { s.player.items[msg.item]--; if (r.recalc) recalc(mon); this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s); }
     this.notice(s, r.text, r.ok ? 'info' : 'error');
+  }
+
+  // Schutz: so viele Schritte keine wilden Pokemon, die schwaecher als das erste Team-Pokemon sind
+  useRepel(s, item) {
+    if ((s.player.repel || 0) > 0) return this.notice(s, 'Die Wirkung des letzten Schutzes hält noch an.', 'error');
+    s.player.items[item]--;
+    s.player.repel = ITEMS[item].repel;
+    this.savePlayerNow(s); this.sendParty(s);
+    this.notice(s, `${s.player.name} benutzt ${ITEMS[item].name}.`);
+  }
+  // Fluchtseil: zurueck zum Eingang der Hoehle, durch die man zuletzt hineingegangen ist
+  useRope(s, item) {
+    const p = s.player; const map = MAPS[p.map];
+    if (map.theme !== 'cave' || !p.escape || !MAPS[p.escape.map]) return this.notice(s, 'Das kann man hier nicht benutzen.', 'error');
+    p.items[item]--;
+    this.sendParty(s);
+    this.notice(s, `${p.name} benutzt ${ITEMS[item].name}.`);
+    this.teleport(s, p.escape.map, p.escape.x, p.escape.y, 'down');
+    this.savePlayerNow(s);
+  }
+  // Entwicklungs-Items: Steine wie im Original. Tausch-Items (Up-Grade usw.) werden ersatzweise angewendet.
+  useEvoItem(s, mon, item) {
+    if (mon.alive === false) return this.notice(s, `${displayName(mon)} ist tot. Nichts kann es zurückholen.`, 'error');
+    const opt = (species(mon.speciesId).evos || []).find((e) => e.item === item && POKEMON[e.to] && (!e.gender || e.gender === mon.gender));
+    if (!opt) return this.notice(s, 'Es hätte keine Wirkung.', 'error');
+    s.player.items[item]--;
+    const from = displayName(mon);
+    mon.speciesId = opt.to; mon.ability = species(opt.to).ability; recalc(mon);
+    this.dexMark(s, opt.to, true);
+    this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s);
+    this.notice(s, `${from} hat sich zu ${species(opt.to).name} entwickelt!`);
   }
 
   // Sonderbonbon: ein Level hoeher, mit neuen Attacken und Entwicklung wie im Original
@@ -607,6 +662,8 @@ export class GameServer {
     let r = Math.random() * total;
     const slot = list.find((e) => (r -= e.weight) < 0) || list[0];
     const level = slot.min + Math.floor(Math.random() * (slot.max - slot.min + 1));
+    const lead = s.party.find((m) => m.alive !== false && m.hp > 0);
+    if (s.player.repel > 0 && lead && level < lead.level) return;
     this.startWildBattle(s, slot.species, level, s.player.map);
   }
 
@@ -623,6 +680,7 @@ export class GameServer {
     s.battle = new WildBattle({
       id: crypto.randomUUID(), party: s.party, wild, route, items: s.player.items,
       catchable: gate.catchable, catchBlockReason: gate.reason, nuzlocke: this.rules.rulesFor(s.player).nuzlocke,
+      ballCtx: { caught: s.player.dex?.caught || {}, cave: MAPS[s.player.map]?.theme === 'cave', water: tileAt(MAPS[s.player.map], s.player.x, s.player.y) === WATER, night: ((h) => h >= 20 || h < 6)(new Date().getHours()) },
       onFaint: (mon) => this.onAllyFaint(s, mon)
     });
     const events = s.battle.intro();

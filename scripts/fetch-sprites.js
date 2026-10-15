@@ -8,6 +8,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../shared/data/items.js';
+import { MOVES } from '../shared/data/moves.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
 import { TERRAINS } from '../client/js/art/realTerrain.js';
@@ -50,7 +51,11 @@ for (const [kind, dir] of Object.entries(KINDS)) {
 const TRAINER_BASE = 'https://raw.githubusercontent.com/smogon/sprites/master/src/_uncategorized/canonical/trainers/gen4/diamond-pearl';
 for (const dir of ['types', 'items', 'trainers']) fs.mkdirSync(path.join(OUT, dir), { recursive: true });
 TYPE_IDS.forEach((t, i) => jobs.push({ url: `${BASE}/types/generation-iv/platinum/${i + 1}.png`, file: path.join(OUT, 'types', `${t}.png`) }));
-for (const id of Object.keys(ITEMS)) jobs.push({ url: `${BASE}/items/${id}.png`, file: path.join(OUT, 'items', `${id}.png`) });
+// TMs und VMs teilen sich ein Bild pro Typ (tm-fire.png usw.)
+for (const [id, it] of Object.entries(ITEMS)) {
+  const name = it.kind === 'tm' ? `${it.hm ? 'hm' : 'tm'}-${MOVES[it.move]?.type || 'normal'}` : id;
+  jobs.push({ url: `${BASE}/items/${name}.png`, file: path.join(OUT, 'items', `${id}.png`) });
+}
 for (const name of TRAINER_FILES) jobs.push({ url: `${TRAINER_BASE}/${encodeURIComponent(name)}.png`, file: path.join(OUT, 'trainers', `${name}.png`) });
 const OW_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res/graphics/field_sprites';
 for (const f of OW_FILES) {
