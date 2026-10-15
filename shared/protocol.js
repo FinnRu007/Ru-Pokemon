@@ -16,7 +16,7 @@ export const C2S = {
   SHOP_CLOSE: 'shopClose',        // {}
   USE_ITEM: 'useItem',            // { item, pokemonId }
   EMOTE: 'emote',                 // { kind } kleine Sprechblase ueber der eigenen Figur
-  FLY: 'fly',                     // {} Fliegen: Auswahl besuchter Orte
+  FLY: 'fly',                     // { to? } Fliegen: Auswahl besuchter Orte, mit to direkt dorthin (Weltkarte)
   PING: 'ping'
 };
 

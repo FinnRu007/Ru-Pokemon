@@ -221,7 +221,39 @@ input.on('mute', () => toggleMute());
 input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
-$('worldmap').onclick = () => toggleMap(false);
+// Weltkarte: Mausrad zoomt, Ziehen verschiebt, Klick auf einen besuchten Ort fliegt dorthin
+worldMap.canFlyTo = (id) => !!(world.flags.hm_fly && world.flags['visit_' + id] && world.me && id !== world.me.map && !MAPS[world.me.map]?.indoor);
+const wmc = $('wmCanvas');
+const wmSize = () => { const r = wmc.getBoundingClientRect(); return { W: r.width, H: r.height }; };
+const wmPoint = (e) => { const r = wmc.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+wmc.addEventListener('wheel', (e) => { e.preventDefault(); const { W, H } = wmSize(); const p = wmPoint(e); worldMap.zoomAt(e.deltaY < 0 ? 1.25 : 0.8, p.x, p.y, W, H); }, { passive: false });
+let wmDrag = null;
+wmc.addEventListener('pointerdown', (e) => { wmDrag = { ...wmPoint(e), moved: 0 }; wmc.setPointerCapture(e.pointerId); });
+wmc.addEventListener('pointermove', (e) => {
+  const p = wmPoint(e); const { W, H } = wmSize();
+  if (wmDrag) { worldMap.pan(p.x - wmDrag.x, p.y - wmDrag.y, W, H); wmDrag.moved += Math.abs(p.x - wmDrag.x) + Math.abs(p.y - wmDrag.y); wmDrag.x = p.x; wmDrag.y = p.y; }
+  const s = worldMap.spotAt(p.x, p.y, W, H);
+  worldMap.hover = s && s.fly && worldMap.canFlyTo(s.id) ? s.id : null;
+  wmc.style.cursor = wmDrag?.moved > 4 ? 'grabbing' : worldMap.hover ? 'pointer' : 'grab';
+  $('wmFoot').textContent = worldMap.hover ? `Klicken: nach ${MAPS[worldMap.hover].name} fliegen` : 'Mausrad oder +/−: Zoom · Ziehen: verschieben · M oder Esc: schließen';
+});
+wmc.addEventListener('pointerup', (e) => {
+  const d = wmDrag; wmDrag = null;
+  if (!d || d.moved > 4) return;
+  const p = wmPoint(e); const { W, H } = wmSize();
+  const s = worldMap.spotAt(p.x, p.y, W, H);
+  if (s && s.fly && worldMap.canFlyTo(s.id)) { audio.sfx('throw'); toggleMap(false); net.send({ t: 'fly', to: s.id }); }
+});
+const wmZoom = (f) => { const { W, H } = wmSize(); worldMap.zoomAt(f, W / 2, H / 2, W, H); };
+$('wmIn').onclick = () => wmZoom(1.4);
+$('wmOut').onclick = () => wmZoom(1 / 1.4);
+$('wmHome').onclick = () => { const { W, H } = wmSize(); worldMap.resetView(W, H); };
+$('wmClose').onclick = () => toggleMap(false);
+addEventListener('keydown', (e) => {
+  if (!mapOpen) return;
+  if (e.key === '+' || e.key === '=') wmZoom(1.4);
+  if (e.key === '-') wmZoom(1 / 1.4);
+});
 $('musicVol').value = Math.round(audio.prefs.music * 100);
 $('sfxVol').value = Math.round(audio.prefs.sfx * 100);
 $('musicVol').oninput = (e) => audio.setVolume('music', e.target.value / 100);
@@ -260,14 +292,21 @@ function toggleMap(open = !mapOpen) {
   updateLock();
   if (open) {
     const list = worldMap.roster.length ? worldMap.roster : [world.me];
+    worldMap.view = null; // beim Oeffnen auf die eigene Position zentrieren
     $('wmList').innerHTML = list.map((p) => `<span><i style="background:${p.color || '#e53935'}"></i>${escHtml(p.name)}${p.id === world.me.id ? ' (du)' : ''}: ${escHtml(placeName(p.map))}</span>`).join('');
     requestAnimationFrame(drawWorldMap);
   }
 }
+// Nur fuer automatische Tests (?test): Bildschirmposition eines Ortes auf der Weltkarte
+if (location.search.includes('test')) window.__wmTarget = (id) => { const r = wmc.getBoundingClientRect(); const s = worldMap.screenOf(id, r.width, r.height); return s && { x: r.left + s.x, y: r.top + s.y }; };
 function drawWorldMap(now) {
   if (!mapOpen) return;
   const c = $('wmCanvas');
-  worldMap.draw(c.getContext('2d'), c.width, c.height, now);
+  // Canvas in echter Bildschirmaufloesung, damit Schrift scharf bleibt
+  const r = c.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
+  if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  worldMap.draw(g, r.width, r.height, now);
   const tod = timeOfDay(); const w = weatherFor(areaOf(world.me.map));
   $('wmInfo').textContent = `${placeName(world.me.map)} · ${TIME_NAMES[tod]}${w !== 'clear' ? ' · ' + { rain: 'Regen', fog: 'Nebel', leaves: 'Windig', ash: 'Kohlenstaub' }[w] : ''}`;
   requestAnimationFrame(drawWorldMap);

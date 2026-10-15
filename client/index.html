@@ -51,10 +51,11 @@
       <section id="modal" class="modal hidden"><div class="panel" id="modalPanel"></div></section>
 
       <section id="worldmap" class="hidden">
-        <div class="wm-head"><b>Karte von Sinnoh</b><span id="wmInfo"></span></div>
-        <canvas id="wmCanvas" width="720" height="440"></canvas>
+        <div class="wm-head"><b>Karte von Sinnoh</b><span id="wmInfo"></span>
+          <span class="wm-btns"><button id="wmIn" title="Hineinzoomen (+)">+</button><button id="wmOut" title="Herauszoomen (-)">−</button><button id="wmHome" title="Zu mir">⌂</button><button id="wmClose" title="Schließen (M)">✕</button></span></div>
+        <canvas id="wmCanvas"></canvas>
         <div id="wmList" class="wm-list"></div>
-        <div class="wm-foot">M, Esc oder Klick: schließen</div>
+        <div class="wm-foot" id="wmFoot">Mausrad oder +/−: Zoom · Ziehen: verschieben · M oder Esc: schließen</div>
       </section>
     </main>
 

@@ -174,3 +174,5 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 #logBadge { position: absolute; top: -6px; right: -4px; min-width: 18px; padding: 0 4px; border-radius: 9px; background: #e04848; color: #fff; font-style: normal; font-size: 11px; line-height: 18px; }
 .settings { display: flex; flex-direction: column; gap: 6px; background: var(--panel2); border-radius: 8px; padding: 8px; }
 .toolbar .online { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.wm-btns { display: flex; gap: 4px; margin-left: auto; } .wm-btns button { padding: 2px 10px; font-size: 15px; }
+#wmCanvas { cursor: grab; touch-action: none; }

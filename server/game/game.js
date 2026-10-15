@@ -76,7 +76,7 @@ export class GameServer {
       case C2S.SHOP_CLOSE: s.shop = false; return;
       case C2S.USE_ITEM: return this.useItem(s, msg);
       case C2S.EMOTE: return this.emote(s, msg);
-      case C2S.FLY: return this.fly(s);
+      case C2S.FLY: return this.fly(s, msg);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -401,12 +401,19 @@ export class GameServer {
   }
 
   // Fliegen: Auswahl aller besuchten Orte (nur draussen und mit der VM Fliegen)
-  fly(s) {
+  fly(s, msg = {}) {
     if (s.battle || s.script || !this.storyOn) return;
     const p = s.player;
     if (!p.flags.hm_fly) return this.notice(s, 'Du beherrschst Fliegen noch nicht.', 'error');
     if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
     const spots = Object.entries(MAPS).filter(([id, m]) => m.fly && p.flags['visit_' + id] && id !== p.map);
+    // Direktflug aus der Weltkarte: Ziel muss ein besuchter Ort sein
+    if (msg.to) {
+      const hit = spots.find(([id]) => id === msg.to);
+      if (!hit) return this.notice(s, 'Dorthin kannst du nicht fliegen.', 'error');
+      this.notice(s, `Du fliegst nach ${hit[1].name}.`);
+      return this.teleport(s, hit[0], hit[1].fly[0], hit[1].fly[1]);
+    }
     if (!spots.length) return this.notice(s, 'Du kennst noch keine anderen Orte.', 'error');
     const labels = [...spots.map(([, m]) => m.name), 'Abbrechen'];
     const branches = spots.map(([id, m]) => [{ warp: [id, m.fly[0], m.fly[1]] }]);
