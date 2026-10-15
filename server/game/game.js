@@ -118,7 +118,7 @@ export class GameServer {
     this.sendParty(s);
     this.sendNuzlocke(s);
     if (!player.starterChosen) {
-      this.send(conn.ws, { t: S2C.NEED_STARTER, options: STARTERS.map((id) => ({ id, name: POKEMON[id].name, types: POKEMON[id].types })) });
+      this.send(conn.ws, { t: S2C.NEED_STARTER, options: STARTERS.map((id) => ({ id, speciesId: id, name: POKEMON[id].name, types: POKEMON[id].types, family: POKEMON[id].family, stage: 1 })) });
     }
     if (player.gameOver) this.send(conn.ws, { t: S2C.GAME_OVER, reason: 'Alle Pokemon deines Teams sind tot.' });
     this.broadcastMap(player.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(player) }, player.id);

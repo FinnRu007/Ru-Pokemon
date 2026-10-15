@@ -1,4 +1,5 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
+import { monsterDataUrl } from './art/monsters.js';
 const $ = (id) => document.getElementById(id);
 const STATUS = { par: ['PAR', '#c9a400'], slp: ['SLF', '#7a7a7a'], psn: ['GIF', '#a040a0'], tox: ['GIF', '#702070'], brn: ['BRT', '#e05a2a'], frz: ['GFR', '#4bb3d6'] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -99,15 +100,16 @@ export class BattleUI {
   color(types) { return this.m.typeColors[types?.[0]] || '#888'; }
   renderSprites(s) {
     const set = (el, mon, back) => {
-      el.style.backgroundColor = this.color(mon.types);
-      // Echtes Sprite nur setzen, wenn die Datei existiert. Sonst bleibt der farbige Platzhalter.
-      const url = `/assets/sprites/${(back ? this.m.pokemon.backPathPattern : this.m.pokemon.pathPattern).replace('{id}', mon.speciesId)}`;
-      el.style.backgroundImage = '';
-      const img = new Image();
-      img.onload = () => { el.style.backgroundImage = `url(${url})`; el.style.backgroundColor = 'transparent'; el.textContent = ''; };
-      if (this.m.pokemon.useImages) img.src = url;
-      el.textContent = mon.species + (mon.shiny ? ' ★' : '');
-      el.title = mon.types.join('/');
+      // Eigene Grafik aus dem Manifest hat Vorrang, sonst das prozedural erzeugte Sprite.
+      el.style.backgroundImage = `url(${monsterDataUrl(mon, back)})`;
+      el.title = `${mon.species} (${mon.types.join('/')})`;
+      el.classList.toggle('shiny', !!mon.shiny);
+      if (this.m.pokemon?.useImages) {
+        const url = `/assets/sprites/${(back ? this.m.pokemon.backPathPattern : this.m.pokemon.pathPattern).replace('{id}', mon.speciesId)}`;
+        const img = new Image();
+        img.onload = () => { el.style.backgroundImage = `url(${url})`; };
+        img.src = url;
+      }
     };
     set($('foeSprite'), s.foe, false);
     set($('allySprite'), s.ally, true);
@@ -117,7 +119,7 @@ export class BattleUI {
     const cls = pct <= 20 ? 'low' : pct <= 50 ? 'mid' : '';
     const st = mon.status ? `<span class="st" style="background:${STATUS[mon.status][1]}">${STATUS[mon.status][0]}</span>` : '';
     const g = mon.gender === 'm' ? ' ♂' : mon.gender === 'f' ? ' ♀' : '';
-    let html = `<div class="row"><span>${mon.name}${g}${st}</span><span>Lv${mon.level}</span></div><div class="hpbar ${cls}"><i style="width:${pct}%"></i></div>`;
+    let html = `<div class="row"><span>${mon.name}${g}${st}</span><span>Lv${mon.level}</span></div><div class="hprow"><b>KP</b><div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div>`;
     if (ally) {
       const span = Math.max(1, mon.expNext - mon.expThis);
       const ep = Math.min(100, Math.max(0, Math.round(((mon.exp - mon.expThis) / span) * 100)));

@@ -6,6 +6,8 @@ import { World } from './world.js';
 import { Renderer } from './renderer.js';
 import { BattleUI } from './battleUI.js';
 import { Hud } from './hud.js';
+import { monsterDataUrl } from './art/monsters.js';
+import { Dialog } from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 const manifest = await (await fetch('/assets/sprites/manifest.json')).json();
@@ -14,11 +16,11 @@ const input = new Input();
 const world = new World(net);
 const renderer = new Renderer($('game'), manifest);
 const hud = new Hud(net, manifest, MAPS);
-let dialogOpen = false;
+const dialog = new Dialog();
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { world.locked = dialogOpen || starterOpen || gameOver; },
+  onEnd: () => { world.locked = dialog.open || starterOpen || gameOver; },
   onLearnPrompt: (ev) => learnQueue.push(ev)
 });
 const learnQueue = [];
@@ -59,8 +61,8 @@ net.on('error', (m) => {
 net.on('_close', () => hud.log('Verbindung getrennt. Versuche erneut ...', 'death'));
 net.on('needStarter', (m) => {
   starterOpen = true; world.locked = true;
-  openModal(`<h1>Wähle deinen Partner</h1><p>Prof. Eibe überlässt dir eines dieser Pokémon.</p><div class="choices">${m.options.map((o) =>
-    `<button data-id="${o.id}" style="background:${manifest.typeColors[o.types[0]]}">${o.name}</button>`).join('')}</div>`);
+  openModal(`<h1>Wähle deinen Partner</h1><p>Prof. Eibe überlässt dir eines dieser Pokémon.</p><div class="choices starters">${m.options.map((o) =>
+    `<button data-id="${o.id}" style="background:${manifest.typeColors[o.types[0]]}"><img src="${monsterDataUrl(o, false)}" alt="">${o.name}</button>`).join('')}</div>`);
   document.querySelectorAll('#modalPanel button[data-id]').forEach((b) => {
     b.onclick = () => { net.send({ t: 'chooseStarter', speciesId: Number(b.dataset.id) }); closeModal(); starterOpen = false; world.locked = false; };
   });
@@ -113,15 +115,12 @@ function showMapName(id) {
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => el.classList.add('hidden'), 2200);
 }
-function showDialog(text) {
-  dialogOpen = true; world.locked = true;
-  $('dialog').textContent = text;
-  $('dialog').classList.remove('hidden');
-}
-function closeDialog() {
-  dialogOpen = false;
-  $('dialog').classList.add('hidden');
-  world.locked = battle.active || starterOpen || gameOver;
+function showDialog(text, onDone) {
+  world.locked = true;
+  dialog.show(Array.isArray(text) ? text : [text], (v) => {
+    world.locked = battle.active || starterOpen || gameOver || dialog.open;
+    if (onDone) onDone(v);
+  });
 }
 function processLearnQueue() {
   if (battle.active || !learnQueue.length) return;
@@ -142,7 +141,7 @@ function processLearnQueue() {
 
 input.on('action', () => {
   if (battle.active || starterOpen || gameOver) return;
-  if (dialogOpen) return closeDialog();
+  if (dialog.open) return dialog.advance();
   if (world.me && !world.anim) net.send({ t: 'interact' });
 });
 input.on('chat', () => $('chatInput').focus());

@@ -57,6 +57,21 @@ export function createPokemon(speciesId, level, opts = {}) {
   return p;
 }
 
+// Entwicklungsstufe (1 = Basis). Wird fuer die prozedurale Grafik und Trainer-KI genutzt.
+let preCache = null; let preCount = 0;
+export function stageOf(id) {
+  const count = Object.keys(POKEMON).length;
+  if (!preCache || preCount !== count) {
+    preCache = new Map(); preCount = count;
+    for (const sp of Object.values(POKEMON)) {
+      for (const e of [sp.evo, ...(sp.evos || [])]) if (e?.to) preCache.set(Number(e.to), sp.id);
+    }
+  }
+  let stage = 1; let cur = Number(id);
+  while (preCache.has(cur) && stage < 3) { cur = preCache.get(cur); stage++; }
+  return stage;
+}
+
 export function displayName(p) {
   return p.nickname || species(p.speciesId).name;
 }
@@ -131,6 +146,7 @@ export function publicPokemon(p) {
   const sp = species(p.speciesId);
   return {
     id: p.id, speciesId: p.speciesId, species: sp.name, name: displayName(p), nickname: p.nickname, types: sp.types,
+    family: sp.family, stage: stageOf(p.speciesId),
     level: p.level, hp: p.hp, maxHp: p.stats.hp, status: p.status, alive: p.alive !== false, deathCause: p.deathCause ?? null,
     shiny: p.shiny, gender: p.gender, nature: NATURES[p.nature].name, ability: p.ability, stats: p.stats,
     exp: p.exp, expThis: expForLevel(sp.growth, p.level), expNext: expForLevel(sp.growth, Math.min(100, p.level + 1)),

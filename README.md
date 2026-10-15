@@ -1,6 +1,6 @@
 # Pokémon Platin Multiplayer
 
-2D-Top-Down-Klon von Pokémon Platin mit Multiplayer-Overworld (Spieler sehen sich in Echtzeit), rundenbasierten Wildkämpfen nach Generation-4-Formeln, Nuzlocke und Linked Soulbound (Hardcore). Server: Node.js + WebSockets. Client: Browser mit Canvas und farbigen Platzhaltern.
+2D-Top-Down-Klon von Pokémon Platin mit Multiplayer-Overworld (Spieler sehen sich in Echtzeit), rundenbasierten Wildkämpfen nach Generation-4-Formeln, Nuzlocke und Linked Soulbound (Hardcore). Server: Node.js + WebSockets. Client: Browser mit Canvas und eigener Pixelgrafik im Stil der DS-Generation.
 
 ## Start
 
@@ -96,15 +96,17 @@ platin-multiplayer/
 - Ist B gerade im Kampf und Y aktiv, fällt Y sofort um und B muss wechseln. Offline-Spieler sehen den Tod beim nächsten Login.
 - Hardcore-Option `failedEncounterBreaksLink`: Verpatzt ein Spieler den Encounter einer Route, stirbt der dortige Fang aller Partner, und spätere Fänge auf dieser Route sind direkt tot.
 
-## Echte Grafiken einbauen
+## Grafik
 
-Alle Platzhalter laufen über `client/assets/sprites/manifest.json`:
+Alle Grafiken sind selbst erstellt und liegen als Code in `client/js/art/`. Es werden keine Originalgrafiken von Nintendo oder Game Freak verwendet.
 
-- Kacheln: bei einem Kachelzeichen `"image": "tiles/gras.png"` setzen
-- Spieler: `player.image` auf ein Spritesheet (Zeilen: unten, links, rechts, oben)
-- Pokémon: `pokemon.useImages` auf `true` stellen und Dateien unter `assets/sprites/pokemon/{id}.png` sowie `pokemon/back/{id}.png` ablegen
+- `tiles.js` und `tileset.js`: 16x16-Kacheln (Wiese, Weg mit weichen Raendern, hohes Gras mit Animation, Baeume, Wasser mit Ufern, Vorsprung, Blumen, Zaun, Schild). Raender passen sich automatisch an die Nachbarkacheln an.
+- `buildings.js`: Gebaeude werden als Ganzes aus dem Rechteck der Karte gemalt (Dach, Wand, Fenster, Tuer, Schild). Stile: `house` bis `house5`, `center`, `mart`, `lab`, `gym`, `school`, `tv`, `corp`, `mine`. Vergabe pro Karte ueber `buildings: [{ x, y, style }]`.
+- `characters.js`: Figuren mit vier Richtungen und Laufanimation, eingefaerbt ueber Paletten (Spieler in der eigenen Spielerfarbe, NPCs wie Professor, Rivale, Team Galaktik, Schwester, Arenaleiter).
+- `monsters.js`: Pokemon-Sprites werden prozedural erzeugt. Familie, Entwicklungsstufe und Typen bestimmen Koerperbau, Farben, Ohren, Hoerner, Flossen und Augen. Jede Art sieht dadurch immer gleich aus, Entwicklungen aehneln ihrer Vorstufe und werden groesser. Schillernde Pokemon bekommen eine andere Farbe.
+- Schrift: Pixelify Sans (SIL Open Font License 1.1), siehe `CREDITS.md`.
 
-Fehlt eine Datei, wird automatisch wieder die Farbe gezeichnet.
+Eigene Bilder koennen weiterhin ueber `client/assets/sprites/manifest.json` eingebunden werden (Kacheln per `image`, Spieler-Spritesheet per `player.image`, Pokemon per `pokemon.useImages` und `pokemon/{id}.png`). Gesetzte Bilder haben Vorrang vor der eingebauten Grafik.
 
 ## Daten erweitern
 

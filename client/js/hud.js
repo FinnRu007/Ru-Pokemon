@@ -1,4 +1,5 @@
 // Seitenleiste: Team, Nuzlocke-Uebersicht, Seelenbaender, Box, Log und Chat.
+import { monsterIcon } from './art/monsters.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ROUTE_NAMES = { starter: 'Starter' };
@@ -33,9 +34,8 @@ export class Hud {
   monRow(p, actions) {
     const pct = p.alive ? Math.round((p.hp / p.maxHp) * 100) : 0;
     const cls = pct <= 20 ? 'low' : pct <= 50 ? 'mid' : '';
-    const color = this.m.typeColors[p.types[0]];
     const sub = p.alive ? `Lv${p.level} · ${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}` : `† ${CAUSE[p.deathCause] || 'tot'}`;
-    return `<div class="mon ${p.alive ? '' : 'dead'}"><div class="dot" style="background:${color}"></div>
+    return `<div class="mon ${p.alive ? '' : 'dead'}"><img class="icon" src="${monsterIcon(p)}" alt="">
       <div><div class="name">${esc(p.name)}${p.shiny ? ' ★' : ''}</div><div class="sub">${esc(p.species)} · ${sub}</div>
       <div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div><div class="acts">${actions}</div></div>`;
   }

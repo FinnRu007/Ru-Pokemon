@@ -1,5 +1,5 @@
 {
-  "_info": "Platzhalter-Konfiguration. Fuer echte Grafiken einfach 'image' setzen (Pfad relativ zu /assets/sprites/). Fehlt das Bild, wird die Farbe gezeichnet.",
+  "_info": "Optionale eigene Bilder. Standardmaessig zeichnet der Client die eingebaute Pixelgrafik aus client/js/art. Wird hier 'image' gesetzt (Pfad relativ zu /assets/sprites/), hat das Bild Vorrang.",
   "tileSize": 16,
   "tiles": {
     "#": { "color": "#2f6b32", "detail": "tree", "image": null },

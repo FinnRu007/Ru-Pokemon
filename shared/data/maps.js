@@ -40,6 +40,7 @@ export const MAPS = {
       ['rect', 1, 14, 18, 1, '~']
     ]),
     connections: { north: { map: 'route_201', offset: 0 } },
+    buildings: [{ x: 2, y: 2, style: 'house' }, { x: 14, y: 2, style: 'house2' }, { x: 2, y: 9, style: 'house3' }, { x: 13, y: 9, style: 'house5' }],
     events: [
       { x: 3, y: 4, type: 'heal', text: 'Mama: Ruh dich aus, Schatz! Dein Team ist wieder fit.' },
       { x: 16, y: 4, type: 'text', text: 'Das Haus deines Rivalen. Niemand ist da.' },
@@ -109,6 +110,7 @@ export const MAPS = {
       ['tile', 9, 5, 'S']
     ]),
     connections: { west: { map: 'route_201', offset: 0 }, north: { map: 'route_202', offset: -5 } },
+    buildings: [{ x: 3, y: 10, style: 'lab' }],
     events: [
       { x: 6, y: 13, type: 'text', text: 'Pokemon-Forschungslabor von Prof. Eibe.' },
       { x: 17, y: 11, type: 'heal', text: 'Willkommen im Pokemon-Center! Deine Pokemon sind wieder fit.' },
@@ -152,6 +154,7 @@ export const MAPS = {
       ['tile', 13, 22, 'S']
     ]),
     connections: { south: { map: 'route_202', offset: -9 }, north: { map: 'route_204', offset: -9 }, east: { map: 'route_203', offset: -6 } },
+    buildings: [{ x: 3, y: 3, style: 'school' }, { x: 22, y: 3, style: 'tv' }, { x: 22, y: 17, style: 'corp' }],
     events: [
       { x: 6, y: 6, type: 'text', text: 'Trainerschule von Jubelstadt.' },
       { x: 25, y: 6, type: 'text', text: 'Jubel-TV. Heute: Live aus Sinnoh!' },

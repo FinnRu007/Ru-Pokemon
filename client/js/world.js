@@ -19,6 +19,9 @@ export class World {
 
   get map() { return MAPS[this.me.map]; }
 
+  // NPCs der aktuellen Karte (werden ab der Story-Etappe befuellt)
+  visibleNpcs() { return this.npcs || []; }
+
   setSelf(p) { this.me = { ...p }; this.anim = null; }
 
   setOthers(list) {
