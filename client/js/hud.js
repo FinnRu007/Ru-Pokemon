@@ -1,5 +1,7 @@
 // Seitenleiste: Team, Nuzlocke-Uebersicht, Seelenbaender, Box, Log und Chat.
 import { monsterIcon } from './art/monsters.js';
+import { ITEMS } from '/shared/data/items.js';
+import { BADGES } from '/shared/data/story.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ROUTE_NAMES = { starter: 'Starter' };
@@ -9,7 +11,7 @@ const CAUSE = { fainted: 'im Kampf gefallen', soulbound: 'Seelenband', soulbound
 export class Hud {
   constructor(net, manifest, maps) {
     this.net = net; this.m = manifest; this.maps = maps;
-    this.party = []; this.box = [];
+    this.party = []; this.box = []; this.items = {}; this.progress = { flags: {}, money: 0 };
     document.querySelectorAll('.tabs button').forEach((b) => {
       b.onclick = () => {
         document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
@@ -40,11 +42,30 @@ export class Hud {
       <div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div><div class="acts">${actions}</div></div>`;
   }
 
+  setProgress(m) {
+    this.progress = m;
+    const badges = BADGES.filter((b) => m.flags?.[b.flag]);
+    $('trainerCard').innerHTML = `<span>Geld: <b>${m.money ?? 0} ¥</b></span><span>Orden: ${badges.length
+      ? badges.map((b) => `<i class="badge-icon" style="background:${b.color}" title="${esc(b.name)}"></i>${esc(b.name)}`).join(' ') : 'keine'}</span>`;
+  }
+
+  renderBag() {
+    const entries = Object.entries(this.items).filter(([k, n]) => n > 0 && ITEMS[k]);
+    const alive = this.party.filter((p) => p.alive);
+    $('tab-bag').innerHTML = entries.length ? entries.map(([k, n]) => {
+      const it = ITEMS[k];
+      const use = it.kind === 'med' && alive.length ? `<div class="use">${alive.map((p) => `<button data-item="${k}" data-id="${p.id}" title="${esc(p.name)}"><img class="icon" src="${monsterIcon(p)}" alt=""></button>`).join('')}</div>` : '';
+      return `<div class="bag-row"><span>${esc(it.name)}</span><span>x${n}</span>${use}</div>`;
+    }).join('') + '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll.</div>' : '<div class="hint">Dein Beutel ist leer.</div>';
+    for (const b of document.querySelectorAll('#tab-bag button[data-item]')) b.onclick = () => this.net.send({ t: 'useItem', item: b.dataset.item, pokemonId: b.dataset.id });
+  }
+
   setParty(msg) {
-    this.party = msg.party; this.box = msg.box;
-    $('tab-party').innerHTML = msg.party.map((p, i) => this.monRow(p,
+    this.party = msg.party; this.box = msg.box; this.items = msg.items || {};
+    this.renderBag();
+    $('tab-party').innerHTML = msg.party.length ? msg.party.map((p, i) => this.monRow(p,
       `${i > 0 ? `<button data-a="up" data-i="${i}">▲</button>` : ''}<button data-a="nick" data-id="${p.id}">✎</button><button data-a="tobox" data-id="${p.id}">Box</button>`)).join('')
-      + `<div class="hint">Bälle: ${msg.items['poke-ball'] || 0} Pokéball · ${msg.items['great-ball'] || 0} Superball · ${msg.items['ultra-ball'] || 0} Hyperball</div>`;
+      : '<div class="hint">Du hast noch kein Pokémon.</div>';
     $('tab-box').innerHTML = msg.box.length ? msg.box.map((p) => this.monRow(p, p.alive ? `<button data-a="toparty" data-id="${p.id}">Team</button>` : '')).join('') : '<div class="hint">Box ist leer.</div>';
     for (const btn of document.querySelectorAll('#tab-party button, #tab-box button')) {
       btn.onclick = () => {

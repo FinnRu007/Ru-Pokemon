@@ -20,12 +20,16 @@ const dialog = new Dialog();
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { world.locked = dialog.open || starterOpen || gameOver; },
+  onEnd: () => { updateLock(); flushDialogs(); },
   onLearnPrompt: (ev) => learnQueue.push(ev)
 });
 const learnQueue = [];
 let starterOpen = false;
 let gameOver = false;
+let scriptActive = false;
+let shopOpen = false;
+const pendingDialogs = [];
+function updateLock() { world.locked = battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen; }
 
 // ------------------------------------------------------------------ Login
 const saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
@@ -61,20 +65,21 @@ net.on('error', (m) => {
 net.on('_close', () => hud.log('Verbindung getrennt. Versuche erneut ...', 'death'));
 net.on('needStarter', (m) => {
   starterOpen = true; world.locked = true;
-  openModal(`<h1>Wähle deinen Partner</h1><p>Prof. Eibe überlässt dir eines dieser Pokémon.</p><div class="choices starters">${m.options.map((o) =>
+  openModal(`<h1>Der Koffer</h1><p>Im Koffer liegen drei Pokébälle. Welches Pokémon wählst du als Partner?</p><div class="choices starters">${m.options.map((o) =>
     `<button data-id="${o.id}" style="background:${manifest.typeColors[o.types[0]]}"><img src="${monsterDataUrl(o, false)}" alt="">${o.name}</button>`).join('')}</div>`);
   document.querySelectorAll('#modalPanel button[data-id]').forEach((b) => {
-    b.onclick = () => { net.send({ t: 'chooseStarter', speciesId: Number(b.dataset.id) }); closeModal(); starterOpen = false; world.locked = false; };
+    b.onclick = () => { net.send({ t: 'chooseStarter', speciesId: Number(b.dataset.id) }); closeModal(); starterOpen = false; updateLock(); };
   });
 });
 net.on('moveAck', (m) => world.reconcile(m));
 net.on('mapChange', (m) => {
+  if (m.map !== world.me.map) world.npcState = {};
   Object.assign(world.me, { map: m.map, x: m.x, y: m.y, dir: m.dir });
   world.anim = null;
   world.setOthers(m.players);
   showMapName(m.map);
 });
-world.onMapChange = (mapId, warp) => { if (warp) fade(); showMapName(mapId); };
+world.onMapChange = (mapId, warp) => { world.npcState = {}; if (warp) fade(); showMapName(mapId); };
 net.on('playerJoined', (m) => { if (m.player.map === world.me?.map) { world.addOther(m.player); hud.log(`${m.player.name} ist hier.`); } });
 net.on('playerLeft', (m) => world.removeOther(m.id));
 net.on('playerMoved', (m) => world.moveOther(m));
@@ -93,6 +98,12 @@ net.on('soulDeath', (m) => {
   hud.log(txt, 'death');
 });
 net.on('battleStart', (m) => { world.locked = true; world.anim = null; battle.start(m); });
+// Story: Dialoge vom Server. Waehrend eines Kampfes warten sie, bis der Kampfbildschirm zu ist.
+net.on('dialog', (m) => { pendingDialogs.push(m); flushDialogs(); });
+net.on('script', (m) => { scriptActive = m.active; updateLock(); });
+net.on('progress', (m) => { world.flags = m.flags || {}; hud.setProgress(m); });
+net.on('npcEmote', (m) => world.emote(m.id));
+net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
 net.on('battleEnd', (m) => {
   battle.end(m);
@@ -122,12 +133,27 @@ function showMapName(id) {
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => el.classList.add('hidden'), 2200);
 }
-function showDialog(text, onDone) {
+function showDialog(text, onDone, choices) {
   world.locked = true;
   dialog.show(Array.isArray(text) ? text : [text], (v) => {
-    world.locked = battle.active || starterOpen || gameOver || dialog.open;
+    updateLock();
     if (onDone) onDone(v);
-  });
+  }, choices);
+}
+function flushDialogs() {
+  if (battle.active || dialog.open || !pendingDialogs.length) return;
+  const m = pendingDialogs.shift();
+  if (m.face) world.faceNpc(m.face.id, m.face.dir);
+  for (const l of m.lines) hud.log(l.speaker ? `${l.speaker}: ${l.text}` : l.text, 'dialog');
+  showDialog(m.lines, (v) => { net.send({ t: 'dialogDone', token: m.token, choice: v ?? 0 }); setTimeout(flushDialogs, 0); }, m.choices);
+}
+function openShop(m) {
+  shopOpen = true; updateLock();
+  const rows = m.stock.map((it) => `<div class="shop-row${it.locked ? ' locked' : ''}"><span class="nm">${it.name}<small>Im Beutel: ${it.have}</small></span><span class="pr">${it.price} ¥</span>
+    ${it.locked ? '<span class="hint">ab Orden 1</span>' : `<button data-buy="${it.id}" data-n="1" ${m.money < it.price ? 'disabled' : ''}>1</button><button data-buy="${it.id}" data-n="5" ${m.money < it.price * 5 ? 'disabled' : ''}>5</button><button data-buy="${it.id}" data-n="10" ${m.money < it.price * 10 ? 'disabled' : ''}>10</button>`}</div>`).join('');
+  openModal(`<h1>Pokémon-Markt</h1><p>Dein Geld: <b>${m.money} ¥</b></p><div class="shop">${rows}</div><button id="shopClose">Fertig</button>`);
+  document.querySelectorAll('#modalPanel button[data-buy]').forEach((b) => { b.onclick = () => net.send({ t: 'buy', item: b.dataset.buy, count: Number(b.dataset.n) }); });
+  $('shopClose').onclick = () => { net.send({ t: 'shopClose' }); closeModal(); shopOpen = false; updateLock(); };
 }
 function processLearnQueue() {
   if (battle.active || !learnQueue.length) return;
@@ -147,9 +173,9 @@ function processLearnQueue() {
 }
 
 input.on('action', () => {
-  if (battle.active || starterOpen || gameOver) return;
+  if (battle.active || starterOpen || gameOver || shopOpen) return;
   if (dialog.open) return dialog.advance();
-  if (world.me && !world.anim) net.send({ t: 'interact' });
+  if (world.me && !world.anim && !scriptActive) net.send({ t: 'interact' });
 });
 input.on('chat', () => $('chatInput').focus());
 $('chatForm').addEventListener('submit', (e) => {

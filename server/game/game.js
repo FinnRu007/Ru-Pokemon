@@ -6,17 +6,23 @@ import { MOVES } from '../../shared/data/moves.js';
 import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, DIRS, isStandable } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS } from '../../shared/protocol.js';
-import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species } from './pokemonFactory.js';
-import { WildBattle } from './battle.js';
+import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
+import { WildBattle, TrainerBattle } from './battle.js';
 import { RulesEngine, DEFAULT_RULES } from './rules.js';
+import { StoryRunner } from './story.js';
+import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
+import { ITEMS, MART_STOCK, applyItem } from '../../shared/data/items.js';
 
 const NAME_RE = /^[\p{L}\p{N} _-]{2,16}$/u;
 const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#fdd835', '#6d4c41'];
 
 export class GameServer {
-  constructor(repo, log = console) {
+  // opts.story = false schaltet Story, Ausloeser und Trainer ab (freies Spiel wie vor Etappe 3).
+  constructor(repo, log = console, opts = {}) {
     this.repo = repo;
     this.log = log;
+    this.storyOn = opts.story !== false && process.env.STORY !== 'off';
+    this.story = new StoryRunner(this);
     this.sessions = new Map(); // playerId -> session
     this.rules = new RulesEngine(repo);
     this.saveTimer = setInterval(() => this.flushPositions(), 2000);
@@ -63,6 +69,10 @@ export class GameServer {
       case C2S.BOX_MOVE: return this.boxMove(s, msg);
       case C2S.NICKNAME: return this.nickname(s, msg);
       case C2S.LEARN_MOVE: return this.learnMove(s, msg);
+      case C2S.DIALOG_DONE: return this.story.dialogDone(s, msg);
+      case C2S.BUY: return this.buy(s, msg);
+      case C2S.SHOP_CLOSE: s.shop = false; return;
+      case C2S.USE_ITEM: return this.useItem(s, msg);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -71,6 +81,7 @@ export class GameServer {
   hello(conn, msg) {
     if (conn.session) return;
     let player = msg.token ? this.repo.getPlayerByToken(String(msg.token)) : null;
+    if (!player && process.env.DEV === '1' && msg.name) player = this.repo.getPlayerByName(String(msg.name).trim()); // nur zum Testen
     if (!player) {
       const name = String(msg.name || '').trim();
       if (!NAME_RE.test(name)) return this.send(conn.ws, { t: S2C.ERROR, message: 'Name: 2 bis 16 Zeichen (Buchstaben, Zahlen, Leerzeichen, _ und -)' });
@@ -86,17 +97,26 @@ export class GameServer {
         }
         runId = code;
       }
+      const start = this.storyOn ? NEW_PLAYER_SPAWN : SPAWN;
       player = {
         id: crypto.randomUUID(), token: crypto.randomBytes(24).toString('hex'), name, runId, gameOver: false,
-        map: SPAWN.map, x: SPAWN.x, y: SPAWN.y, dir: SPAWN.dir,
+        map: start.map, x: start.x, y: start.y, dir: start.dir,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
         starterChosen: false,
-        items: { 'poke-ball': 10, 'great-ball': 0, 'ultra-ball': 0 },
+        // Mit Story gibt es die ersten Baelle erst im Labor
+        items: this.storyOn ? {} : { 'poke-ball': 10, 'great-ball': 0, 'ultra-ball': 0 },
+        money: 3000, flags: {},
         lastHeal: { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y }
       };
       this.repo.savePlayer(player);
       this.repo.log(runId, 'player_created', { playerId: player.id, name });
     }
+
+    // Spielstaende von vor der Story: Fortschritt bis zum Labor gilt als erledigt
+    if (!player.flags) player.flags = player.starterChosen ? Object.fromEntries(LEGACY_FLAGS.map((f) => [f, true])) : {};
+    if (player.money == null) player.money = 3000;
+    if (!player.items) player.items = {};
+    if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
     if (!isStandable(MAPS, player.map, player.x, player.y)) {
@@ -108,7 +128,7 @@ export class GameServer {
     const old = this.sessions.get(player.id);
     if (old) { this.send(old.ws, { t: S2C.ERROR, message: 'Du hast dich an anderer Stelle angemeldet.' }); old.ws.close(); this.disconnect({ session: old }); }
 
-    const s = { ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [] };
+    const s = { ws: conn.ws, player, party: [], box: [], battle: null, lastMoveAt: 0, posDirty: false, pendingLearn: [], script: null, shop: false, prev: null };
     this.loadMons(s);
     conn.session = s;
     this.sessions.set(player.id, s);
@@ -124,13 +144,21 @@ export class GameServer {
     });
     this.sendParty(s);
     this.sendNuzlocke(s);
-    if (!player.starterChosen) {
-      this.send(conn.ws, { t: S2C.NEED_STARTER, options: STARTERS.map((id) => ({ id, speciesId: id, name: POKEMON[id].name, types: POKEMON[id].types, family: POKEMON[id].family, stage: 1 })) });
-    }
+    this.sendProgress(s);
+    if (!player.starterChosen && !this.storyOn) this.sendStarterChoice(s);
     if (player.gameOver) this.send(conn.ws, { t: S2C.GAME_OVER, reason: 'Alle Pokemon deines Teams sind tot.' });
     this.broadcastMap(player.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(player) }, player.id);
     this.log.info(`[+] ${player.name} (${player.runId || 'solo'}) online`);
+    if (this.storyOn && !player.gameOver) {
+      if (!player.flags.intro) this.story.runNamed(s, 'intro');
+      else this.story.afterMove(s);
+    }
   }
+
+  sendStarterChoice(s) {
+    this.send(s.ws, { t: S2C.NEED_STARTER, options: STARTERS.map((id) => ({ id, speciesId: id, name: POKEMON[id].name, types: POKEMON[id].types, family: POKEMON[id].family, stage: 1 })) });
+  }
+  sendProgress(s) { this.send(s.ws, { t: S2C.PROGRESS, flags: s.player.flags, money: s.player.money }); }
 
   loadMons(s) {
     const all = this.repo.listPokemon(s.player.id);
@@ -181,6 +209,7 @@ export class GameServer {
   // ------------------------------------------------------------------ Starter
   chooseStarter(s, msg) {
     if (s.player.starterChosen) return this.notice(s, 'Du hast bereits einen Starter.');
+    if (this.storyOn && s.script?.waiting !== 'starter') return this.notice(s, 'Das geht gerade nicht.', 'error');
     const id = Number(msg.speciesId);
     if (!STARTERS.includes(id)) return this.notice(s, 'Ungueltiger Starter', 'error');
     const mon = createPokemon(id, 5, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
@@ -188,6 +217,8 @@ export class GameServer {
     s.party.push(mon);
     this.reslot(s);
     s.player.starterChosen = true;
+    s.player.starterSpecies = id;
+    s.player.flags.has_starter = true;
     this.repo.transaction(() => { this.repo.savePlayer(s.player); this.repo.savePokemon(mon); });
     // Starter zaehlen als Encounter "starter" und werden bei Soulbound miteinander verlinkt.
     const rules = this.rules.rulesFor(s.player);
@@ -200,11 +231,13 @@ export class GameServer {
     this.sendParty(s);
     this.refreshRun(s.player);
     this.broadcastRun(s.player.runId, { t: S2C.NOTICE, text: `${s.player.name} hat ${displayName(mon)} gewählt.`, kind: 'info' });
+    this.sendProgress(s);
+    this.story.starterChosen(s);
   }
 
   // ------------------------------------------------------------------ Bewegung
   face(s, msg) {
-    if (!DIRS[msg.dir] || s.battle) return;
+    if (!DIRS[msg.dir] || s.battle || s.script) return;
     s.player.dir = msg.dir;
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
   }
@@ -212,14 +245,15 @@ export class GameServer {
   move(s, msg) {
     const p = s.player;
     const ack = (ok) => this.send(s.ws, { t: S2C.MOVE_ACK, seq: msg.seq, ok, map: p.map, x: p.x, y: p.y, dir: p.dir });
-    if (!DIRS[msg.dir] || s.battle || !p.starterChosen) return ack(false);
+    if (!DIRS[msg.dir] || s.battle || s.script || (!p.starterChosen && !this.storyOn)) return ack(false);
     const now = Date.now();
     const minGap = (msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
     p.dir = msg.dir;
-    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir);
+    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined);
     if (!r.ok) { ack(false); return this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id); }
     s.lastMoveAt = now;
+    s.prev = { map: p.map, x: p.x, y: p.y };
     const oldMap = p.map;
     p.map = r.map; p.x = r.x; p.y = r.y;
     if (r.dir) p.dir = r.dir;
@@ -234,35 +268,114 @@ export class GameServer {
       this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir, running: !!msg.running, jump: r.jump }, p.id);
     }
 
+    if (this.storyOn && this.story.afterMove(s)) return;
     if (!r.warp) this.tryEncounter(s, tileAt(MAPS[p.map], p.x, p.y));
   }
 
+  // Skriptschritt "back": Spieler auf das vorige Feld zuruecksetzen
+  pushBack(s) {
+    const p = s.player;
+    if (!s.prev || s.prev.map !== p.map) return;
+    const dx = s.prev.x - p.x; const dy = s.prev.y - p.y;
+    p.x = s.prev.x; p.y = s.prev.y;
+    p.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
+    s.prev = null; s.posDirty = true;
+    this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
+    this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir }, p.id);
+  }
+
   interact(s) {
-    if (s.battle) return;
+    if (s.battle || s.script) return;
     const p = s.player;
     const f = facingTile(p.x, p.y, p.dir);
+    if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
     const map = MAPS[p.map];
     const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y);
     if (!ev) return;
     if (ev.type === 'heal') return this.healAt(s, ev);
+    if (ev.type === 'shop') return this.openShop(s);
+    if (this.storyOn) return this.story.start(s, [[null, ev.text]]);
     this.notice(s, ev.text, 'dialog');
   }
 
-  healAt(s, ev) {
+  healParty(s, setHealPoint) {
     for (const m of s.party) healPokemon(m);
-    s.player.lastHeal = { map: s.player.map, x: s.player.x, y: s.player.y };
+    if (setHealPoint) s.player.lastHeal = { map: s.player.map, x: s.player.x, y: s.player.y };
     this.saveMons(s);
     this.savePlayerNow(s);
-    const dead = s.party.filter((m) => !m.alive).length;
-    this.notice(s, (ev?.text || 'Dein Team wurde geheilt.') + (dead ? ` (${dead} tote Pokemon koennen nicht geheilt werden.)` : ''), 'dialog');
     this.sendParty(s);
+  }
+
+  healAt(s, ev) {
+    const dead = s.party.filter((m) => !m.alive).length;
+    const tail = dead ? ` ${dead === 1 ? 'Ein totes Pokémon kann' : dead + ' tote Pokémon können'} leider nicht mehr geheilt werden.` : '';
+    if (this.storyOn) {
+      return this.story.start(s, [
+        ['Pflegerin', 'Willkommen im Pokémon-Center! Ich kümmere mich kurz um dein Team.'],
+        { heal: 'center' },
+        [null, 'Ding ding dideldum!'],
+        ['Pflegerin', 'Fertig! Deine Pokémon sind wieder topfit.' + tail + ' Bis bald!']
+      ]);
+    }
+    this.healParty(s, true);
+    this.notice(s, (ev?.text || 'Dein Team wurde geheilt.') + tail, 'dialog');
+  }
+
+  // ------------------------------------------------------------------ Markt und Beutel
+  shopStock(s) {
+    return MART_STOCK.map((id) => ({ id, name: ITEMS[id].name, price: ITEMS[id].price, locked: !!ITEMS[id].requires && !s.player.flags?.[ITEMS[id].requires], have: s.player.items[id] || 0 }));
+  }
+  openShop(s) {
+    s.shop = true;
+    this.send(s.ws, { t: S2C.SHOP, stock: this.shopStock(s), money: s.player.money });
+  }
+  buy(s, msg) {
+    if (!s.shop || s.battle || s.script) return;
+    const it = ITEMS[msg.item];
+    const count = Math.floor(Number(msg.count));
+    if (!it || !MART_STOCK.includes(msg.item) || !(count >= 1 && count <= 99)) return;
+    if (it.requires && !s.player.flags[it.requires]) return this.notice(s, 'Das gibt es erst mit dem passenden Orden.', 'error');
+    const cost = it.price * count;
+    if (s.player.money < cost) return this.notice(s, 'Du hast nicht genug Geld.', 'error');
+    s.player.money -= cost;
+    s.player.items[msg.item] = (s.player.items[msg.item] || 0) + count;
+    // Wie im Original: Wer 10 Pokebaelle kauft, bekommt einen Premierball dazu (hier ein Pokeball)
+    if (msg.item === 'poke-ball' && count >= 10) { s.player.items['poke-ball']++; this.notice(s, 'Als Dankeschön gibt es einen Pokéball gratis dazu!'); }
+    this.notice(s, `Du hast ${count}x ${it.name} für ${cost} ¥ gekauft.`);
+    this.savePlayerNow(s);
+    this.sendParty(s);
+    this.sendProgress(s);
+    this.send(s.ws, { t: S2C.SHOP, stock: this.shopStock(s), money: s.player.money });
+  }
+  useItem(s, msg) {
+    if (s.battle || s.script) return;
+    const mon = s.party.find((m) => m.id === msg.pokemonId);
+    if (!mon || !(s.player.items[msg.item] > 0)) return;
+    const r = applyItem(msg.item, mon, displayName(mon), { nuzlocke: this.rules.rulesFor(s.player).nuzlocke });
+    if (r.ok) { s.player.items[msg.item]--; this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s); }
+    this.notice(s, r.text, r.ok ? 'info' : 'error');
   }
 
   chat(s, msg) {
     const text = String(msg.text || '').slice(0, 200).trim();
     if (!text) return;
+    if (process.env.DEV === '1' && text.startsWith('/')) return this.devCommand(s, text.split(/\s+/));
     this.broadcastMap(s.player.map, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text });
     this.send(s.ws, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text });
+  }
+
+  // Nur zum Testen (DEV=1): /tp karte x y, /flag name, /lv n
+  devCommand(s, [cmd, a, b, c]) {
+    const p = s.player;
+    if (cmd === '/tp' && MAPS[a]) {
+      const old = p.map;
+      Object.assign(p, { map: a, x: Number(b), y: Number(c) });
+      this.broadcastMap(old, { t: S2C.PLAYER_LEFT, id: p.id });
+      this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
+    }
+    if (cmd === '/flag') { p.flags[a] = true; this.sendProgress(s); }
+    if (cmd === '/lv') { for (const m of s.party) { m.level = Number(a); m.moves = defaultMoves(species(m.speciesId), m.level); recalc(m); m.hp = m.stats.hp; } this.saveMons(s); this.sendParty(s); }
+    this.savePlayerNow(s);
   }
 
   // ------------------------------------------------------------------ Encounter
@@ -284,8 +397,12 @@ export class GameServer {
   startWildBattle(s, speciesId, level, route) {
     const wild = createPokemon(speciesId, level, { metRoute: route });
     const families = new Set([...s.party, ...s.box].map((m) => species(m.speciesId).family));
-    const gate = this.rules.onEncounterStart(s.player, route, wild, families);
+    // Vor den ersten Pokebaellen zaehlt keine Begegnung fuer Nuzlocke (wie die gaengige Regel)
+    const gate = this.storyOn && !s.player.flags.got_balls
+      ? { counted: false, catchable: false, reason: 'Du hast noch keine Pokébälle. Diese Begegnung zählt nicht.' }
+      : this.rules.onEncounterStart(s.player, route, wild, families);
     s.encounter = { route, counted: gate.counted };
+    s.battleMeta = null;
     s.battle = new WildBattle({
       id: crypto.randomUUID(), party: s.party, wild, route, items: s.player.items,
       catchable: gate.catchable, catchBlockReason: gate.reason, nuzlocke: this.rules.rulesFor(s.player).nuzlocke,
@@ -297,10 +414,47 @@ export class GameServer {
     if (gate.counted) this.sendNuzlocke(s);
   }
 
+  // Geskripteter Wildkampf: zaehlt nicht fuer Nuzlocke, niemand stirbt, Niederlage ohne Folgen.
+  startScriptWild(s, speciesId, level) {
+    if (!s.party.some((m) => m.alive !== false && m.hp > 0)) return false;
+    const wild = createPokemon(speciesId, level, { metRoute: 'story' });
+    s.encounter = { route: 'story', counted: false };
+    s.battleMeta = { safe: true, script: true };
+    s.battle = new WildBattle({
+      id: crypto.randomUUID(), party: s.party, wild, route: 'story', items: s.player.items,
+      catchable: false, catchBlockReason: 'Jetzt ist keine Zeit zum Fangen!', nuzlocke: false, onFaint: () => []
+    });
+    this.beginBattle(s);
+    return true;
+  }
+
+  startTrainerBattle(s, trainerId) {
+    const tr = TRAINERS[trainerId];
+    if (!tr || !s.party.some((m) => m.alive !== false && m.hp > 0)) return false;
+    const starter = s.player.starterSpecies || s.party.concat(s.box).find((m) => m.metRoute === 'starter')?.speciesId || 387;
+    const foeParty = tr.party.map(([sp, lv]) => createPokemon(sp === 'rival' ? (RIVAL_STARTER[species(starter).family] || RIVAL_STARTER[starter] || 390) : sp, lv, { metRoute: 'trainer' }));
+    const nuz = this.rules.rulesFor(s.player).nuzlocke;
+    s.encounter = { route: 'trainer', counted: false };
+    s.battleMeta = { trainerId, safe: !!tr.safe };
+    s.battle = new TrainerBattle({
+      id: crypto.randomUUID(), party: s.party, foeParty, route: 'trainer', items: s.player.items,
+      trainer: { name: tr.name, cls: tr.cls, look: tr.look }, nuzlocke: nuz && !tr.safe,
+      onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon)
+    });
+    this.beginBattle(s);
+    return true;
+  }
+
+  beginBattle(s) {
+    const events = s.battle.intro();
+    this.send(s.ws, { t: S2C.BATTLE_START, state: s.battle.snapshot(), events });
+    this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
+  }
+
   battleAction(s, msg) {
     const b = s.battle;
     if (!b) return this.notice(s, 'Kein aktiver Kampf', 'error');
-    const action = { type: msg.type, index: Number(msg.index), ball: msg.ball };
+    const action = { type: msg.type, index: Number(msg.index), ball: msg.ball, item: msg.item };
     const { events, error } = b.act(action);
     if (error) return this.send(s.ws, { t: S2C.BATTLE_EVENTS, events: [{ type: 'text', text: error }], state: b.snapshot(), error: true });
     this.send(s.ws, { t: S2C.BATTLE_EVENTS, events, state: b.snapshot() });
@@ -356,6 +510,9 @@ export class GameServer {
     s.battle = null;
     const enc = s.encounter || {};
     s.encounter = null;
+    const meta = s.battleMeta || null;
+    s.battleMeta = null;
+    const tr = meta?.trainerId ? TRAINERS[meta.trainerId] : null;
     const extra = [];
     let victims = [];
 
@@ -374,13 +531,28 @@ export class GameServer {
       extra.push('Nuzlocke: Der Encounter dieser Route ist verbraucht.');
     }
 
-    if (result === 'win') {
+    if (result === 'win' && tr) {
+      const flags = s.player.flags;
+      for (const [who, text] of tr.win || []) extra.push(who ? `${who}: ${text}` : text);
+      const prize = tr.prize * Math.max(...b.foeParty.map((m) => m.level));
+      if (prize) { s.player.money += prize; extra.push(`Du erhältst ${prize} ¥ als Preisgeld.`); }
+      flags['beat_' + meta.trainerId] = true;
+      if (tr.flag) flags[tr.flag] = true;
+      if (tr.badge) extra.push(`Du erhältst den ${tr.badge}!`);
+      this.sendProgress(s);
+    }
+
+    if (result === 'lose' && meta?.safe) {
+      // Story-Kaempfe ohne Risiko: Team wird geheilt, es geht einfach weiter
+      for (const m of s.party) healPokemon(m);
+      extra.push(tr ? `${tr.name}: Ha! Aber keine Sorge, das war nur ein Übungskampf.` : 'Dein Pokémon hat sich zum Glück schnell erholt.');
+    } else if (result === 'win') {
       for (const m of s.party) {
         if (m.alive && m.hp > 0 && canEvolve(m)) { const e = evolve(m); if (e) extra.push(e.text); }
       }
     }
 
-    if (result === 'lose') {
+    if (result === 'lose' && !meta?.safe) {
       const rules = this.rules.rulesFor(s.player);
       if (rules.nuzlocke) {
         this.checkGameOver(s);
@@ -390,7 +562,11 @@ export class GameServer {
         const oldMap = s.player.map;
         Object.assign(s.player, s.player.lastHeal || { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y });
         for (const m of s.party) healPokemon(m);
+        const lost = Math.floor((s.player.money || 0) / 2);
+        s.player.money -= lost;
+        if (lost) extra.push(`Du verlierst ${lost} ¥.`);
         extra.push('Du bist in Ohnmacht gefallen und eilst zum letzten Heilpunkt.');
+        this.sendProgress(s);
         this.broadcastMap(oldMap, { t: S2C.PLAYER_LEFT, id: s.player.id });
         this.send(s.ws, { t: S2C.MAP_CHANGE, map: s.player.map, x: s.player.x, y: s.player.y, dir: 'down', players: this.playersOnMap(s.player.map, s.player.id) });
         this.broadcastMap(s.player.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(s.player) }, s.player.id);
@@ -404,6 +580,7 @@ export class GameServer {
     this.refreshRun(s.player);
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);
     if (victims.length) this.handleVictims(victims, s.player, null);
+    this.story.battleEnded(s, result, meta);
   }
 
   checkGameOver(s) {

@@ -6,11 +6,15 @@ export const C2S = {
   FACE: 'face',                   // { dir }
   INTERACT: 'interact',           // {}
   CHAT: 'chat',                   // { text }
-  BATTLE_ACTION: 'battleAction',  // { type: 'move'|'switch'|'ball'|'run', index?, ball? }
+  BATTLE_ACTION: 'battleAction',  // { type: 'move'|'switch'|'ball'|'item'|'run', index?, ball?, item? }
   PARTY_SWAP: 'partySwap',        // { from, to }
   BOX_MOVE: 'boxMove',            // { pokemonId, to: 'party'|'box' }
   NICKNAME: 'nickname',           // { pokemonId, name }
   LEARN_MOVE: 'learnMove',        // { pokemonId, moveId, replaceIndex (-1 = verwerfen) }
+  DIALOG_DONE: 'dialogDone',      // { token, choice? }
+  BUY: 'buy',                     // { item, count }
+  SHOP_CLOSE: 'shopClose',        // {}
+  USE_ITEM: 'useItem',            // { item, pokemonId }
   PING: 'ping'
 };
 
@@ -33,6 +37,11 @@ export const S2C = {
   BATTLE_EVENTS: 'battleEvents',
   BATTLE_END: 'battleEnd',
   GAME_OVER: 'gameOver',
+  DIALOG: 'dialog',               // { token, lines: [{ speaker, text }], choices?, face? }
+  SCRIPT: 'script',               // { active }
+  PROGRESS: 'progress',           // { flags, money }
+  NPC_EMOTE: 'npcEmote',          // { id }
+  SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }
   PONG: 'pong'
 };
 

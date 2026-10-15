@@ -2,6 +2,7 @@
 // Kollision ueber dieselbe Logik wie der Server, Interpolation der anderen Spieler.
 import { MAPS } from '/shared/data/maps.js';
 import { resolveStep } from '/shared/world.js';
+import { visibleNpcs, npcAt } from '/shared/data/story.js';
 
 const TURN_DELAY = 90; // kurzes Antippen dreht nur die Blickrichtung (wie im Original)
 
@@ -15,12 +16,25 @@ export class World {
     this.walkMs = 250; this.runMs = 125;
     this.locked = false;      // Kampf, Dialog, Starterwahl
     this.onMapChange = () => {};
+    this.flags = {};          // Story-Fortschritt vom Server
+    this.npcState = {};       // Blickrichtung und Emotes einzelner NPCs (nur Anzeige)
+    this.blocked = (m, x, y) => !!npcAt(m, x, y, this.flags);
   }
 
   get map() { return MAPS[this.me.map]; }
 
-  // NPCs der aktuellen Karte (werden ab der Story-Etappe befuellt)
-  visibleNpcs() { return this.npcs || []; }
+  // NPCs der aktuellen Karte, gefiltert nach Story-Flags
+  visibleNpcs() {
+    if (!this.me) return [];
+    const now = performance.now();
+    return visibleNpcs(this.me.map, this.flags).map((n) => {
+      const st = this.npcState[n.id];
+      if (!st) return n;
+      return { ...n, dir: st.dir || n.dir, emote: st.emoteUntil > now ? '!' : null };
+    });
+  }
+  emote(id) { (this.npcState[id] ||= {}).emoteUntil = performance.now() + 1200; }
+  faceNpc(id, dir) { (this.npcState[id] ||= {}).dir = dir; }
 
   setSelf(p) { this.me = { ...p }; this.anim = null; }
 
@@ -62,7 +76,7 @@ export class World {
       return;
     }
     if (now < (this.turnUntil || 0)) return;
-    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir);
+    const r = resolveStep(MAPS, this.me.map, this.me.x, this.me.y, dir, this.blocked);
     if (!r.ok) {
       if (!this.bumpAt || now - this.bumpAt > 300) { this.bumpAt = now; this.net.send({ t: 'face', dir }); }
       return;

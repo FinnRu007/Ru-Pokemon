@@ -54,9 +54,9 @@ export class BattleUI {
     if (this.state && this.state.state === 'action') this.mainMenu();
   }
 
-  async say(text, ms = 900) {
+  async say(text, ms = 900, log = true) {
     $('battleText').textContent = text;
-    this.hooks.log(text, 'battle');
+    if (log) this.hooks.log(text, 'battle');
     this.skip = false;
     const t0 = performance.now();
     while (performance.now() - t0 < ms && !this.skip) await sleep(30);
@@ -65,7 +65,7 @@ export class BattleUI {
   async playEvent(ev) {
     switch (ev.type) {
       case 'text': return this.say(ev.text);
-      case 'death': this.hooks.log(ev.text, 'death'); return this.say(ev.text, 1400);
+      case 'death': this.hooks.log(ev.text, 'death'); return this.say(ev.text, 1400, false);
       case 'hp': {
         const box = ev.side === 'ally' ? this.state.ally : this.state.foe;
         box.hp = ev.hp; box.maxHp = ev.maxHp;
@@ -75,6 +75,11 @@ export class BattleUI {
       }
       case 'status': (ev.side === 'ally' ? this.state.ally : this.state.foe).status = ev.status; this.renderBoxes(this.state); return;
       case 'faint': $(ev.side === 'ally' ? 'allySprite' : 'foeSprite').classList.add('fainted'); return sleep(500);
+      case 'foeSwitch':
+        this.state.foe = { ...ev.mon, stages: {} };
+        $('foeSprite').classList.remove('fainted');
+        this.renderBoxes(this.state); this.renderSprites(this.state);
+        return sleep(400);
       case 'switch': this.state.ally = { ...ev.mon, stages: {} }; $('allySprite').classList.remove('fainted'); this.renderBoxes(this.state); this.renderSprites(this.state); return sleep(300);
       case 'shake': for (let i = 0; i < ev.count; i++) await this.say('... wackelt ...', 600); return;
       case 'anim': return sleep(150);
@@ -128,7 +133,8 @@ export class BattleUI {
     return html;
   }
   renderBoxes(s) {
-    $('foeBox').innerHTML = this.boxHtml(s.foe, false);
+    const team = s.kind === 'trainer' && s.foeTeam ? `<div class="foe-team">${s.foeTeam.map((t) => `<i class="${t}"></i>`).join('')}</div>` : '';
+    $('foeBox').innerHTML = (s.trainer ? `<div class="hint" style="font-size:11px">${s.trainer.name}</div>` : '') + this.boxHtml(s.foe, false) + team;
     $('allyBox').innerHTML = this.boxHtml(s.ally, true);
   }
 
@@ -155,7 +161,7 @@ export class BattleUI {
       { label: 'KAMPF', color: '#d9534f', fn: () => this.moveMenu() },
       { label: 'BEUTEL', color: '#e0a526', fn: () => this.bagMenu() },
       { label: 'POKéMON', color: '#3fa34d', fn: () => this.partyMenu(false) },
-      { label: 'FLUCHT', color: '#3b6fd6', fn: () => this.act({ type: 'run' }) }
+      { label: 'FLUCHT', color: '#3b6fd6', disabled: this.state.kind === 'trainer', fn: () => this.act({ type: 'run' }) }
     ]);
   }
   moveMenu() {
@@ -172,11 +178,22 @@ export class BattleUI {
   }
   bagMenu() {
     const names = { 'poke-ball': 'Pokéball', 'great-ball': 'Superball', 'ultra-ball': 'Hyperball' };
-    const btns = Object.entries(this.state.balls).map(([k, n]) => ({
-      label: `${names[k]} x${n}`, disabled: n <= 0 || !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k })
-    }));
-    if (!this.state.catchable) $('battleText').textContent = 'Nuzlocke: Dieses Pokémon darfst du nicht fangen.';
+    const btns = [];
+    if (this.state.kind !== 'trainer') {
+      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ label: `${names[k]} x${n}`, disabled: !this.state.catchable, fn: () => this.act({ type: 'ball', ball: k }) });
+    }
+    for (const [k, it] of Object.entries(this.state.bag || {})) btns.push({ label: `${it.name} x${it.count}`, color: '#3f8a7a', fn: () => this.itemTarget(k, it.name) });
+    $('battleText').textContent = !btns.length ? 'Dein Beutel ist leer.' : this.state.kind === 'trainer' ? 'Welchen Gegenstand?' : !this.state.catchable ? 'Dieses Pokémon kannst du nicht fangen.' : 'Welchen Gegenstand?';
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
+    this.menu(btns);
+  }
+  itemTarget(item, name) {
+    $('battleText').textContent = `${name}: Für welches Pokémon?`;
+    const btns = this.state.party.map((p, i) => ({
+      html: `${p.alive ? '' : '† '}${p.name} Lv${p.level}<small>${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}</small>`, cls: 'mv',
+      disabled: !p.alive, fn: () => this.act({ type: 'item', item, index: i })
+    }));
+    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.bagMenu() });
     this.menu(btns);
   }
   partyMenu(forced) {

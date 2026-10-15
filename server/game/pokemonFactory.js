@@ -1,5 +1,6 @@
 // Erzeugung und Entwicklung einzelner Pokemon (Werte, Attacken, EP, Entwicklung).
 import crypto from 'node:crypto';
+import '../data/dex.js';
 import { POKEMON } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
 import { NATURES } from '../../shared/data/natures.js';
@@ -119,9 +120,14 @@ export function addExp(p, amount) {
   return events;
 }
 
+// Entwicklungen: evos aus dem Pokedex (Level oder Ersatzlevel fuer Tausch, Steine, Freundschaft).
+export function evoOptions(sp) { return sp.evos || (sp.evo ? [sp.evo] : []); }
 export function canEvolve(p) {
-  const sp = species(p.speciesId);
-  return sp.evo && p.level >= sp.evo.level && POKEMON[sp.evo.to] ? sp.evo.to : null;
+  const opts = evoOptions(species(p.speciesId)).filter((e) => POKEMON[e.to] && p.level >= e.level && (!e.gender || e.gender === p.gender));
+  if (!opts.length) return null;
+  // Mehrere Moeglichkeiten (z. B. Evoli, Waumpel): fest pro Pokemon gewaehlt
+  const h = [...String(p.id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return opts[h % opts.length].to;
 }
 
 export function evolve(p) {

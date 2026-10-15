@@ -8,6 +8,7 @@
     "start": "node --no-warnings server/index.js",
     "dev": "node --no-warnings --watch server/index.js",
     "fetch-data": "node scripts/fetch-pokeapi.js",
+    "build-dex": "node scripts/build-dex.js",
     "test": "node --no-warnings test/smoke.js"
   },
   "engines": { "node": ">=22.5" },

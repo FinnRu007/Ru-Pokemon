@@ -141,11 +141,29 @@ await test('Jede Karte mit Pokemon-Center ist erreichbar und heilt', () => {
   for (const id of ['sandgem_center', 'jubilife_center', 'oreburgh_center']) assert.ok(MAPS[id].events.some((e) => e.type === 'heal'));
 });
 
+console.log('\nPokedex');
+await test('Alle 493 Arten mit gueltigen Attacken und Entwicklungen', async () => {
+  const { POKEMON } = await import('../shared/data/pokemon.js');
+  const { MOVES } = await import('../shared/data/moves.js');
+  const { canEvolve } = await import('../server/game/pokemonFactory.js');
+  for (let id = 1; id <= 493; id++) {
+    const sp = POKEMON[id];
+    assert.ok(sp && sp.base.length === 6 && sp.learnset.length, 'Art ' + id);
+    for (const [, mv] of sp.learnset) assert.ok(MOVES[mv], `${sp.name}: ${mv}`);
+    for (const e of sp.evos || []) assert.ok(POKEMON[e.to], `${sp.name} -> ${e.to}`);
+  }
+  assert.equal(POKEMON[35].types[0], 'normal', 'Piepi ist in Gen 4 Normal');
+  assert.equal(canEvolve({ ...createPokemon(393, 16), id: 'x' }), 394);
+  const w = createPokemon(448, 50);
+  assert.ok(w.moves.length > 0);
+});
+
 // ------------------------------------------------------------ Netzwerk
 console.log('\nMultiplayer ueber WebSocket');
 process.env.STORAGE = 'sqlite';
 process.env.DATA_DIR = path.join(tmp, 'net');
 process.env.PORT = '3199';
+process.env.STORY = 'off';
 const { server, game, repo } = await import('../server/index.js');
 await new Promise((r) => (server.listening ? r() : server.once('listening', r)));
 const { default: WebSocket } = await import('ws');
@@ -256,6 +274,82 @@ await test('Tuer fuehrt serverseitig ins Haus und wieder hinaus', async () => {
   await step('down');
   const out = await a.wait((m) => m.t === 'mapChange');
   assert.deepEqual([out.map, out.x, out.y, out.dir], ['twinleaf_town', 3, 5, 'down']);
+  a.ws.close();
+});
+
+// ------------------------------------------------------------ Story
+console.log('\nStory');
+const story = await import('../shared/data/story.js');
+await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {
+  for (const [mapId, list] of Object.entries(story.NPCS)) {
+    assert.ok(MAPS[mapId], 'Karte fehlt: ' + mapId);
+    for (const n of list) {
+      const t = MAPS[mapId].tiles[n.y]?.[n.x];
+      assert.ok(t && !SOLID.has(t) && !'DCGU'.includes(t), `${mapId}/${n.id} steht auf ${t}`);
+      if (n.trainer) assert.ok(story.TRAINERS[n.trainer], n.trainer);
+      if (typeof n.talk === 'string') assert.ok(story.SCRIPTS[n.talk], n.talk);
+    }
+  }
+  for (const [mapId, list] of Object.entries(story.TRIGGERS)) for (const t of list) assert.ok(story.SCRIPTS[t.script], t.script);
+  const walk = (steps) => { for (const st of steps) { if (st.battle) assert.ok(story.TRAINERS[st.battle], st.battle); if (st.then) walk(st.then); if (st.else) walk(st.else); } };
+  for (const sc of Object.values(story.SCRIPTS)) walk(sc);
+  const ids = new Set(); for (const list of Object.values(story.NPCS)) for (const n of list) { assert.ok(!ids.has(n.id), 'doppelte NPC-ID ' + n.id); ids.add(n.id); }
+});
+
+// Spielt automatisch weiter: Dialoge bestaetigen, Starter waehlen, im Kampf immer Attacke 1.
+function autoplay(c) {
+  const h = (m) => {
+    if (m.t === 'dialog') c.send({ t: 'dialogDone', token: m.token, choice: 0 });
+    if (m.t === 'needStarter') c.send({ t: 'chooseStarter', speciesId: 393 });
+    const st = (m.t === 'battleStart' || m.t === 'battleEvents') && m.state;
+    if (st?.state === 'action') c.send({ t: 'battleAction', type: 'move', index: 0 });
+    if (st?.state === 'switch') c.send({ t: 'battleAction', type: 'switch', index: st.party.findIndex((p) => p.alive && p.hp > 0) });
+  };
+  c.ws.on('message', (raw) => h(JSON.parse(raw)));
+}
+await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', async () => {
+  game.storyOn = true;
+  const a = client('E');
+  await a.open;
+  autoplay(a);
+  a.send({ t: 'hello', name: 'Story', runCode: 'STORY1' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  assert.equal(w.player.map, 'twinleaf_home_2f');
+  await a.wait((m) => m.t === 'progress' && m.flags.intro);
+  const s = game.sessions.get(w.selfId);
+  assert.equal(s.party.length, 0);
+  const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
+  let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); await sleep(60); };
+  // Ohne Pokemon schickt der Ausloeser zurueck
+  tp('route_201', 42, 7); await step('right');
+  await a.wait((m) => m.t === 'mapChange' && m.x === 42);
+  // See: Zyrus, Koffer, Starter, Wildkampf, Rivalenkampf
+  tp('lake_verity', 20, 7); await step('left');
+  await a.wait((m) => m.t === 'progress' && m.flags.lake_done, 20000);
+  assert.equal(s.party.length, 1);
+  assert.equal(s.party[0].speciesId, 393);
+  assert.equal(s.player.items['poke-ball'] || 0, 0);
+  // Labor: Pokedex und Baelle
+  tp('sandgem_lab', 6, 9); await step('up');
+  await a.wait((m) => m.t === 'progress' && m.flags.lab_done, 8000);
+  assert.equal(s.player.items['poke-ball'], 5);
+  // Trainer Tim (3,15) schaut nach rechts, Sichtweite 3
+  for (const m of s.party) { m.level = 30; m.hp = m.stats.hp = 200; }
+  tp('route_202', 7, 15); await step('left');
+  await a.wait((m) => m.t === 'npcEmote' && m.id === 'tim');
+  await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer');
+  const end = await a.wait((m) => m.t === 'battleEnd', 20000);
+  assert.equal(end.result, 'win');
+  await a.wait((m) => m.t === 'progress' && m.flags.beat_youngster_tim);
+  assert.ok(s.player.money > 3000);
+  // Markt: kaufen mit Geld
+  tp('sandgem_mart', 2, 3); s.player.dir = 'left'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'shop');
+  const before = s.player.money;
+  a.send({ t: 'buy', item: 'potion', count: 2 });
+  await a.wait((m) => m.t === 'shop' && m.money === before - 600);
+  a.send({ t: 'buy', item: 'great-ball', count: 1 });
+  await a.wait((m) => m.t === 'notice' && m.kind === 'error');
   a.ws.close();
 });
 

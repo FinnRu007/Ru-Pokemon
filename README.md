@@ -25,6 +25,7 @@ Steuerung: Pfeiltasten/WASD laufen, Shift rennen, Z/Enter/Leertaste interagieren
 | `STORAGE` | auto | `sqlite` (node:sqlite), `better-sqlite3` oder `json` |
 | `POKEAPI` | 0 | `1` lädt beim Start fehlende Arten live von pokeapi.co |
 | `POKEAPI_IDS` | 387-405 | Nationale Dex-Nummern für den Live-Abruf, z. B. `387-493,25` |
+| `STORY` | an | `off` schaltet Story, NPCs und Trainer ab (freies Spiel ab Zweiblattdorf mit 10 Pokébällen) |
 
 ## Ordnerstruktur
 
@@ -59,6 +60,7 @@ platin-multiplayer/
 │   ├── js/hud.js             Team, Nuzlocke, Seelenband, Box, Log, Chat
 │   └── assets/sprites/manifest.json   Farben und optionale Bildpfade
 ├── scripts/fetch-pokeapi.js  npm run fetch-data -- 387-493
+├── scripts/build-dex.js      npm run build-dex: kompletter Gen-4-Pokédex aus PokeAPI-CSV
 └── test/smoke.js
 ```
 
@@ -108,21 +110,35 @@ Alle Grafiken sind selbst erstellt und liegen als Code in `client/js/art/`. Es w
 
 Eigene Bilder koennen weiterhin ueber `client/assets/sprites/manifest.json` eingebunden werden (Kacheln per `image`, Spieler-Spritesheet per `player.image`, Pokemon per `pokemon.useImages` und `pokemon/{id}.png`). Gesetzte Bilder haben Vorrang vor der eingebauten Grafik.
 
-## Daten erweitern
+## Story
 
-Die Kerndaten (35 Arten der ersten Sinnoh-Routen, rund 120 Attacken, vollständige Typentabelle, alle 25 Wesen, alle Wachstumskurven) sind eingebettet, das Spiel läuft also offline. Weitere Arten:
+Die Handlung reicht bis zum ersten Orden und folgt lose dem Ablauf von Platin. Alle Texte sind selbst geschrieben.
+
+1. Zweiblattdorf: Barry weckt dich, Mama warnt vor dem hohen Gras.
+2. Kraterberg-See: Zyrus taucht auf, Prof. Eibe vergisst seinen Koffer, du wählst deinen Starter, kämpfst gegen ein wildes Staralili und gegen Barry.
+3. Labor in Sandgemme: Pokédex, die ersten Pokébälle und Tränke. Erst ab hier zählen Begegnungen für Nuzlocke.
+4. Route 202 und Jubelstadt: Trainer mit Sichtlinie, Lucias Tipps, Trainerschule, zwei Rüpel von Team Galaktik.
+5. Route 203: zweiter Kampf gegen Barry, weitere Trainer, Erzelingen-Tor mit Wanderer.
+6. Erzelingen: Veit ist erst in der Mine, danach in der Arena. Zwei Arenatrainer, dann Veit selbst. Der Sieg bringt den Kohleorden, Superbälle, Supertränke und Beleber werden im Markt freigeschaltet.
+
+Technik: `shared/data/story.js` enthält NPCs, Trainer, Bodenausloeser und Skripte als Daten. Der Server (`server/game/story.js`) fuehrt die Skripte aus und merkt sich den Fortschritt als Flags im Spielstand. Der Client zeigt NPCs passend zu den Flags an. Trainer, die dich sehen, fordern dich von selbst heraus. Kaempfe gegen Trainer bringen Preisgeld, eine Niederlage kostet die Haelfte des Geldes. Die beiden Story-Kaempfe am See sind ohne Risiko. Pokemon-Center heilen, im Markt gibt es Baelle und Heilmittel, Heilmittel lassen sich im Kampf und im Beutel benutzen.
+
+## Pokédex
+
+Alle 493 Pokémon der vierten Generation und alle 467 Attacken bis Platin sind enthalten (`shared/data/dex/gen4.json`). Werte, Typen, Fähigkeiten, Fangraten, Wachstumskurven und Level-Lernsets entsprechen dem Platin-Stand, Namen sind deutsch. Erzeugt wird die Datei aus den offenen CSV-Daten der PokeAPI (BSD-3-Clause):
 
 ```bash
-npm run fetch-data -- 387-493   # gesamter Sinnoh-Dex, Lernsets im Platin-Stand
+npm run build-dex                  # laedt die CSV-Dateien von GitHub
+npm run build-dex -- ./csv-ordner  # oder aus einem Ordner mit bereits geladenen CSV-Dateien
 ```
 
-Der Cache landet in `shared/data/generated/pokeapi.json` und wird beim Start automatisch eingemischt. Eingebettete Einträge haben Vorrang.
+Entwicklungen per Level funktionieren wie im Original. Für Entwicklungen, die es im Spiel noch nicht gibt, gilt ein Ersatzlevel: Tausch ab Level 36, Entwicklungssteine und Orte ab Level 30, Freundschaft ab Level 30 (Baby-Pokémon ab Level 15). Hat ein Pokémon mehrere Möglichkeiten (Evoli, Waumpel), entscheidet sein Wesen dauerhaft, welche es wird. Attacken mit Sondermechanik, die noch nicht nachgebaut ist, tragen `simplified: true` und wirken als normale Schadensattacke mit Stärke 60 bzw. ohne Effekt. Handgebaute Attacken in `shared/data/moves.js` haben Vorrang.
 
 ## Protokoll (Auszug)
 
-Client an Server: `hello`, `chooseStarter`, `move`, `face`, `interact`, `chat`, `battleAction`, `partySwap`, `boxMove`, `nickname`, `learnMove`.
-Server an Client: `welcome`, `needStarter`, `moveAck`, `mapChange`, `playerJoined`, `playerMoved`, `playerLeft`, `playerState`, `party`, `nuzlocke`, `soulDeath`, `battleStart`, `battleEvents`, `battleEnd`, `gameOver`. Vollständig in `shared/protocol.js`.
+Client an Server: `hello`, `chooseStarter`, `move`, `face`, `interact`, `chat`, `battleAction`, `partySwap`, `boxMove`, `nickname`, `learnMove`, `dialogDone`, `buy`, `shopClose`, `useItem`.
+Server an Client: `welcome`, `needStarter`, `moveAck`, `mapChange`, `playerJoined`, `playerMoved`, `playerLeft`, `playerState`, `party`, `nuzlocke`, `soulDeath`, `battleStart`, `battleEvents`, `battleEnd`, `gameOver`, `dialog`, `script`, `progress`, `npcEmote`, `shop`. Vollständig in `shared/protocol.js`.
 
 ## Nächste Ausbaustufen
 
-Trainerkämpfe und Arenen, Innenräume hinter Türen, Surfer/Angel-Encounter, Tageszeiten, Items und Shop, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena.
+Alle 493 Arten und Attacken der vierten Generation, weitere Routen und Arenen, Surfer/Angel-Encounter, Tageszeiten, PvP-Kämpfe zwischen Spielern, Level-Caps pro Arena.
