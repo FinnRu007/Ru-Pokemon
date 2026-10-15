@@ -155,7 +155,7 @@ for (const pack of PACKS) {
 
 // ---------------------------------------------------------------- Verzeichnis fuer den Client
 // moves: Schluessel aus dem Attackennamen -> Dateien in Abspielreihenfolge (Teil 1, Teil 2, ...).
-// Varianten wie "_1hit" werden nur genommen, wenn es keine Grunddatei gibt.
+// Die Grunddatei ist der ganze Klang; Teile oder Varianten wie "_1hit" nur, wenn sie fehlt.
 const moves = {};
 for (const f of list(path.join(OUT, 'moves'))) {
   const m = /^(.*?)(?:_part_(\d+))?(?:_(\d+)hits?)?\.\w+$/i.exec(f);
@@ -165,7 +165,7 @@ for (const f of list(path.join(OUT, 'moves'))) {
 }
 for (const [k, e] of Object.entries(moves)) {
   const sort = (a) => a.sort((x, y) => x[0] - y[0]).map((x) => 'moves/' + x[1]);
-  moves[k] = e.parts.length ? sort(e.parts) : e.base ? ['moves/' + e.base] : sort(e.hits).slice(0, 1);
+  moves[k] = e.base ? ['moves/' + e.base] : e.parts.length ? sort(e.parts) : sort(e.hits).slice(0, 1);
 }
 const music = fs.readdirSync(MUSIC).filter((f) => f.endsWith('.mp3')).map((f) => f.slice(0, -4));
 const misc = Object.fromEntries(list(path.join(OUT, 'misc')).map((f) => [f.replace(/\.\w+$/, ''), 'misc/' + f]));
