@@ -23,6 +23,7 @@ export const C2S = {
   FORGET: 'forget',               // { pokemonId, index } beim Attacken-Verlerner
   MOVE_SWAP: 'moveSwap',          // { pokemonId, a, b } Reihenfolge der Attacken (Bericht)
   SERVICE_DONE: 'serviceDone',    // {} Lehrer, Erinnerer oder Verlerner verlassen
+  EVOLVE_CANCEL: 'evolveCancel',  // { pokemonId } Entwicklung mit B abgebrochen (nur direkt nach einer Entwicklung durch Level)
   PING: 'ping'
 };
 
@@ -43,7 +44,8 @@ export const S2C = {
   SOUL_DEATH: 'soulDeath',        // { pokemonName, playerName, partnerName, cause }
   BATTLE_START: 'battleStart',
   BATTLE_EVENTS: 'battleEvents',
-  BATTLE_END: 'battleEnd',
+  BATTLE_END: 'battleEnd',        // { result, messages, evolutions?: [{ pokemonId, text, from, to, cancelable }] }
+  EVOLUTION: 'evolution',         // { list: [{ pokemonId, text, from, to, cancelable? }] } Entwicklung ausserhalb des Kampfes (Stein, Sonderbonbon)
   GAME_OVER: 'gameOver',
   DIALOG: 'dialog',               // { token, lines: [{ speaker, text }], choices?, face? }
   SCRIPT: 'script',               // { active }

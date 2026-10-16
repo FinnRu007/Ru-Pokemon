@@ -135,10 +135,17 @@ export function evolve(p) {
   const to = canEvolve(p);
   if (!to) return null;
   const from = displayName(p);
+  const before = evoView(p);
   p.speciesId = to;
   p.ability = species(to).ability;
   recalc(p);
-  return { type: 'evolve', pokemonId: p.id, text: `${from} hat sich zu ${species(to).name} entwickelt!` };
+  return { type: 'evolve', pokemonId: p.id, text: `${from} hat sich zu ${species(to).name} entwickelt!`, from: before, to: evoView(p) };
+}
+
+// Was der Client fuer die Entwicklungsszene braucht (Bild vorher und nachher, Namen)
+export function evoView(p) {
+  const sp = species(p.speciesId);
+  return { speciesId: p.speciesId, species: sp.name, name: displayName(p), types: sp.types, family: sp.family, stage: stageOf(p.speciesId), shiny: p.shiny, gender: p.gender, form: p.form || null };
 }
 
 export function healPokemon(p) {

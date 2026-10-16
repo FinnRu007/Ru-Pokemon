@@ -58,7 +58,8 @@ export const SONG_TRACKS = {
   battle_boss: 'Battle! (Team Galactic Boss)', battle_elite: 'Battle! (Elite Four)', battle_champion: 'Battle! (Champion)',
   battle_legend: 'Battle! (Legendary Pokémon)', battle_lakes: 'Battle! (Azelf/Mesprit/Uxie)', battle_creation: 'Battle! (Dialga/Palkia)',
   victory_rival: 'Victory! (Trainer Battle)', victory_galactic: 'Victory! (Team Galactic)', victory_commander: 'Victory! (Team Galactic)',
-  victory_boss: 'Victory! (Team Galactic)', victory_elite: 'Victory! (Elite Four)', victory_champion: 'Victory! (Champion)'
+  victory_boss: 'Victory! (Team Galactic)', victory_elite: 'Victory! (Elite Four)', victory_champion: 'Victory! (Champion)',
+  evolution: 'Evolution'
 };
 // Fanfaren: erst Sound Library, dann die Gen-4-Sammlung (misc:Dateiname)
 export const JINGLE_TRACKS = {
