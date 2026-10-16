@@ -2,6 +2,7 @@
 // Dazu Statusbildschirm, Attacken lernen (Level-Up, TM/VM, Lehrer, Erinnerer) und Verlerner.
 // Alle Bildschirme liegen als HTML ueber dem Spielfeld und lassen sich mit Tastatur und Maus bedienen:
 // Pfeiltasten waehlen, Z/Enter bestaetigt, X/Esc geht zurueck.
+import { showLevelStats } from './levelStats.js';
 import { MAPS } from '/shared/data/maps.js';
 import { ITEMS, isHmMove } from '/shared/data/items.js';
 import { BADGES } from '/shared/data/story.js';
@@ -9,6 +10,7 @@ import { monsterDataUrl, monsterIcon, typeBadge, itemIcon } from './art/monsters
 import { DEX, speciesOf, moveOf, moveText, dexText, abilityName, abilityText, itemText, spriteMon, fmtHeight, fmtWeight } from './texts.js';
 import { options, setOption, OPTION_DEFS, textStep } from './options.js';
 import { audio } from './audio.js';
+import { RIBBONS } from '/shared/data/ribbons.js';
 import { layout } from './worldmap.js';
 
 const $ = (id) => document.getElementById(id);
@@ -46,6 +48,14 @@ export class GameMenu {
   get me() { return this.ctx.world.me; }
 
   // ---------------------------------------------------------------- Stapel der Bildschirme
+  // Aus der Seitenleiste: Beutel an der richtigen Tasche öffnen und das Item direkt anwählen
+  openItem(k) {
+    if (!ITEMS[k] || !(this.items[k] > 0)) return;
+    if (!this.isOpen) this.open();
+    const pocket = POCKETS.some(([p]) => p === ITEMS[k].kind) ? ITEMS[k].kind : 'item';
+    this.push(this.bagScreen({ pocket }));
+    this.useBagItem(k);
+  }
   open() { if (!this.isOpen) { audio.sfx('start'); this.push(this.startScreen()); } }
   push(screen) { this.stack.push(screen); this.root.classList.remove('hidden'); this.render(); }
   replace(screen) { this.stack[this.stack.length - 1] = screen; this.render(); }
@@ -320,7 +330,7 @@ export class GameMenu {
         const pct = p.alive ? Math.round((p.hp / p.maxHp) * 100) : 0;
         const tag = pick?.label ? pick.label(p) : null;
         return `<button data-nav data-i="${i}" class="pcard ${p.alive ? '' : 'dead'} ${st.swapFrom === i ? 'swap' : ''} ${i === 0 ? 'lead' : ''}">
-          <img src="${monsterIcon(p)}" alt=""><div class="pn">${esc(p.name)} ${genderSym(p.gender)}</div>
+          <img src="${monsterIcon(p)}" alt=""><div class="pn">${esc(p.name)} ${genderSym(p.gender)}${p.item ? ` <span class="held-tag" title="${esc(ITEMS[p.item]?.name || p.item)}">●</span>` : ''}</div>
           ${p.egg ? `<div class="pl">&nbsp;</div><div class="ptag">${tag || ''}</div>` : `<div class="pl">Lv. ${p.level}${p.status ? ` <span class="st st-${p.status}">${p.status.toUpperCase()}</span>` : ''}</div>
           ${tag ? `<div class="ptag">${tag}</div>` : `<div class="hpbar ${pct <= 20 ? 'low' : pct <= 50 ? 'mid' : ''}"><i style="width:${pct}%"></i></div><div class="php">${p.hp}/${p.maxHp}</div>`}`}
         </button>`;
@@ -341,15 +351,35 @@ export class GameMenu {
               if (c === 0) { st.swapFrom = i; this.render(i); }
               return;
             }
-            const c = await this.say(`Was tun mit ${mon.name}?`, ['Bericht', 'Tausch', 'Zurück']);
+            const c = await this.say(`Was tun mit ${mon.name}?`, ['Bericht', 'Tausch', 'Item', 'Zurück']);
             if (c === 0) this.push(this.summaryScreen(i));
             if (c === 1) { st.swapFrom = i; this.render(i); }
+            if (c === 2) await this.itemMenu(mon);
           };
         });
       },
       onBack: () => { if (st.swapFrom != null) { st.swapFrom = null; this.render(); return false; } return true; }
     };
     return scr;
+  }
+  // Item tragen lassen (Geben) oder abnehmen (Nehmen) wie in Platin
+  async itemMenu(mon) {
+    const held = mon.item ? ITEMS[mon.item]?.name || mon.item : null;
+    const c = await this.say(held ? `${mon.name} trägt ${held}.` : `${mon.name} trägt nichts.`, ['Geben', 'Nehmen', 'Zurück']);
+    if (c === 0) return this.push(this.bagScreen({ give: mon }));
+    if (c === 1) {
+      if (!mon.item) return this.say(`${mon.name} trägt nichts.`);
+      this.ctx.net.send({ t: 'hold', pokemonId: mon.id, item: null });
+      await this.waitParty();
+      return this.say(`Du hast ${held} erhalten.`);
+    }
+  }
+  async giveItem(mon, k) {
+    if (!ITEMS[k]?.hold) return this.say('Dieses Item kann man nicht tragen lassen.');
+    this.ctx.net.send({ t: 'hold', pokemonId: mon.id, item: k });
+    await this.waitParty();
+    this.back();
+    return this.say(`${mon.name} trägt jetzt ${ITEMS[k].name}.`);
   }
   async swapParty(a, b) {
     // Server tauscht nur benachbarte Plaetze nicht, sondern beliebige: partySwap(from, to)
@@ -362,7 +392,7 @@ export class GameMenu {
   // ---------------------------------------------------------------- Statusbildschirm (Bericht)
   summaryScreen(index) {
     const st = { i: index, page: 0, moveSel: null, swapMove: null };
-    const pages = ['Info', 'Werte', 'Attacken'];
+    const pages = ['Info', 'Werte', 'Attacken', 'Bänder'];
     const scr = {
       cls: 'm-summary',
       html: () => {
@@ -376,11 +406,17 @@ export class GameMenu {
           const met = MAPS[p.metRoute]?.name || (p.metRoute === 'starter' ? 'Zweiblattdorf' : 'unbekannt');
           body = `<div class="sum-rows"><div><span>Nr.</span><b>${pad3(sp.sinnoh && !this.flags.champion ? sp.sinnoh : p.speciesId)}</b></div><div><span>Name</span><b>${esc(p.species)}</b></div>
             <div><span>Typ</span><b>${p.types.map(typeTag).join(' ')}</b></div><div><span>OT</span><b>${ot}</b></div><div><span>ID-Nr.</span><b>${this.progress.trainerId || '00000'}</b></div>
-            <div><span>EP</span><b>${p.exp}</b></div><div><span>Nächstes Lv.</span><b>${Math.max(0, (p.expNext || 0) - p.exp)}</b></div></div>
+            <div><span>EP</span><b>${p.exp}</b></div><div><span>Nächstes Lv.</span><b>${Math.max(0, (p.expNext || 0) - p.exp)}</b></div>
+            <div><span>Item</span><b>${p.item ? `${itemIcon(p.item)}${esc(ITEMS[p.item]?.name || p.item)}` : 'Kein Item'}</b></div></div>
             <div class="sum-memo"><b>${esc(p.nature)}</b> ist sein Wesen. Getroffen in ${esc(met)}${p.metLevel ? ` mit Lv. ${p.metLevel}` : ''}.${p.alive ? '' : ' <span class="dead-note">Gestorben.</span>'}</div>`;
         } else if (st.page === 1) {
           body = `<div class="sum-rows stats">${STAT_ROWS.map(([k, l]) => `<div><span>${l}</span><b>${k === 'hp' ? `${p.hp}/${p.maxHp}` : p.stats?.[k] ?? '?'}</b></div>`).join('')}</div>
             <div class="sum-memo"><b>${esc(abilityName(p.ability))}</b><br>${esc(abilityText(p.ability))}</div>`;
+        } else if (st.page === 3) {
+          const rib = (p.ribbons || []).filter((r) => RIBBONS[r]);
+          body = rib.length
+            ? `<div class="sum-rows ribbons">${rib.map((r) => `<div><span>🎀</span><b>${esc(RIBBONS[r].name)}</b><small>${esc(RIBBONS[r].text)}</small></div>`).join('')}</div>`
+            : '<div class="sum-memo">Dieses Pokémon hat noch keine Bänder.</div>';
         } else {
           const mv = st.moveSel != null ? p.moves[st.moveSel] : null; const md = mv && moveOf(mv.id);
           body = `<div class="sum-moves">${p.moves.map((m, i) => `<button data-nav data-mv="${i}" class="mrow ${st.swapMove === i ? 'swap' : ''}">${typeTag(m.type)}<span>${esc(m.name)}</span><small>AP ${m.pp}/${m.maxPp}</small></button>`).join('')}</div>
@@ -402,7 +438,7 @@ export class GameMenu {
       onKey: (code) => {
         const n = this.party.length;
         if (code === 'ArrowLeft' || code === 'ArrowRight' || code === 'KeyA' || code === 'KeyD') {
-          st.page = (st.page + (code === 'ArrowRight' || code === 'KeyD' ? 1 : 2)) % 3; st.moveSel = st.page === 2 ? 0 : null; scr.focus = 0; audio.sfx('click'); this.render(); return true;
+          st.page = (st.page + (code === 'ArrowRight' || code === 'KeyD' ? 1 : pages.length - 1)) % pages.length; st.moveSel = st.page === 2 ? 0 : null; scr.focus = 0; audio.sfx('click'); this.render(); return true;
         }
         if (st.page !== 2 && (code === 'ArrowUp' || code === 'ArrowDown' || code === 'KeyW' || code === 'KeyS')) {
           st.i = (st.i + (code === 'ArrowDown' || code === 'KeyS' ? 1 : n - 1)) % n; audio.sfx('cry', this.party[st.i].speciesId); this.render(); return true;
@@ -434,7 +470,7 @@ export class GameMenu {
         root.querySelectorAll('[data-p]').forEach((b) => { b.onclick = () => { st.pocket = b.dataset.p; st.sel = null; scr.focus = POCKETS.findIndex(([k]) => k === st.pocket); this.render(); }; });
         root.querySelectorAll('[data-it]').forEach((b) => {
           b.addEventListener('focus', () => { st.sel = b.dataset.it; $('bagDesc').innerHTML = `${itemIcon(st.sel)}${esc(itemText(st.sel))}`; });
-          b.onclick = () => this.useBagItem(b.dataset.it);
+          b.onclick = () => (opts.give ? this.giveItem(opts.give, b.dataset.it) : this.useBagItem(b.dataset.it));
         });
       },
       onKey: (code) => {
@@ -449,7 +485,11 @@ export class GameMenu {
   }
   async useBagItem(k) {
     const it = ITEMS[k];
-    const c = await this.say(`${it.kind === 'tm' ? it.name + ' ' + (moveOf(it.move)?.name || '') : it.name}: Was tun?`, ['Benutzen', 'Zurück']);
+    const c = await this.say(`${it.kind === 'tm' ? it.name + ' ' + (moveOf(it.move)?.name || '') : it.name}: Was tun?`, it.hold ? ['Benutzen', 'Geben', 'Zurück'] : ['Benutzen', 'Zurück']);
+    if (it.hold && c === 1) {
+      if (!this.party.length) return this.say('Du hast keine Pokémon.');
+      return this.push(this.partyScreen({ title: `${it.name} welchem Pokémon geben?`, label: (p) => (p.egg ? 'Unmöglich' : p.item ? 'Trägt etwas' : ''), onPick: async (mon) => { if (mon.egg) return this.say('Ein Ei kann nichts tragen.'); await this.giveItem(mon, k); } }));
+    }
     if (c !== 0) return;
     if (it.kind === 'tm') return this.teachTm(k);
     // Schutz und Fluchtseil wirken ohne Pokemon
@@ -471,10 +511,13 @@ export class GameMenu {
           moveIndex = await this.pickMove(mon, mon.moves.map((m) => ({ id: m.id, note: `AP ${m.pp}/${m.maxPp}` })), it.ppUp ? 'AP welcher Attacke erhöhen?' : 'AP welcher Attacke auffüllen?');
           if (moveIndex == null) return;
         }
+        const before = mon.stats ? { ...mon.stats } : null; const lvBefore = mon.level;
         this.ctx.net.send({ t: 'useItem', item: k, pokemonId: mon.id, moveIndex });
         const n = await this.waitNotice();
         await this.waitParty();
         if (n) await this.say(n);
+        const now = this.party.find((p) => p.id === mon.id);
+        if (it.candy && now && now.level > lvBefore) await showLevelStats(this.root, before, now.stats);
         if (!(this.items[k] > 0)) this.back();
       }
     }));

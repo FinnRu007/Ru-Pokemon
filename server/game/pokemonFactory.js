@@ -113,8 +113,9 @@ export function addExp(p, amount) {
   const newLevel = levelForExp(sp.growth, p.exp);
   while (p.level < newLevel) {
     p.level++;
+    const before = { ...p.stats };
     recalc(p);
-    events.push({ type: 'levelup', pokemonId: p.id, level: p.level, text: `${displayName(p)} erreicht Level ${p.level}!` });
+    events.push({ type: 'levelup', pokemonId: p.id, level: p.level, before, after: { ...p.stats }, text: `${displayName(p)} erreicht Level ${p.level}!` });
     for (const [lv, moveId] of sp.learnset) {
       if (lv !== p.level || !MOVES[moveId] || p.moves.some((m) => m.id === moveId)) continue;
       if (p.moves.length < 4) {

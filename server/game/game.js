@@ -656,11 +656,16 @@ export class GameServer {
     this.story.start(s, [[null, 'Wohin möchtest du fliegen?'], { choose: labels, branches }]);
   }
 
-  // Nur zum Testen (DEV=1): /tp karte x y, /flag name, /lv n
+  // Nur zum Testen (DEV=1): /tp karte x y, /flag name, /lv n, /give item n, /mon art level, /partner id, /wild art level, /exp
   devCommand(s, [cmd, a, b, c]) {
     const p = s.player;
     if (cmd === '/tp' && MAPS[a]) this.teleport(s, a, Number(b), Number(c));
     if (cmd === '/flag') { p.flags[a] = true; this.sendProgress(s); }
+    if (cmd === '/give' && ITEMS[a]) { p.items[a] = (p.items[a] || 0) + (Number(b) || 1); this.sendParty(s); }
+    if (cmd === '/mon' && POKEMON[a]) { const m = createPokemon(Number(a), Number(b) || 30, { ownerId: p.id, runId: p.runId, metRoute: p.map }); (s.party.length < 6 ? s.party : s.box).push(m); this.reslot(s); this.repo.savePokemon(m); this.sendParty(s); }
+    if (cmd === '/partner') { this.setPartner(s, a || null); }
+    if (cmd === '/exp' && s.party[0]) { const m = s.party[0]; m.exp = expForLevel(species(m.speciesId).growth, m.level + 1) - 1; this.sendParty(s); }
+    if (cmd === '/wild') { this.startScriptWild(s, Number(a) || 396, Number(b) || 5); return; }
     if (cmd === '/lv') { for (const m of s.party) { m.level = Number(a); m.moves = defaultMoves(species(m.speciesId), m.level); recalc(m); m.hp = m.stats.hp; } this.saveMons(s); this.sendParty(s); }
     this.savePlayerNow(s);
   }

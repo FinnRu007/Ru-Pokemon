@@ -1,6 +1,7 @@
 // Seitenleiste: Team, Nuzlocke-Uebersicht, Seelenbaender, Box, Log und Chat.
 import { monsterIcon, itemIcon } from './art/monsters.js';
 import { ITEMS } from '/shared/data/items.js';
+import { moveOf } from './texts.js';
 import { BADGES } from '/shared/data/story.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -55,8 +56,11 @@ export class Hud {
     $('tab-bag').innerHTML = entries.length ? entries.map(([k, n]) => {
       const it = ITEMS[k];
       const use = it.kind === 'med' && (it.heal || it.cure || it.revive) && alive.length ? `<div class="use">${alive.map((p) => `<button data-item="${k}" data-id="${p.id}" title="${esc(p.name)}"><img class="icon" src="${monsterIcon(p)}" alt=""></button>`).join('')}</div>` : '';
-      return `<div class="bag-row"><span>${itemIcon(k)}${esc(it.name)}</span><span>x${n}</span>${use}</div>`;
-    }).join('') + '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll.</div>' : '<div class="hint">Dein Beutel ist leer.</div>';
+      const open = it.kind === 'tm' || it.kind === 'med' || it.evo || it.hold || it.repel || it.rope ? `<button class="open" data-open="${k}">${it.kind === 'tm' ? 'Beibringen' : 'Benutzen'}</button>` : '';
+      const label = it.kind === 'tm' ? `${esc(it.name)} ${esc(moveOf(it.move)?.name || '')}` : esc(it.name);
+      return `<div class="bag-row"><span>${itemIcon(k)}${label}</span><span>x${n} ${open}</span>${use}</div>`;
+    }).join('') + '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll. TMs und andere Items über „Beibringen“ oder „Benutzen“.</div>' : '<div class="hint">Dein Beutel ist leer.</div>';
+    for (const b of document.querySelectorAll('#tab-bag button[data-open]')) b.onclick = () => this.onOpenItem?.(b.dataset.open);
     for (const b of document.querySelectorAll('#tab-bag button[data-item]')) b.onclick = () => this.net.send({ t: 'useItem', item: b.dataset.item, pokemonId: b.dataset.id });
   }
 

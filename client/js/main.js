@@ -272,6 +272,11 @@ input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
 input.on('escape', () => { if (mapOpen) toggleMap(false); if (freeCam) toggleFreeCam(false); });
 input.on('menu', () => openMenu());
 $('menuBtn').onclick = () => openMenu();
+hud.onOpenItem = (k) => {
+  if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen) return;
+  if (mapOpen) toggleMap(false);
+  menu.openItem(k); updateLock();
+};
 function openMenu() {
   if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;
   if (mapOpen) toggleMap(false);

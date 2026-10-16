@@ -1,4 +1,5 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
+import { showLevelStats } from './levelStats.js';
 import { ITEMS } from '/shared/data/items.js';
 import { monsterDataUrl, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
 import { terrainImage } from './art/realTerrain.js';
@@ -209,7 +210,11 @@ export class BattleUI {
         if (ev.caught) { audio.jingle('caught'); this.caught = true; }
         return;
       case 'learnPrompt': this.hooks.onLearnPrompt(ev); return this.say(ev.text, 1200);
-      case 'levelup': audio.jingle('levelup'); this.fx.sparkle('ally'); return this.say(ev.text, 1400);
+      case 'levelup': {
+        audio.jingle('levelup'); this.fx.sparkle(this.state.ally2?.id === ev.pokemonId ? 'ally2' : 'ally');
+        await this.say(ev.text, 600);
+        return showLevelStats(this.root.querySelector('.field') || this.root, ev.before, ev.after);
+      }
       case 'learn': return this.say(ev.text, 1100);
       case 'needSwitch': case 'exp': case 'end': return;
       default: return;
