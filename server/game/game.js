@@ -21,6 +21,7 @@ import { Extras } from './extras.js';
 import { Berries } from './berries.js';
 import { MULCH_STOCK } from '../../shared/data/berries.js';
 import { PoketchLogic } from './poketch.js';
+import { Link } from './pvp.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
 export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
@@ -79,6 +80,7 @@ export class GameServer {
       case C2S.INTERACT: return this.interact(s);
       case C2S.CHAT: return this.chat(s, msg);
       case C2S.BATTLE_ACTION: return this.battleAction(s, msg);
+      case C2S.TRADE: return this.tradeMsg(s, msg);
       case C2S.PARTY_SWAP: return this.partySwap(s, msg);
       case C2S.BOX_MOVE: return this.boxMove(s, msg);
       case C2S.NICKNAME: return this.nickname(s, msg);
@@ -248,7 +250,9 @@ export class GameServer {
   disconnect(conn) {
     const s = conn.session;
     if (!s || this.sessions.get(s.player.id) !== s) return;
-    if (s.battle && s.battle.state !== 'ended') {
+    if (s.trade) this.endTrade(s.trade, `Die Verbindung zu ${s.player.name} ist abgebrochen.`);
+    if (s.battle?.pvp) this.pvpLeave(s);
+    else if (s.battle && s.battle.state !== 'ended') {
       // Anti-Exploit: Verbindungsabbruch im Kampf zaehlt als Flucht (Encounter gilt als verbraucht).
       s.battle.end('fled', []);
       this.finishBattle(s, 'fled');
@@ -337,7 +341,7 @@ export class GameServer {
   move(s, msg) {
     const p = s.player;
     const ack = (ok) => this.send(s.ws, { t: S2C.MOVE_ACK, seq: msg.seq, ok, map: p.map, x: p.x, y: p.y, dir: p.dir });
-    if (!DIRS[msg.dir] || s.battle || s.script || (!p.starterChosen && !this.storyOn)) return ack(false);
+    if (!DIRS[msg.dir] || s.battle || s.script || s.trade || (!p.starterChosen && !this.storyOn)) return ack(false);
     const now = Date.now();
     const minGap = (p.flags.riding ? BIKE_MS : msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
@@ -397,6 +401,9 @@ export class GameServer {
     const desk = counter && map.events.find(near);
     if (desk) return desk.type === 'heal' ? this.healAt(s, desk) : this.openShop(s, desk);
     if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
+    // Anderer Spieler vor dir: Kampf oder Tausch wie im Union-Raum
+    const other = this.storyOn && this.sessionAt(p.map, f.x, f.y, p.id);
+    if (other) return this.talkToPlayer(s, other);
     if (this.berryTalk(s, f.x, f.y)) return;
     const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y) || null;
     if (!ev) return;
@@ -826,6 +833,12 @@ export class GameServer {
   battleAction(s, msg) {
     const b = s.battle;
     if (!b) return this.notice(s, 'Kein aktiver Kampf', 'error');
+    if (b.pvp) {
+      const one2 = (m) => ({ type: m?.type, index: Number(m?.index), slot: m?.slot == null ? undefined : Number(m.slot), target: typeof m?.target === 'string' ? m.target : undefined });
+      const a = one2(msg);
+      if (msg.type === 'multi' && Array.isArray(msg.actions)) a.actions = msg.actions.slice(0, 2).map(one2);
+      return this.pvpAction(s, a);
+    }
     const one = (m) => ({ type: m?.type, index: Number(m?.index), ball: m?.ball, item: m?.item, moveIndex: m?.moveIndex == null ? undefined : Number(m.moveIndex), free: !!m?.free, slot: m?.slot == null ? undefined : Number(m.slot), target: typeof m?.target === 'string' ? m.target : undefined });
     const action = one(msg);
     if (msg.type === 'multi' && Array.isArray(msg.actions)) action.actions = msg.actions.slice(0, 2).map(one);
@@ -1036,7 +1049,7 @@ export class GameServer {
 }
 
 // Begleiter, Wanderer, Eier, Icognito-Formen und Kampfturm (extras.js)
-Object.assign(GameServer.prototype, Extras);
+Object.assign(GameServer.prototype, Extras, Link);
 // Beerenpflanzen (berries.js)
 Object.assign(GameServer.prototype, Berries);
 Object.assign(GameServer.prototype, PoketchLogic);

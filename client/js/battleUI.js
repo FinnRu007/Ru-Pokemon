@@ -145,6 +145,8 @@ export class BattleUI {
     this.playing = false;
     if (this.pendingEnd) return this.finish();
     if (this.state && this.state.state === 'switch') return this.partyMenu(true);
+    // Kampf gegen einen anderen Spieler: warten, bis auch er gewählt hat
+    if (this.state && this.state.state === 'wait') { this.menu(null); $('battleText').textContent = `Warte auf ${this.state.trainer?.name || 'den anderen Spieler'} ...`; return; }
     if (this.state && this.state.state === 'action') {
       if (this.state.shiftOffer && options.battleStyle === 'shift' && this.shiftFor !== this.state.foe.id) return this.shiftPrompt();
       this.beginTurn();
@@ -422,7 +424,7 @@ export class BattleUI {
       { label: 'KAMPF', color: '#d9534f', fn: () => this.moveMenu() },
       { label: 'BEUTEL', color: '#e0a526', fn: () => this.bagMenu() },
       { label: 'POKéMON', color: '#3fa34d', fn: () => this.partyMenu(false) },
-      second ? { label: 'ZURÜCK', color: '#5a5f78', fn: () => this.stepBack() } : { label: 'FLUCHT', color: '#3b6fd6', disabled: this.state.kind === 'trainer', fn: () => this.act({ type: 'run' }) }
+      second ? { label: 'ZURÜCK', color: '#5a5f78', fn: () => this.stepBack() } : (this.state.pvp ? { label: 'AUFGEBEN', color: '#3b6fd6', fn: () => this.forfeitPrompt() } : { label: 'FLUCHT', color: '#3b6fd6', disabled: this.state.kind === 'trainer', fn: () => this.act({ type: 'run' }) })
     ]);
   }
   moveMenu() {
@@ -450,8 +452,18 @@ export class BattleUI {
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.moveMenu() });
     this.menu(btns);
   }
+  // Wie im Original fragt das Spiel nach, bevor man einen Kampf gegen einen Spieler aufgibt
+  forfeitPrompt() {
+    $('battleText').textContent = 'Willst du wirklich aufgeben?';
+    this.menu([
+      { label: 'JA', color: '#d9534f', fn: () => { this.menu(null); this.net.send({ t: 'battleAction', type: 'run' }); } },
+      { label: 'NEIN', color: '#5a5f78', fn: () => this.mainMenu() }
+    ]);
+  }
+
   bagMenu(pocket = this.bagPocket) {
     const s = this.state;
+    if (s.pvp) { $('battleText').textContent = 'Im Kampf gegen andere Spieler sind keine Items erlaubt.'; this.menu(null); setTimeout(() => this.mainMenu(), 1400); return; }
     const own = { ...Object.fromEntries(Object.entries(s.balls || {}).filter(([, n]) => n > 0).map(([k, n]) => [k, { name: ITEMS[k]?.name || k, count: n, kind: 'ball' }])), ...(s.bag || {}) };
     const ids = Object.keys(own);
     this.bagPocket = pocket;

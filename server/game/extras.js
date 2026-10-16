@@ -305,6 +305,8 @@ export const Extras = {
     const lead = this.lead(s);
     const say = (who, text) => lines.push({ speaker: who, text });
     switch (step.x) {
+      case 'linkInvite': return this.linkInvite(s, step, say);
+      case 'linkAnswer': return this.linkAnswer(s, step, say);
       case 'dayRibbon': {
         const r = DAY_RIBBONS[this.localDate(s).getDay()];
         if (!lead) return;

@@ -856,6 +856,97 @@ await test('Beeren: weicher Boden, Startbeeren, pflanzen, gießen, wachsen und e
   a.ws.close();
 });
 
+await test('Attacken mit Nachteilen: Finale, Hyperstrahl, Fliegen, Wutanfall, Sprungkick, Schutzschild', () => {
+  const duel = (moveId, foeMove = 'splash', lv = 50) => {
+    const a = createPokemon(143, lv); a.moves = [{ id: moveId, pp: 10, maxPp: 10 }];
+    const w = createPokemon(143, lv); w.moves = [{ id: foeMove, pp: 30, maxPp: 30 }];
+    a.stats.hp = a.hp = w.stats.hp = w.hp = 2000;
+    const b = new WildBattle({ id: 'm', party: [a], wild: w, route: 'r', items: {}, catchable: false, onFaint: () => [] });
+    b.intro();
+    return { a, w, b, turn: () => b.act({ type: 'move', index: 0 }).events.map((e) => e.text).filter(Boolean).join(' | ') };
+  };
+  let d = duel('self-destruct'); d.turn();
+  assert.equal(d.a.hp, 0, 'Finale besiegt den Anwender');
+  d = duel('hyper-beam'); let hit = false;
+  for (let i = 0; i < 5 && !hit; i++) { const t = d.turn(); hit = !/daneben/.test(t); if (hit) assert.match(d.turn(), /muss sich erholen/); }
+  d = duel('fly', 'tackle');
+  const t1 = d.turn(); assert.match(t1, /fliegt hoch empor/); assert.match(t1, /daneben/);
+  const ppAfter = d.a.moves[0].pp; d.turn(); assert.equal(d.a.moves[0].pp, ppAfter, 'zweite Runde kostet keine AP');
+  d = duel('outrage'); let conf = false;
+  for (let i = 0; i < 4 && !conf; i++) conf = /Erschöpfung verwirrt/.test(d.turn());
+  assert.ok(conf, 'Wutanfall verwirrt am Ende');
+  d = duel('jump-kick'); d.w.speciesId = 92; // Nebulak: Geist, Sprungkick wirkt nicht
+  const hp = d.a.hp; d.turn(); assert.ok(d.a.hp < hp, 'Sprungkick ins Leere verletzt');
+  d = duel('protect', 'tackle'); const whp = d.a.hp; assert.match(d.turn(), /schützt sich selbst/); assert.equal(d.a.hp, whp);
+});
+
+await test('Spieler gegen Spieler: Einzelkampf, Doppelkampf und Tausch mit Tausch-Entwicklung', async () => {
+  game.storyOn = true;
+  const mk = async (name) => {
+    const c = client(name); await c.open;
+    c.pick = 0;
+    c.ws.on('message', (raw) => {
+      const m = JSON.parse(raw);
+      if (m.t === 'dialog') c.send({ t: 'dialogDone', token: m.token, choice: m.lines.some((l) => /machen\?/.test(l.text)) ? c.pick : 0 });
+      const st = (m.t === 'battleStart' || m.t === 'battleEvents') && m.state;
+      if (st?.state === 'action') c.send({ t: 'battleAction', type: 'move', index: 0 });
+      if (st?.state === 'switch') c.send({ t: 'battleAction', type: 'switch', index: st.party.findIndex((x) => x.alive && x.hp > 0 && !x.egg && x.id !== st.ally?.id && x.id !== st.ally2?.id) });
+    });
+    c.send({ t: 'hello', name, runCode: 'LINK1' });
+    const w = await c.wait((m) => m.t === 'welcome');
+    const s = game.sessions.get(w.selfId);
+    for (const sp of [395, 64, 25]) {
+      const m = createPokemon(sp, 30, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
+      m.moves[0] = { id: name === 'LinkA' ? 'surf' : 'tackle', pp: 99, maxPp: 99 };
+      if (name === 'LinkA') m.stats.spa = 999;
+      s.party.push(m);
+    }
+    s.player.starterChosen = true;
+    Object.assign(s.player.flags, { intro: true, has_starter: true });
+    return { c, s };
+  };
+  const A = await mk('LinkA'); const B = await mk('LinkB');
+  Object.assign(A.s.player, { map: 'jubilife_city', x: 10, y: 10, dir: 'right' });
+  Object.assign(B.s.player, { map: 'jubilife_city', x: 11, y: 10, dir: 'left' });
+  const before = A.s.party.map((m) => `${m.hp}/${m.level}/${m.moves.map((x) => x.pp).join('.')}`).join();
+  for (const [pick, double] of [[0, false], [1, true]]) {
+    A.c.pick = pick;
+    A.c.send({ t: 'interact' });
+    const sa = await A.c.wait((m) => m.t === 'battleStart', 5000);
+    const sb = await B.c.wait((m) => m.t === 'battleStart', 5000);
+    assert.equal(sa.state.double, double);
+    assert.equal(sa.state.trainer.name, 'LinkB');
+    assert.equal(sb.state.trainer.name, 'LinkA');
+    assert.equal(sb.state.ally.speciesId, 395);
+    assert.ok(sa.events.some((e) => /LinkB möchte kämpfen/.test(e.text)));
+    assert.ok(sb.events.some((e) => /LinkA schickt/.test(e.text)));
+    assert.ok(!JSON.stringify(sa.events).includes('\u0001'));
+    const ea = await A.c.wait((m) => m.t === 'battleEnd', 30000);
+    const eb = await B.c.wait((m) => m.t === 'battleEnd', 30000);
+    assert.deepEqual([ea.result, eb.result].sort(), ['lose', 'win']);
+    assert.equal(A.s.battle, null);
+    await sleep(150);
+  }
+  // Wie im Original ist das Team nach dem Kampf wie vorher
+  assert.equal(A.s.party.map((m) => `${m.hp}/${m.level}/${m.moves.map((x) => x.pp).join('.')}`).join(), before);
+  // Tausch: Kadabra gegen Pikachu, Kadabra entwickelt sich beim neuen Besitzer zu Simsala
+  A.c.pick = 2;
+  A.c.send({ t: 'interact' });
+  await A.c.wait((m) => m.t === 'trade' && m.open, 5000);
+  await B.c.wait((m) => m.t === 'trade' && m.open, 5000);
+  const kad = A.s.party.find((m) => m.speciesId === 64); const pika = B.s.party.find((m) => m.speciesId === 25);
+  A.c.send({ t: 'trade', op: 'offer', pokemonId: kad.id });
+  B.c.send({ t: 'trade', op: 'offer', pokemonId: pika.id });
+  await B.c.wait((m) => m.t === 'trade' && m.theirs?.speciesId === 64, 3000);
+  A.c.send({ t: 'trade', op: 'confirm' }); B.c.send({ t: 'trade', op: 'confirm' });
+  const done = await B.c.wait((m) => m.t === 'trade' && m.done, 3000);
+  assert.ok(done.texts.some((t) => /Simsala/.test(t)));
+  assert.ok(A.s.party.some((m) => m.id === pika.id && m.ownerId === A.s.player.id));
+  assert.ok(B.s.party.some((m) => m.id === kad.id && m.speciesId === 65 && m.ownerId === B.s.player.id));
+  assert.equal(A.s.trade, null);
+  A.c.ws.close(); B.c.ws.close();
+});
+
 game.stop();
 server.close();
 repo.close();

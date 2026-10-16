@@ -27,6 +27,7 @@ export const C2S = {
   POKETCH: 'poketch',             // {} Daten für den Pokétch anfordern
   BIKE: 'bike',                   // {} auf das Fahrrad steigen oder absteigen
   EVOLVE_CANCEL: 'evolveCancel',  // { pokemonId } Entwicklung mit B abgebrochen (nur direkt nach einer Entwicklung durch Level)
+  TRADE: 'trade',                 // { op: offer|confirm|cancel, pokemonId? } Tausch mit einem anderen Spieler
   PING: 'ping'
 };
 
@@ -60,6 +61,7 @@ export const S2C = {
   SHOP: 'shop',                   // { stock: [{ id, name, price, locked }], money }
   ROSTER: 'roster',               // { players: [{ id, name, map, x, y, color, runId }] } alle online (Weltkarte)
   PLAYER_EMOTE: 'playerEmote',    // { id, kind }
+  TRADE: 'trade',                 // { open, partner, mine, theirs, okMine, okTheirs, done?, texts?, text? }
   POKETCH: 'poketch',             // { roamers: [{ speciesId, map, name }], steps, party }
   PONG: 'pong'
 };
