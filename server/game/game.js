@@ -20,6 +20,7 @@ import { TUTORS, BADGE_TMS, RELEARN_COST } from '../../shared/data/tutors.js';
 import { Extras } from './extras.js';
 import { Berries } from './berries.js';
 import { MULCH_STOCK } from '../../shared/data/berries.js';
+import { PoketchLogic } from './poketch.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
 export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
@@ -216,7 +217,7 @@ export class GameServer {
     const id = Number(speciesId);
     const fresh = !d.seen[id] || (caught && !d.caught[id]);
     d.seen[id] = 1;
-    if (caught) d.caught[id] = 1;
+    if (caught) { d.caught[id] = 1; this.noteHistory(s, id); }
     // Wie in Platin: wer alle 210 Pokémon des Sinnoh-Pokédex gesehen hat, bekommt den Nationalen Pokédex
     if (fresh && !s.player.flags.national_dex && Object.values(POKEMON).every((sp) => !sp.sinnoh || d.seen[sp.id])) {
       s.player.flags.national_dex = true;
@@ -1038,3 +1039,4 @@ export class GameServer {
 Object.assign(GameServer.prototype, Extras);
 // Beerenpflanzen (berries.js)
 Object.assign(GameServer.prototype, Berries);
+Object.assign(GameServer.prototype, PoketchLogic);

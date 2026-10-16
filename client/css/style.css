@@ -353,22 +353,53 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .lvstats div { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; }
 .lvstats b { min-width: 36px; text-align: right; }
 .ic-poketch { background: linear-gradient(#e04040 30%, #9cc88c 30% 85%, #e04040 85%); border-radius: 4px; }
-.poketch { width: min(380px, 92%); margin: 24px auto; padding: 14px; background: #d23a3a; border-radius: 18px; box-shadow: inset 0 -6px 0 #9a2020, 0 6px 0 rgba(0,0,0,.25); }
-.pt-screen { position: relative; min-height: 260px; padding: 12px; background: #9cc88c; color: #183018; border: 4px solid #183018; border-radius: 8px; text-align: center; image-rendering: pixelated; }
-.pt-title { font-size: 12px; text-align: left; opacity: .8; margin-bottom: 8px; }
-.pt-clock { font-size: 64px; letter-spacing: 4px; margin-top: 30px; line-height: 1; }
+.poketch { width: min(420px, 94%); margin: 20px auto; padding: 14px 14px 10px; background: #d23a3a; border-radius: 18px; box-shadow: inset 0 -6px 0 #9a2020, 0 6px 0 rgba(0,0,0,.25); }
+.pt-body { display: flex; gap: 10px; align-items: stretch; }
+.pt-screen { --lcd0: #9cc88c; --lcd1: #78a868; --lcd2: #4a7044; --lcd3: #183018; flex: 1; position: relative; min-height: 300px; padding: 10px; background: var(--lcd0); color: var(--lcd3); border: 4px solid #282828; border-radius: 8px; box-shadow: inset 0 0 0 2px var(--lcd1); text-align: center; image-rendering: pixelated; font-family: monospace; }
+.pt-side { display: flex; flex-direction: column; width: 34px; border-radius: 10px; overflow: hidden; box-shadow: 0 3px 0 #7a1818; }
+.pt-side button { flex: 1; padding: 0; background: #b02a2a; border-radius: 0; position: relative; }
+.pt-side .pt-up { border-bottom: 2px solid #7a1818; }
+.pt-side button::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 7px solid transparent; }
+.pt-side .pt-up::after { border-bottom-color: #f4d0d0; margin-top: -4px; }
+.pt-side .pt-down::after { border-top-color: #f4d0d0; margin-top: 4px; }
+.pt-side button:hover, .pt-side button:focus { background: #c83434; outline: none; }
+.pt-title { font-size: 12px; text-align: left; color: var(--lcd2); margin-bottom: 6px; }
+.pt-clock { font-size: 64px; letter-spacing: 4px; margin-top: 26px; line-height: 1; }
+.pt-clock.small { font-size: 48px; margin-top: 10px; }
 .pt-clock .blink { animation: ptblink 1s steps(1) infinite; }
+.pt-clock.ring { animation: ptblink .5s steps(1) infinite; }
 @keyframes ptblink { 50% { opacity: 0; } }
 .pt-sub { margin-top: 10px; font-size: 14px; }
-.pt-map { width: 100%; border: 2px solid #183018; background: #9cc88c; image-rendering: pixelated; }
+.pt-map, .pt-canvas { display: block; margin: 0 auto; border: 2px solid var(--lcd3); background: var(--lcd0); image-rendering: pixelated; touch-action: none; }
+.pt-map { width: 100%; }
+.pt-canvas { width: min(100%, 260px); }
 .pt-list { font-size: 12px; text-align: left; margin-top: 6px; }
-.pt-btn { margin-top: 18px; padding: 6px 14px; background: #5c8c54; color: #eaf6e0; border-radius: 6px; }
-.pt-btn:focus { outline: 2px solid #183018; }
+.pt-key, .pt-btn { margin-top: 10px; padding: 6px 12px; background: var(--lcd2); color: var(--lcd0); border-radius: 6px; box-shadow: none; font-family: monospace; font-size: 15px; }
+.pt-key.on { background: var(--lcd3); }
+.pt-key.big { display: block; margin: 14px auto 0; padding: 14px 40px; font-size: 20px; }
+.pt-key.wide { min-width: 120px; }
+.pt-key:focus, .pt-btn:focus, .pt-day:focus, .pt-swatch:focus { outline: 2px solid var(--lcd3); outline-offset: 1px; }
+.pt-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.pt-lcd { margin: 4px 0 6px; padding: 6px 10px; text-align: right; font-size: 30px; background: var(--lcd1); color: var(--lcd3); border-radius: 4px; }
+.pt-grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pt-grid4 .pt-key { margin: 0; font-size: 18px; padding: 8px 0; }
 .pt-party { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
-.pt-mon { position: relative; padding: 4px; border: 2px solid #5c8c54; border-radius: 6px; }
-.pt-mon img { width: 48px; height: 48px; image-rendering: pixelated; filter: grayscale(1) sepia(1) hue-rotate(50deg) saturate(2) brightness(.7); }
-.pt-hp { height: 5px; background: #5c8c54; border-radius: 3px; overflow: hidden; } .pt-hp i { display: block; height: 100%; background: #183018; }
+.pt-mon { position: relative; padding: 4px; border: 2px solid var(--lcd2); border-radius: 6px; }
+.pt-mon img, .pt-hist img { width: 48px; height: 48px; image-rendering: pixelated; filter: grayscale(1) contrast(1.3); mix-blend-mode: multiply; }
+.pt-hist { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+.pt-hp { height: 5px; background: var(--lcd1); border-radius: 3px; overflow: hidden; } .pt-hp i { display: block; height: 100%; background: var(--lcd3); }
 .pt-item { position: absolute; right: 4px; top: 2px; font-size: 10px; }
-.pt-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #fff; }
-.pt-nav button { padding: 6px 18px; background: #9a2020; color: #fff; border-radius: 8px; font-size: 16px; }
-.pt-nav button:focus { outline: 2px solid #fff; }
+.pt-sel { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
+.pt-sel .pt-key { margin: 0; }
+.pt-sel span { flex: 1; font-size: 17px; } .pt-sel small { display: block; font-size: 11px; color: var(--lcd2); }
+.pt-vs { font-size: 12px; color: var(--lcd2); margin: 2px 0; }
+.pt-verdict { margin-top: 10px; padding: 6px; border: 2px solid var(--lcd3); font-size: 16px; } .pt-verdict b { font-size: 20px; margin-right: 6px; }
+.pt-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 6px; font-size: 12px; }
+.pt-cal i { font-style: normal; color: var(--lcd2); }
+.pt-day { padding: 4px 0; background: transparent; color: var(--lcd3); box-shadow: none; border-radius: 4px; font-family: monospace; font-size: 13px; }
+.pt-day.now { box-shadow: inset 0 0 0 2px var(--lcd2); }
+.pt-day.on { background: var(--lcd3); color: var(--lcd0); }
+.pt-colors { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+.pt-swatch { padding: 12px 0; border: 3px solid transparent; box-shadow: none; font-family: monospace; font-size: 15px; }
+.pt-swatch.on { border-color: var(--lcd3); }
+.pt-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; color: #fff; font-size: 13px; }

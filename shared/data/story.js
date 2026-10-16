@@ -352,6 +352,7 @@ export const SCRIPTS = {
 import { applyStory8 } from './story8.js';
 import { applyStory9 } from './story9.js';
 import { applyBerryStory } from './berries.js';
+import { applyPoketch } from './poketch.js';
 export const NEW_PLAYER_SPAWN = { map: 'twinleaf_home_2f', x: 3, y: 4, dir: 'up' };
 // Flags fuer Spielstaende von vor der Story (Starter schon gewaehlt)
 export const LEGACY_FLAGS = ['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done'];
@@ -382,6 +383,8 @@ applyStory9({ SCRIPTS, NPCS, TRIGGERS });
 Object.assign(TRAINERS, ORIG_FIX._trainers || {});
 // Blumenladen von Flori: Beere am Tag und Enton-Kanne (berries.js)
 applyBerryStory({ SCRIPTS, NPCS });
+// Clowns und Figuren mit Pokétch-Apps (poketch.js)
+applyPoketch({ NPCS });
 // Auf die Originalkarten umrechnen (origLayout.js, feste Stellen in origFix.js)
 applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORIG_FIX }, MAPS);
 
