@@ -11,6 +11,7 @@ import { WildBattle, TrainerBattle } from './battle.js';
 import { DoubleBattle } from './double.js';
 import { RulesEngine, sanitizeRules } from './rules.js';
 import { StoryRunner } from './story.js';
+import { ORIG_ON, REMAP } from '../../shared/data/origLayout.js';
 import { TRAINERS, RIVAL_STARTER, NEW_PLAYER_SPAWN, LEGACY_FLAGS, npcAt } from '../../shared/data/story.js';
 import { ITEMS, MART_STOCK, STORE_STOCK, sellPrice, applyItem, HM_FLAGS, isHmMove } from '../../shared/data/items.js';
 import { addExp } from './pokemonFactory.js';
@@ -128,7 +129,8 @@ export class GameServer {
         money: 3000, flags: {},
         // Solo: eigene Regeln am Spielstand (im Run gelten die Regeln des Runs)
         ...(runId ? {} : { rules: sanitizeRules(msg.rules, true) }),
-        lastHeal: { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y }
+        lastHeal: { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y },
+        ...(ORIG_ON ? { origMaps: 1 } : {})
       };
       this.repo.savePlayer(player);
       this.repo.log(runId, 'player_created', { playerId: player.id, name });
@@ -144,6 +146,12 @@ export class GameServer {
     if (player.flags?.bike && !player.items.bicycle) player.items.bicycle = 1;
     if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
+    // Spielstaende von vor den Originalkarten: Position auf die neue Karte umrechnen
+    if (ORIG_ON && !player.origMaps) {
+      const move = (o) => { const r = o && REMAP[o.map]; if (r) [o.x, o.y] = r.pt(o.x, o.y); if (o && MAPS[o.map]?.retired) Object.assign(o, { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y }); };
+      move(player); move(player.lastHeal);
+      player.origMaps = 1;
+    }
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
     if (!isStandable(MAPS, player.map, player.x, player.y, player.flags)) {
       const h = player.lastHeal;
