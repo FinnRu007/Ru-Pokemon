@@ -51,7 +51,9 @@ export class DoubleBattle extends WildBattle {
   trainerInfo() {
     const names = this.foeTrainers.map((t) => (t.cls ? `${t.cls} ${t.name}` : t.name));
     const t = this.foeTrainers[0];
-    return { name: names.join(' und '), look: t.look, cls: t.cls, leader: !!t.leader, looks: this.foeTrainers.map((x) => x.look), count: this.foeTrainers.length };
+    // Trainerpaar (Zwillinge, Junges Glück ...): ein Trainer mit zwei Personen, eigene Kampfbilder in looks
+    const looks = this.foeTrainers.length === 1 && t.looks ? t.looks : this.foeTrainers.map((x) => x.look);
+    return { name: names.join(' und '), look: t.look, cls: t.cls, leader: !!t.leader, looks, count: this.foeTrainers.length, pair: !!t.pair };
   }
   ownerName(owner) { return owner.cls ? `${owner.cls} ${owner.name}` : owner.name; }
 
@@ -111,10 +113,11 @@ export class DoubleBattle extends WildBattle {
       ev.push({ type: 'text', text: w.length > 1 ? `Ein wildes ${displayName(w[0].mon)} und ein wildes ${displayName(w[1].mon)} erscheinen!` : `Ein wildes ${displayName(w[0].mon)} erscheint!` });
       if (!this.catchable) ev.push({ type: 'text', text: this.catchBlockReason });
     } else {
-      ev.push({ type: 'text', text: `${this.trainer.name} ${this.foeTrainers.length > 1 ? 'möchten' : 'möchte'} kämpfen!` });
+      const many = this.foeTrainers.length > 1 || this.trainer.pair;
+      ev.push({ type: 'text', text: `${this.trainer.name} ${many ? 'möchten' : 'möchte'} kämpfen!` });
       const byOwner = new Map();
       for (const s of this.slots.foe) if (s.b) byOwner.set(s.owner, [...(byOwner.get(s.owner) || []), s.b]);
-      for (const [o, list] of byOwner) ev.push({ type: 'text', text: `${this.ownerName(o)} schickt ${list.map((b) => displayName(b.mon)).join(' und ')} in den Kampf!` });
+      for (const [o, list] of byOwner) ev.push({ type: 'text', text: `${this.ownerName(o)} ${o.pair ? 'schicken' : 'schickt'} ${list.map((b) => displayName(b.mon)).join(' und ')} in den Kampf!` });
     }
     const mine = this.mine();
     if (this.partnerOwner) {

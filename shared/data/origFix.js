@@ -3,6 +3,7 @@ import { FIX as R2 } from './origfix/r2.js';
 import { FIX as R3 } from './origfix/r3.js';
 import { FIX as R4 } from './origfix/r4.js';
 import { FIX as R5 } from './origfix/r5.js';
+import { FIX as DBL } from './origfix/dbl.js';
 
 // Feste Positionen der eigenen Story auf den Originalkarten (Vorrang vor der automatischen Umrechnung
 // in origLayout.js). Koordinaten in Kacheln der Originalkarte, Vorbild sind die Figuren und Ausloeser
@@ -20,6 +21,7 @@ import { FIX as R5 } from './origfix/r5.js';
 //   _maps: { karte: { encounters, fly, name, ... } }        Felder einer Karte setzen
 //   _links: [['pass', von, x, y, nach, tx, ty, richtung], ['tile', karte, x, y, zeichen]]  Durchgaenge in eigenen Raeumen
 //   _signs: { karte: { 'x,y': text | null } }               Schild- oder Tuertext an dieser Stelle (null entfernt ihn)
+//   _trainers: { id: Trainer }                               zusaetzliche Trainer (Doppelkampf-Paare in origfix/dbl.js)
 // Jede Region hat eine eigene Datei in origfix/, hier werden alle zusammengefuehrt.
 const BASE = {
   // Das Nordmeer gibt es in Platin nicht: das Schiff zur Kampfzone legt im Hafen von Blizzach ab
@@ -68,7 +70,7 @@ const BASE = {
 
 // Regionen zusammenfuehren (Karteneintraege und _-Listen werden vereinigt)
 export const ORIG_FIX = {};
-for (const part of [BASE, R1, R2, R3, R4, R5]) {
+for (const part of [BASE, R1, R2, R3, R4, R5, DBL]) {
   for (const [k, v] of Object.entries(part)) {
     if (Array.isArray(v)) ORIG_FIX[k] = [...(ORIG_FIX[k] || []), ...v];
     else ORIG_FIX[k] = { ...(ORIG_FIX[k] || {}), ...v };

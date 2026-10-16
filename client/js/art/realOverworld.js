@@ -36,7 +36,8 @@ export const OW_BY_LOOK = {
   wake: 'npc/crasher_wake', byron: 'npc/byron', candice: 'npc/candice', volkner: 'npc/volkner', aaron: 'npc/aaron',
   bertha: 'npc/bertha', flint: 'npc/flint', lucian: 'npc/lucian', cynthia: 'npc/cynthia', police: 'npc/policeman',
   item_ball: 'objects/pokeball', jasmine: 'npc/jasmine', riley: 'npc/riley', uxie: 'pokemon/uxie', mesprit: 'pokemon/mesprit', azelf: 'pokemon/azelf',
-  dialga: 'pokemon/dialga', palkia: 'pokemon/palkia', heatran: 'pokemon/heatran', regigigas: 'pokemon/regigigas', cresselia: 'pokemon/cresselia', swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic'
+  dialga: 'pokemon/dialga', palkia: 'pokemon/palkia', heatran: 'pokemon/heatran', regigigas: 'pokemon/regigigas', cresselia: 'pokemon/cresselia', swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic',
+  twin: 'npc/twin', guitarist: 'npc/guitarist', beauty: 'npc/beauty', cowgirl: 'npc/cowgirl', rancher: 'npc/rancher', ace_f: 'npc/ace_trainer_f'
 };
 export const OW_FILES = [...new Set([OW_PLAYER, OW_PLAYER + '_bike', ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])].filter((f) => !f.startsWith('mon:'));
 

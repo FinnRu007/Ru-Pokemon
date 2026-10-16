@@ -109,7 +109,7 @@ export class BattleUI {
           el.classList.remove('hidden', 'leave');
         });
         for (const k of foeKeys) spriteEl(k).classList.add('waiting');
-        await this.say(`${s.trainer.name} ${looks.length > 1 ? 'möchten' : 'möchte'} kämpfen!`, 1300, false);
+        await this.say(`${s.trainer.name} ${looks.length > 1 || s.trainer.pair ? 'möchten' : 'möchte'} kämpfen!`, 1300, false);
         tr.classList.add('leave'); tr2.classList.add('leave');
         await sleep(350);
         for (const k of foeKeys) { spriteEl(k).classList.remove('waiting'); this.fx.burst(this.fx.center(k), { c: ['#ffffff', '#fff0b0'], shape: 'star' }, 10); }

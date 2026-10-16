@@ -377,6 +377,8 @@ for (const [m, list] of Object.entries(FIELD_ITEMS)) {
 // Begleiter, Doppelkämpfe, Wanderer, Kampfturm und restliche Kampfzone (story8.js)
 applyStory8({ TRAINERS, SCRIPTS, NPCS, TRIGGERS });
 applyStory9({ SCRIPTS, NPCS, TRIGGERS });
+// Trainerpaare fuer Doppelkaempfe auf den Originalkarten (origfix/dbl.js)
+Object.assign(TRAINERS, ORIG_FIX._trainers || {});
 // Auf die Originalkarten umrechnen (origLayout.js, feste Stellen in origFix.js)
 applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORIG_FIX }, MAPS);
 

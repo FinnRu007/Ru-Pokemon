@@ -191,9 +191,11 @@ export class StoryRunner {
     const p = s.player; const flags = this.flags(s); const map = MAPS[p.map];
     for (const n of visibleNpcs(p.map, flags)) {
       const tr = n.trainer && TRAINERS[n.trainer];
-      if (!tr?.sight || flags['beat_' + n.trainer] || !s.party.some((m) => m.alive !== false && m.hp > 0)) continue;
+      const sight = n.sight ?? tr?.sight;
+      // Trainerpaare sehen den Spieler wie in Platin erst mit zwei kampfbereiten Pokémon
+      if (!tr || !sight || flags['beat_' + n.trainer] || this.fitCount(s) < (tr.double && !this.game.partnerFor(s, tr) ? 2 : 1)) continue;
       const d = DIRS[n.dir];
-      for (let k = 1; k <= tr.sight; k++) {
+      for (let k = 1; k <= sight; k++) {
         const x = n.x + d.dx * k; const y = n.y + d.dy * k;
         if (x === p.x && y === p.y) return n;
         const t = tileAt(map, x, y);
@@ -203,6 +205,9 @@ export class StoryRunner {
     return null;
   }
 
+  // Kampfbereite Pokémon im Team (fuer Doppelkaempfe gegen Trainerpaare braucht es zwei)
+  fitCount(s) { return s.party.filter((m) => !m.egg && m.alive !== false && m.hp > 0).length; }
+
   // Ansprechen eines NPCs. Liefert true, wenn ein NPC vor dem Spieler stand.
   talk(s, x, y) {
     const p = s.player; const flags = this.flags(s);
@@ -211,8 +216,9 @@ export class StoryRunner {
     const ctx = { face: { id: n.id, dir: OPPOSITE[p.dir] } };
     if (n.trainer) {
       const tr = TRAINERS[n.trainer];
-      if (flags['beat_' + n.trainer]) return this.start(s, tr.after || tr.win || [], ctx);
-      if (!s.party.some((m) => m.alive !== false && m.hp > 0)) return this.start(s, [[n.name, 'Komm wieder, wenn du ein kampfbereites Pokémon hast.']], ctx);
+      if (flags['beat_' + n.trainer]) return this.start(s, n.after || tr.after || tr.win || [], ctx);
+      if (!this.fitCount(s)) return this.start(s, [[n.name, 'Komm wieder, wenn du ein kampfbereites Pokémon hast.']], ctx);
+      if (tr.double && this.fitCount(s) < 2 && !this.game.partnerFor(s, tr)) return this.start(s, n.notEnough || tr.notEnough || [[n.name, 'Für einen Doppelkampf brauchst du mindestens zwei Pokémon.']], ctx);
       return this.start(s, [...tr.intro, { battle: n.trainer }], ctx);
     }
     if (typeof n.talk === 'string') return this.runNamed(s, n.talk, ctx);
