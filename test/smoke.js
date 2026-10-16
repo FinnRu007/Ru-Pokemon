@@ -225,14 +225,14 @@ await test('Alle 493 Arten mit gueltigen Attacken und Entwicklungen', async () =
 console.log('\nMultiplayer ueber WebSocket');
 process.env.STORAGE = 'sqlite';
 process.env.DATA_DIR = path.join(tmp, 'net');
-process.env.PORT = '3199';
+process.env.PORT = process.env.TEST_PORT || '3199';
 process.env.STORY = 'off';
 const { server, game, repo } = await import('../server/index.js');
 await new Promise((r) => (server.listening ? r() : server.once('listening', r)));
 const { default: WebSocket } = await import('ws');
 
 function client(name) {
-  const ws = new WebSocket('ws://localhost:3199/ws');
+  const ws = new WebSocket(`ws://localhost:${process.env.PORT}/ws`);
   const inbox = [];
   const waiters = [];
   ws.on('message', (raw) => {
