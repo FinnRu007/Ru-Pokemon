@@ -189,7 +189,9 @@ export function placeBerrySoil(MAPS) {
     if (r[s.x] !== '#') m.tiles[s.y] = r.slice(0, s.x) + '#' + r.slice(s.x + 1);
   }
   const mart = MAPS.floaroma_mart;
-  if (mart && !mart.events.some((e) => e.stock === 'mulch')) mart.events.push({ x: 1, y: 2, type: 'shop', stock: 'mulch', text: 'Willkommen! Was darf es sein?' });
+  const shop = mart?.events.find((e) => e.type === 'shop' && !e.stock);
+  // Zweite Kasse direkt neben der normalen (Theke eine Reihe weiter oben)
+  if (shop && !mart.events.some((e) => e.stock === 'mulch')) mart.events.push({ x: shop.x, y: shop.y - 1, type: 'shop', stock: 'mulch', text: 'Willkommen! Was darf es sein?' });
 }
 
 // Figuren im Blumenladen von Flori wie in Platin: Beere am Tag (Zuechterin) und Enton-Kanne (Göre)
@@ -217,7 +219,7 @@ export const BERRY_TEXT = {
   askMulch: 'Möchtest du den Boden düngen?',
   askPlant: 'Möchtest du eine Beere pflanzen?',
   mulchScattered: (m) => `${m} wurde auf dem Boden verteilt.`,
-  planted: (b) => `${nameOf(b)} wurde in den weichen, fruchtbaren Boden gepflanzt.`,
+  planted: (b) => `Die ${nameOf(b)} wurde in den weichen, fruchtbaren Boden gepflanzt.`,
   plantedHere: (b) => `Hier wurde eine ${nameOf(b)} gepflanzt.`,
   sprouted: (b) => `Die ${nameOf(b)} ist gekeimt.`,
   growing: (b) => `Die Pflanze der ${nameOf(b)} wird größer.`,

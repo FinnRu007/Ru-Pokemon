@@ -706,6 +706,7 @@ export class GameServer {
     if (cmd === '/partner') { this.setPartner(s, a || null); }
     if (cmd === '/exp' && s.party[0]) { const m = s.party[0]; m.exp = expForLevel(species(m.speciesId).growth, m.level + 1) - 1; this.sendParty(s); }
     if (cmd === '/wild') { this.startScriptWild(s, Number(a) || 396, Number(b) || 5); return; }
+    if (cmd === '/berrytime') { this.berryState(s).t -= (Number(a) || 1) * 3600000; this.sendBerries(s); }
     if (cmd === '/lv') { for (const m of s.party) { m.level = Number(a); m.moves = defaultMoves(species(m.speciesId), m.level); recalc(m); m.hp = m.stats.hp; } this.saveMons(s); this.sendParty(s); }
     this.savePlayerNow(s);
   }

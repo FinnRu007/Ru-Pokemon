@@ -755,13 +755,15 @@ await test('Beeren: weicher Boden, Startbeeren, pflanzen, gießen, wachsen und e
   const a = client('Beere');
   await a.open;
   autoplay(a);
+  if (process.env.DEBUG_TEST) a.ws.on('message', (raw) => { const m = JSON.parse(raw); console.log('   <', m.t, m.t === 'dialog' ? m.lines.map((l) => l.text).join(' | ') : m.t === 'berries' ? m.patches[0].join() : m.t === 'notice' ? m.text : ''); });
   a.send({ t: 'hello', name: 'Beere', runCode: 'BERRY1' });
   const w = await a.wait((m) => m.t === 'welcome');
   const view = await a.wait((m) => m.t === 'berries');
   assert.equal(view.patches.length, 118);
   assert.ok(view.patches.every((p, i) => p[0] === B.BERRY_INIT[i][0] && p[1] === B.STAGE.FRUIT));
   const s = game.sessions.get(w.selfId);
-  Object.assign(s.player.flags, { intro: true });
+  await a.wait((m) => m.t === 'progress' && m.flags.intro);
+  while (s.script) await sleep(20);
   const patch = soil.byId[0];
   // Startbeere pflücken: Sinelbeere ins Beerenfach, der Boden ist danach leer
   Object.assign(s.player, { map: patch.map, x: patch.x, y: patch.y + 1, dir: 'up' });
