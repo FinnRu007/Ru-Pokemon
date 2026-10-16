@@ -16,8 +16,14 @@ const WEATHER_POOL = {
   jubilife_city: ['clear', 'clear', 'clear', 'rain']
 };
 const SLOT_MS = 8 * 60 * 1000;
+const ORIG_WEATHER = {
+  FOG: 'fog', RAINING: 'rain', ROUTE_212_SOUTH: 'rain', ROUTE_213: 'rain', SANDSTORM: 'sand', SLOW_ASHFALL: 'ash',
+  SNOWPOINT_CITY: 'snow', ROUTE_216: 'snow', ACUITY_LAKEFRONT: 'snow', HEAVY_SNOW: 'snow', BLIZZARD: 'snow', CLOUDY: 'snow'
+};
 
 export function weatherFor(mapId, now = Date.now()) {
+  // Originalkarten: festes Wetter aus dem Kartenkopf wie in Platin
+  if (MAPS[mapId]?.orig) return MAPS[mapId].indoor ? 'clear' : ORIG_WEATHER[MAPS[mapId].orig.weather] || 'clear';
   // Festes Wetter einer Karte (Sandsturm auf Route 228)
   if (MAPS[mapId]?.weather && !MAPS[mapId].indoor) return MAPS[mapId].weather;
   const pool = WEATHER_POOL[mapId];
@@ -109,6 +115,15 @@ export class Ambience {
         if (f.x > W) f.x = 0;
         g.fillStyle = weather === 'ash' ? 'rgba(90,86,96,.75)' : ['#d8a040', '#c86a30', '#e8c060'][Math.floor(f.p) % 3];
         g.fillRect(Math.round(f.x), Math.round(f.y), weather === 'ash' ? 4 : 6, weather === 'ash' ? 4 : 3);
+      }
+    } else if (weather === 'snow') {
+      for (const f of this.flakes) {
+        f.y += f.v * 0.7; f.x += Math.sin(now / 900 + f.p) * 0.6 - 0.3;
+        if (f.y > H) { f.y = -10; f.x = Math.random() * W; }
+        if (f.x < 0) f.x = W;
+        g.fillStyle = 'rgba(255,255,255,.9)';
+        const sz = 3 + (Math.floor(f.p) % 3);
+        g.fillRect(Math.round(f.x), Math.round(f.y), sz, sz);
       }
     } else if (weather === 'fog') {
       for (let i = 0; i < 4; i++) {

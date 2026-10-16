@@ -133,7 +133,7 @@ export function applyOrigMaps(MAPS) {
     if (spec.indoor) { map.indoor = true; map.theme = spec.theme || map.theme || 'gate'; }
     let hcache = null, bcache = null;
     map.orig = {
-      m: g.m, x: g.x, z: g.z, battleBG: g.battleBG, objects: g.objects, coords: g.coords, bgs: g.bgs, warps: g.warps,
+      m: g.m, x: g.x, z: g.z, battleBG: g.battleBG, weather: g.weather, objects: g.objects, coords: g.coords, bgs: g.bgs, warps: g.warps,
       get heights() { return hcache || (hcache = new Int16Array(b64(g.heights).buffer)); },
       // Verhalten je Kachel (Gras, Sand, Schnee ...), wie in include/constants/field/map_tile_behaviors.h
       get beh() { return bcache || (bcache = g.beh ? b64(g.beh) : new Uint8Array(g.width * g.height)); }

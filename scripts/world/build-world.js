@@ -67,6 +67,7 @@ export async function buildWorld({ log = console.log } = {}) {
       matrix: +(b.match(/mapMatrixID = map_matrix_(\d+)/)?.[1] ?? 0),
       events: b.match(/eventsArchiveID = (\w+)/)?.[1],
       battleBG: b.match(/battleBG = (\w+)/)?.[1],
+      weather: b.match(/weather = OVERWORLD_WEATHER_(\w+)/)?.[1],
       mapType: b.match(/mapType = (\w+)/)?.[1]
     };
   }
@@ -239,7 +240,8 @@ export async function buildWorld({ log = console.log } = {}) {
       heights: Buffer.from(hgt.buffer).toString('base64'),
       beh: Buffer.from(beh).toString('base64'),
       warps, objects, coords, bgs,
-      battleBG: HEAD[spec.h]?.battleBG || null
+      battleBG: HEAD[spec.h]?.battleBG || null,
+      weather: HEAD[spec.h]?.weather || null
     };
   }
   fs.mkdirSync(GEN, { recursive: true });
