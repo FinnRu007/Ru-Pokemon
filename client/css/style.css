@@ -56,7 +56,8 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 
 /* Seitenleiste */
 #hud { width: 330px; max-width: 100%; background: var(--panel); border: 3px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.tabs { display: flex; gap: 4px; } .tabs button { flex: 1; padding: 6px 4px; background: var(--panel2); font-size: 13px; } .tabs button.active { background: var(--accent); }
+#hud > * { min-width: 0; max-width: 100%; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; } .tabs button { flex: 1 1 auto; min-width: 0; padding: 6px 3px; background: var(--panel2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tabs button.active { background: var(--accent); }
 .tab { max-height: 260px; overflow: auto; }
 .mon { display: grid; grid-template-columns: 40px 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; background: var(--panel2); margin-bottom: 4px; }
 .mon.dead { opacity: .5; filter: grayscale(1); } .mon .icon { width: 40px; height: 40px; image-rendering: pixelated; }
@@ -80,7 +81,11 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 #battle .field::after { width: 290px; height: 64px; left: 30px; bottom: 6px; }
 .infobox { position: absolute; background: var(--box); color: var(--boxInk); border: 3px solid #303848; border-radius: 6px 18px 6px 18px; padding: 6px 12px 8px; width: 280px; font-weight: 700; font-size: 17px; z-index: 2; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
 .infobox.foe { top: 22px; left: 20px; } .infobox.ally { bottom: 18px; right: 20px; }
-.infobox .row { display: flex; justify-content: space-between; align-items: center; }
+.infobox .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
+.infobox .nm { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+.infobox .nmt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.infobox .g { flex: none; margin-left: 3px; font-weight: 700; } .infobox .st { flex: none; }
+.infobox .lv { flex: none; white-space: nowrap; }
 .infobox .hprow { display: flex; align-items: center; gap: 6px; margin-top: 4px; } .infobox .hprow b { font-size: 11px; background: #f0a030; color: #fff; padding: 0 4px; border-radius: 3px; }
 .infobox .hpbar { height: 9px; margin-top: 0; } .infobox .exp { height: 5px; background: #ccc; margin-top: 4px; border-radius: 3px; overflow: hidden; } .infobox .exp > i { display: block; height: 100%; background: #3aa0ff; transition: width .5s; }
 .infobox .st { font-size: 11px; padding: 0 4px; border-radius: 3px; color: #fff; margin-left: 6px; }
@@ -88,7 +93,6 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 .mon-sprite.foe { top: 8px; right: 82px; animation: enter-foe .5s ease-out; } .mon-sprite.ally { bottom: 0; left: 60px; width: 224px; height: 224px; animation: enter-ally .5s ease-out; }
 @keyframes enter-foe { from { transform: translateX(-300px); } } @keyframes enter-ally { from { transform: translateX(300px); } }
 .item-ic { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; margin: -4px 4px -4px 0; }
-.type-badge { width: 48px; height: 16px; image-rendering: pixelated; vertical-align: middle; margin-right: 4px; }
 .mon-sprite.real { background-size: 160px; } .mon-sprite.ally.real { background-size: 240px; }
 .mon-sprite.shiny { filter: drop-shadow(0 0 6px #fff7a0); }
 .mon-sprite.fainted { opacity: 0; transform: translateY(50px); } .mon-sprite.hit { animation: hit .35s; }
@@ -98,9 +102,38 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 #battle .field.real-terrain::after { background-image: var(--terrain-player); width: 512px; height: 64px; left: -84px; bottom: 0; }
 #battle .bottom { display: flex; height: 132px; background: #283050; border-top: 4px solid #12162a; }
 .battle-text { flex: 1; margin: 8px; background: var(--box); color: var(--boxInk); border: 4px solid var(--boxLine); border-radius: 8px; font-size: 19px; padding: 10px 14px; box-shadow: inset 0 0 0 3px #c8d4e8; }
-.battle-menu { width: 330px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 8px 8px 0; }
-.battle-menu button { font-weight: 700; font-size: 16px; border: 2px solid rgba(0,0,0,.35); text-shadow: 1px 1px 0 rgba(0,0,0,.35); }
-.battle-menu .mv { text-align: left; line-height: 1.1; } .battle-menu .mv small { display: block; font-weight: 400; opacity: .9; font-size: 12px; }
+.battle-menu { width: 330px; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: 6px; padding: 8px 8px 8px 0; min-height: 0; }
+.battle-menu button { min-width: 0; overflow: hidden; font-weight: 700; font-size: 16px; border: 2px solid rgba(0,0,0,.35); text-shadow: 1px 1px 0 rgba(0,0,0,.35); }
+.battle-menu .mv { text-align: left; line-height: 1.1; padding: 6px 10px; } .battle-menu .mv small { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 13px; margin-top: 4px; }
+.battle-menu .mv-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Attackenwahl: vier Attacken ueber die ganze Breite, Zurueck rechts daneben */
+#battle .bottom.wide .battle-text { display: none; }
+.battle-menu.moves { flex: 1; width: auto; grid-template-columns: 1fr 1fr minmax(90px, 120px); grid-template-rows: 1fr 1fr; padding: 8px; }
+.battle-menu.moves .back { grid-column: 3; grid-row: 1 / 3; }
+.battle-menu .mv:focus-visible, .bpanel button:focus-visible { outline: 3px solid #ffe066; outline-offset: -3px; }
+/* Auswahlfenster im Kampf: Beutel und Pokemon */
+.bpanel { position: absolute; inset: 0; z-index: 12; display: flex; flex-direction: column; color: var(--boxInk); background: linear-gradient(#f0c870, #e8b050); }
+.bpanel.bp-party { background: linear-gradient(#5aa070, #3c7a58); }
+.bp-head, .bp-tabs, .bp-foot { flex: none; }
+.bp-head { padding: 8px 14px; background: var(--box); border-bottom: 4px solid var(--boxLine); font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 0; }
+.bp-tabs button { flex: 1 1 0; min-width: 0; padding: 7px 6px; font-size: 15px; background: #a8743a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-tabs button.on { background: #d83c3c; } .bp-tabs button.empty:not(.on) { color: #f0dcc0; }
+.bp-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 10px; align-content: start; }
+.bp-list button { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: left; box-shadow: none; color: var(--boxInk); background: #fff8e8; border: 3px solid #b0803a; border-radius: 10px; padding: 6px 10px; min-height: 48px; font-size: 16px; }
+.bp-list button:disabled { opacity: .5; }
+.bp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-empty { grid-column: 1 / -1; padding: 10px; color: #6a5030; }
+.bp-party .bp-list button { background: #eef6f0; border-color: #2a5a40; border-radius: 12px 4px 12px 4px; }
+.bp-party .bp-list button.lead { background: #fff2dc; border-color: #c86a30; }
+.bp-party .bp-list button.dead { filter: grayscale(1); }
+.bp-mon img { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
+.bp-mn { display: flex; flex-direction: column; flex: 1; min-width: 0; } .bp-mn b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .bp-mn small { font-size: 13px; display: flex; gap: 6px; align-items: center; }
+.bp-mn .st { font-size: 11px; padding: 0 4px; border-radius: 3px; color: #fff; }
+.bp-hp { display: flex; flex-direction: column; align-items: flex-end; width: 34%; flex: none; } .bp-hp .hpbar { width: 100%; flex: none; } .bp-hp small { font-size: 12px; }
+.bp-foot { display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: rgba(0,0,0,.2); min-height: 56px; }
+.bp-info { flex: 1; min-width: 0; color: #fff; font-size: 15px; text-shadow: 1px 1px 0 rgba(0,0,0,.4); }
+.bp-foot .back { flex: none; min-width: 140px; padding: 10px 18px; font-size: 17px; background: #5a5f78; border: 2px solid rgba(0,0,0,.35); }
 .battle-menu .back { background: #5a5f78; }
 /* Doppelkampf: zwei Pokémon je Seite, kleinere Infoboxen */
 #battle .dbl { display: none; } #battle.double .dbl { display: block; }
@@ -118,7 +151,11 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 /* Trainerkarte, Beutel und Markt */
 .trainer-card { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; padding: 6px 8px; background: var(--panel2); border-radius: 8px; }
 .badge-icon { display: inline-block; width: 12px; height: 12px; border-radius: 3px; transform: rotate(45deg); margin: 0 6px 0 2px; border: 2px solid #20202a; vertical-align: -1px; }
-.bag-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; padding: 6px 8px; background: var(--panel2); border-radius: 8px; margin-bottom: 4px; }
+#tab-bag { padding-top: 0; }
+.bag-pockets { position: sticky; top: 0; z-index: 1; display: grid; grid-template-columns: repeat(4, auto); gap: 3px; padding-bottom: 6px; background: var(--panel); }
+.bag-pockets button { min-width: 0; padding: 4px 3px; font-size: 11px; background: var(--panel2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bag-pockets button.on { background: #d83c3c; } .bag-pockets button.empty:not(.on) { color: var(--muted); }
+.bag-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 6px 8px; background: var(--panel2); border-radius: 8px; margin-bottom: 4px; }
 .bag-row .use { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; }
 .bag-row .use button { padding: 0; background: #4a5278; border-radius: 6px; }
 .bag-row .use img { width: 32px; height: 32px; image-rendering: pixelated; display: block; }
@@ -172,7 +209,7 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 
 /* Werkzeugleiste: Emotes und Ton */
 .toolbar { display: flex; gap: 6px; align-items: center; }
-.emotes { display: flex; gap: 4px; flex: 1; } .emotes button { flex: 1; padding: 4px 0; background: var(--panel2); font-size: 15px; }
+.emotes { display: flex; gap: 4px; flex: 1; min-width: 0; } .emotes button { flex: 1; min-width: 0; padding: 4px 0; background: var(--panel2); font-size: 15px; }
 #muteBtn { padding: 4px 10px; background: var(--panel2); } #muteBtn.off { background: #7a2327; }
 .volumes { display: flex; gap: 10px; font-size: 12px; color: var(--muted); } .volumes label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; margin: 0; } .volumes input { flex: 1; min-width: 0; width: 60px; accent-color: var(--accent); }
 
@@ -181,11 +218,10 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 @keyframes soulflash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
 
 /* Einklappbare Bereiche der Seitenleiste */
-.toggles { display: flex; gap: 4px; }
-.toggles .tg { flex: 1; padding: 5px 4px; font-size: 13px; background: var(--panel2); color: var(--muted); position: relative; }
+.toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 4px; }
+.toggles .tg { min-width: 0; padding: 5px 4px; font-size: 13px; background: var(--panel2); color: var(--muted); position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toggles .tg.on { background: var(--accent); color: #fff; }
 #musicBtn:not(.on), #sfxBtn:not(.on) { text-decoration: line-through; }
-#setBtn { flex: 0 0 40px; }
 #logBadge { position: absolute; top: -6px; right: -4px; min-width: 18px; padding: 0 4px; border-radius: 9px; background: #e04848; color: #fff; font-style: normal; font-size: 11px; line-height: 18px; }
 .settings { display: flex; flex-direction: column; gap: 6px; background: var(--panel2); border-radius: 8px; padding: 8px; }
 .toolbar .online { font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -234,8 +270,12 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .area { display: flex; gap: 12px; padding: 12px 18px; flex: 1; min-height: 0; }
 .area canvas { width: 440px; height: 250px; border: 4px solid #b8c4d8; border-radius: 6px; image-rendering: pixelated; background: #2c5a9c; }
 .area-list { flex: 1; overflow: auto; font-size: 15px; display: flex; flex-direction: column; gap: 4px; }
-.type-tag { display: inline-block; font-size: 12px; padding: 1px 6px; border-radius: 4px; color: #fff; background: #888; text-shadow: 1px 1px 0 rgba(0,0,0,.35); }
-.t-normal{background:#a8a878}.t-fire{background:#f08030}.t-water{background:#6890f0}.t-electric{background:#e0b820}.t-grass{background:#78c850}.t-ice{background:#78c8d0}.t-fighting{background:#c03028}.t-poison{background:#a040a0}.t-ground{background:#d0a850}.t-flying{background:#a890f0}.t-psychic{background:#f85888}.t-bug{background:#a8b820}.t-rock{background:#b8a038}.t-ghost{background:#705898}.t-dragon{background:#7038f8}.t-dark{background:#705848}.t-steel{background:#b8b8d0}
+/* Typ-Schilder im Platin-Stil: farbiges abgerundetes Schild, weisse Schrift mit dunkler Kante */
+.type-tag { --tc: #a8a878; display: inline-block; box-sizing: border-box; min-width: 58px; padding: 1px 6px 2px; border-radius: 5px; vertical-align: middle;
+  font: 700 12px/13px var(--pixel); color: #fff; text-align: center; letter-spacing: .2px; white-space: nowrap; text-transform: none;
+  background: linear-gradient(color-mix(in srgb, var(--tc) 72%, #fff) 0 2px, var(--tc) 2px calc(100% - 3px), color-mix(in srgb, var(--tc) 70%, #000) calc(100% - 3px));
+  border: 1px solid color-mix(in srgb, var(--tc) 45%, #000); text-shadow: 1px 0 0 rgba(0,0,0,.55), 0 1px 0 rgba(0,0,0,.55), 1px 1px 0 rgba(0,0,0,.55); }
+.t-normal{--tc:#a8a878}.t-fire{--tc:#f08030}.t-water{--tc:#6890f0}.t-electric{--tc:#e8c020}.t-grass{--tc:#68c048}.t-ice{--tc:#70c8c8}.t-fighting{--tc:#c03028}.t-poison{--tc:#a040a0}.t-ground{--tc:#d0a848}.t-flying{--tc:#9880e8}.t-psychic{--tc:#f05888}.t-bug{--tc:#a0b020}.t-rock{--tc:#b8a038}.t-ghost{--tc:#705898}.t-dragon{--tc:#7038f8}.t-dark{--tc:#705848}.t-steel{--tc:#a8a8c8}.t-unknown{--tc:#68a090}
 .party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; }
 .pcard { display: grid; grid-template-columns: 56px 1fr auto; grid-template-rows: auto auto auto; column-gap: 8px; align-items: center; text-align: left; background: #4a8ad8; color: #fff; padding: 6px 10px; border: 3px solid #20305a; border-radius: 12px 4px 12px 4px; min-height: 84px; }
 .pcard.lead { background: #e86a48; } .pcard.dead { filter: grayscale(1); opacity: .6; } .pcard.swap { box-shadow: 0 0 0 4px #ffe066; }
@@ -259,7 +299,7 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .sum-foot { margin-top: auto; padding-bottom: 6px; }
 .forget { display: flex; flex-direction: column; gap: 10px; height: 100%; } .forget > :not(.dex-head) { margin: 0 14px; }
 .bag { display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; height: 100%; background: linear-gradient(#f0c870, #e8b050); }
-.pockets { display: flex; gap: 4px; padding: 8px; } .pockets button { flex: 1; padding: 6px 2px; font-size: 13px; background: #a8743a; } .pockets button.on { background: #d83c3c; }
+.pockets { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; } .pockets button { flex: 1 1 auto; min-width: 0; padding: 6px 4px; font-size: 13px; background: #a8743a; white-space: nowrap; } .pockets button.on { background: #d83c3c; }
 .bag-list { overflow: auto; margin: 0 10px; padding: 6px; background: #fff8e8; border: 3px solid #b0803a; border-radius: 8px; display: flex; flex-direction: column; gap: 2px; }
 .bag-list button { display: flex; align-items: center; gap: 6px; text-align: left; background: transparent; color: var(--boxInk); box-shadow: none; padding: 4px 8px; } .bag-list button span { flex: 1; } .bag-list button:focus { background: #ffe8b8; }
 .bag-desc { margin: 8px 10px 0; background: var(--box); border: 3px solid var(--boxLine); border-radius: 8px; padding: 8px 12px; min-height: 64px; font-size: 16px; }

@@ -171,6 +171,35 @@ HM_MOVES.forEach((move, i) => { const n = String(i + 1).padStart(2, '0'); ITEMS[
 // VM-Attacken lassen sich nur beim Attacken-Verlerner vergessen
 export const isHmMove = (moveId) => HM_MOVES.includes(moveId);
 
+// Taschen des Beutels wie in der deutschen Platin-Edition
+export const POCKETS = [['items', 'Items'], ['medicine', 'Medizin'], ['balls', 'Pokébälle'], ['tm', 'TM/VM'], ['berries', 'Beeren'], ['mail', 'Briefe'], ['battle', 'Kampf-Items'], ['key', 'Basis-Items']];
+const POCKET_OF_KIND = { ball: 'balls', med: 'medicine', tm: 'tm', berry: 'berries', mail: 'mail', battle: 'battle', key: 'key' };
+export const pocketOf = (id) => ITEMS[id]?.pocket || POCKET_OF_KIND[ITEMS[id]?.kind] || 'items';
+// Itemnummern der 4. Generation: bestimmen die Reihenfolge innerhalb einer Tasche
+const ITEM_NUM = {
+  'master-ball': 1, 'ultra-ball': 2, 'great-ball': 3, 'poke-ball': 4, 'safari-ball': 5, 'net-ball': 6, 'dive-ball': 7, 'nest-ball': 8, 'repeat-ball': 9, 'timer-ball': 10,
+  'luxury-ball': 11, 'premier-ball': 12, 'dusk-ball': 13, 'heal-ball': 14, 'quick-ball': 15, 'cherish-ball': 16,
+  potion: 17, antidote: 18, 'burn-heal': 19, 'ice-heal': 20, awakening: 21, 'paralyze-heal': 22, 'full-restore': 23, 'max-potion': 24, 'hyper-potion': 25,
+  'super-potion': 26, 'full-heal': 27, revive: 28, 'max-revive': 29, ether: 38, 'max-ether': 39, elixir: 40, 'max-elixir': 41, 'hp-up': 45, protein: 46,
+  iron: 47, carbos: 48, calcium: 49, 'rare-candy': 50, 'pp-up': 51, zinc: 52, 'pp-max': 53, 'old-gateau': 54,
+  'guard-spec': 55, 'dire-hit': 56, 'x-attack': 57, 'x-defense': 58, 'x-speed': 59, 'x-accuracy': 60, 'x-sp-atk': 61, 'x-sp-def': 62,
+  'red-shard': 72, 'blue-shard': 73, 'yellow-shard': 74, 'green-shard': 75, 'super-repel': 76, 'max-repel': 77, 'escape-rope': 78, repel: 79,
+  'sun-stone': 80, 'moon-stone': 81, 'fire-stone': 82, 'thunder-stone': 83, 'water-stone': 84, 'leaf-stone': 85, 'big-pearl': 89, 'star-piece': 91,
+  nugget: 92, 'heart-scale': 93, 'shiny-stone': 107, 'dusk-stone': 108, 'dawn-stone': 109, 'oval-stone': 110, 'griseous-orb': 112, 'adamant-orb': 135,
+  'lustrous-orb': 136, 'mental-herb': 219, 'kings-rock': 221, 'silver-powder': 222, 'amulet-coin': 223, 'deep-sea-tooth': 226, 'deep-sea-scale': 227,
+  'smoke-ball': 228, 'metal-coat': 233, leftovers: 234, 'dragon-scale': 235, 'soft-sand': 237, 'hard-stone': 238, 'miracle-seed': 239, magnet: 242,
+  'mystic-water': 243, 'poison-barb': 245, 'never-melt-ice': 246, charcoal: 249, 'dragon-fang': 250, 'up-grade': 252, 'sea-incense': 254, 'lax-incense': 255,
+  'light-clay': 269, 'life-orb': 270, 'iron-ball': 278, 'lagging-tail': 279, 'destiny-knot': 280, 'grip-claw': 286, 'shed-shell': 295, 'big-root': 296,
+  'splash-plate': 299, 'fist-plate': 303, 'earth-plate': 305, 'mind-plate': 307, 'spooky-plate': 310, 'dread-plate': 312, 'odd-incense': 314,
+  'rock-incense': 315, 'full-incense': 316, 'wave-incense': 317, 'rose-incense': 318, 'luck-incense': 319, 'pure-incense': 320, protector: 321,
+  electirizer: 322, magmarizer: 323, 'dubious-disc': 324, 'reaper-cloth': 325, 'razor-claw': 326, 'razor-fang': 327, 'lunar-wing': 451
+};
+TM_MOVES.forEach((_, i) => { ITEM_NUM['tm' + String(i + 1).padStart(2, '0')] = 328 + i; });
+HM_MOVES.forEach((_, i) => { ITEM_NUM['hm' + String(i + 1).padStart(2, '0')] = 420 + i; });
+export const itemNum = (id) => ITEM_NUM[id] ?? 9000;
+// Sortiert Item-Kennungen wie im Original nach Itemnummer
+export const sortItems = (ids) => [...ids].sort((a, b) => itemNum(a) - itemNum(b) || String(ITEMS[a]?.name || a).localeCompare(String(ITEMS[b]?.name || b), 'de'));
+
 export const MART_STOCK = ['poke-ball', 'great-ball', 'ultra-ball', 'potion', 'super-potion', 'hyper-potion', 'max-potion', 'full-restore', 'antidote', 'paralyze-heal', 'awakening', 'burn-heal', 'ice-heal', 'full-heal', 'revive',
   'escape-rope', 'repel', 'super-repel', 'max-repel'];
 // Kaufhaus Schleiede: Kampf-Items, Vitamine, Heilball und TMs wie im Original

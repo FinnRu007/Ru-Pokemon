@@ -1,7 +1,7 @@
 // Kampfoberflaeche: spielt Server-Ereignisse nacheinander ab und sendet Aktionen.
 import { showLevelStats } from './levelStats.js';
-import { ITEMS } from '/shared/data/items.js';
-import { monsterDataUrl, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
+import { ITEMS, POCKETS, pocketOf, sortItems } from '/shared/data/items.js';
+import { monsterDataUrl, monsterIcon, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
 import { terrainImage } from './art/realTerrain.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition, spriteEl } from './battleFx.js';
@@ -13,6 +13,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const KEYS = ['ally', 'ally2', 'foe', 'foe2'];
 const boxEl = (key) => $(key.startsWith('ally') ? 'allyBox' + (key === 'ally2' ? '2' : '') : 'foeBox' + (key === 'foe2' ? '2' : ''));
 const isAllyKey = (key) => key.startsWith('ally');
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Taschen im Kampf: nur was dort benutzt werden kann
+const BATTLE_POCKETS = POCKETS.filter(([k]) => ['medicine', 'balls', 'berries', 'battle'].includes(k));
 
 // Kampfmusik wie in Platin: nach Trainerklasse, bei wilden Pokemon nach Legendaeren
 const LEGENDS = new Set([144, 145, 146, 150, 151, 243, 244, 245, 249, 250, 251, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 485, 486, 487, 488, 489, 490, 491, 492, 493]);
@@ -39,7 +42,33 @@ export class BattleUI {
     this.fx = new BattleFx(this.root.querySelector('.field'));
     this.intro = null;
     this.root.addEventListener('click', () => { this.skip = true; });
-    addEventListener('keydown', (e) => { if (!this.root.classList.contains('hidden') && ['KeyZ', 'Enter', 'Space'].includes(e.code)) this.skip = true; });
+    this.bagPocket = 'medicine';
+    addEventListener('keydown', (e) => this.onKey(e), true);
+  }
+
+  // Tasten im Kampf: Z/Enter/Leertaste weiter, X/Esc zurueck, Pfeiltasten waehlen
+  onKey(e) {
+    if (this.root.classList.contains('hidden')) return;
+    if (e.target?.tagName === 'INPUT') return;
+    if (['KeyZ', 'Enter', 'Space'].includes(e.code)) { this.skip = true; return; }
+    const btns = this.visibleButtons();
+    if (['KeyX', 'Escape', 'Backspace'].includes(e.code)) {
+      const back = btns.find((b) => b.classList.contains('back') && !b.disabled);
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (back) back.click();
+      return;
+    }
+    const dir = { ArrowLeft: -1, ArrowUp: -1, KeyA: -1, KeyW: -1, ArrowRight: 1, ArrowDown: 1, KeyD: 1, KeyS: 1 }[e.code];
+    if (dir && btns.length) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      const usable = btns.filter((b) => !b.disabled);
+      const i = usable.indexOf(document.activeElement);
+      (usable[i < 0 ? 0 : (i + dir + usable.length) % usable.length] || usable[0])?.focus();
+    }
+  }
+  visibleButtons() {
+    const panel = this.root.querySelector('.bpanel:not(.hidden)');
+    return [...(panel || $('battleMenu')).querySelectorAll('button')].filter((b) => b.offsetParent);
   }
 
   get active() { return !!this.shown; }
@@ -303,9 +332,9 @@ export class BattleUI {
     const pct = Math.max(0, Math.round((mon.hp / mon.maxHp) * 100));
     const cls = pct <= 20 ? 'low' : pct <= 50 ? 'mid' : '';
     const st = mon.status ? `<span class="st" style="background:${STATUS[mon.status][1]}">${STATUS[mon.status][0]}</span>` : '';
-    const g = mon.gender === 'm' ? ' ♂' : mon.gender === 'f' ? ' ♀' : '';
-    let html = `<div class="row"><span>${mon.name}${g}${st}</span><span>Lv${mon.level}</span></div><div class="hprow"><b>KP</b><div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div>`;
-    if (mon.owner) html = `<div class="owner">${mon.owner}</div>` + html;
+    const g = mon.gender === 'm' ? '<b class="g g-m">♂</b>' : mon.gender === 'f' ? '<b class="g g-f">♀</b>' : '';
+    let html = `<div class="row"><span class="nm"><span class="nmt">${esc(mon.name)}</span>${g}${st}</span><span class="lv">Lv${mon.level}</span></div><div class="hprow"><b>KP</b><div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div>`;
+    if (mon.owner) html = `<div class="owner">${esc(mon.owner)}</div>` + html;
     if (ally && !mon.owner) {
       const span = Math.max(1, mon.expNext - mon.expThis);
       const ep = Math.min(100, Math.max(0, Math.round(((mon.exp - mon.expThis) / span) * 100)));
@@ -325,20 +354,43 @@ export class BattleUI {
   }
 
   // -------------------------------------------------------------- Menues
-  menu(buttons) {
+  // layout: null (2x2 unten rechts) oder 'moves' (Attacken ueber die ganze Breite, Zurueck rechts)
+  menu(buttons, layout = null) {
     const el = $('battleMenu');
     el.innerHTML = '';
+    el.className = 'battle-menu' + (layout ? ' ' + layout : '');
+    this.root.querySelector('.bottom').classList.toggle('wide', layout === 'moves');
+    this.hidePanel();
     if (!buttons) return;
-    for (const b of buttons) {
-      const btn = document.createElement('button');
-      btn.innerHTML = b.html || b.label;
-      if (b.cls) btn.className = b.cls;
-      if (b.color) btn.style.background = b.color;
-      btn.disabled = !!b.disabled;
-      btn.onclick = (e) => { e.stopPropagation(); audio.sfx(b.cls === 'back' ? 'back' : 'select'); b.fn(); };
-      el.appendChild(btn);
-    }
+    for (const b of buttons) el.appendChild(this.button(b));
   }
+  button(b) {
+    const btn = document.createElement('button');
+    btn.innerHTML = b.html || b.label;
+    if (b.cls) btn.className = b.cls;
+    if (b.color) btn.style.background = b.color;
+    if (b.title) btn.title = b.title;
+    btn.disabled = !!b.disabled;
+    btn.onclick = (e) => { e.stopPropagation(); audio.sfx(b.cls === 'back' ? 'back' : 'select'); b.fn(); };
+    return btn;
+  }
+  // Ganzes Kampfbild als Auswahlfenster (Beutel, Pokemon): Kopf mit Reitern, Liste zum Scrollen, Zurueck immer sichtbar
+  showPanel({ title, cls = '', tabs = null, items, info = '', back = null }) {
+    this.menu(null);
+    let el = this.root.querySelector('.bpanel');
+    if (!el) { el = document.createElement('div'); this.root.appendChild(el); el.addEventListener('click', (e) => e.stopPropagation()); }
+    el.className = 'bpanel ' + cls;
+    el.innerHTML = `<div class="bp-head"><b>${esc(title)}</b></div>${tabs ? '<div class="bp-tabs"></div>' : ''}<div class="bp-list"></div><div class="bp-foot"><span class="bp-info"></span></div>`;
+    if (tabs) for (const t of tabs) el.querySelector('.bp-tabs').appendChild(this.button(t));
+    const list = el.querySelector('.bp-list');
+    if (items.length) for (const it of items) list.appendChild(this.button(it));
+    else list.innerHTML = '<div class="bp-empty">Hier ist nichts.</div>';
+    el.querySelector('.bp-info').textContent = info;
+    if (back) el.querySelector('.bp-foot').appendChild(this.button({ label: 'Zurück', cls: 'back', fn: back }));
+    $('battleText').textContent = title;
+    (list.querySelector('button:not(:disabled)') || el.querySelector('.back'))?.focus({ preventScroll: true });
+  }
+  hidePanel() { this.root.querySelector('.bpanel')?.classList.add('hidden'); }
   // Im Doppelkampf sammelt act() die Befehle für beide eigenen Pokémon und schickt sie zusammen
   act(a) {
     if (!this.state.double || a.type === 'switch' && this.state.state === 'switch') { this.menu(null); this.net.send({ t: 'battleAction', ...a }); return; }
@@ -369,12 +421,13 @@ export class BattleUI {
     const allEmpty = moves.every((m) => m.pp <= 0);
     const btns = moves.map((m, i) => ({
       cls: 'mv', color: this.m.typeColors[m.type],
-      html: `${m.name}<small>${typeBadge(m.type)}AP ${m.pp}/${m.maxPp} · ${m.power || '-'}</small>`,
+      html: `<span class="mv-name">${esc(m.name)}</span><small>${typeBadge(m.type)}<span>AP ${m.pp}/${m.maxPp}</span></small>`,
       disabled: m.pp <= 0 && !allEmpty,
       fn: () => this.chooseTarget(m, i)
     }));
-    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
-    this.menu(btns);
+    btns.push({ label: 'Zurück', cls: 'back', title: 'Zurück (X)', fn: () => this.mainMenu() });
+    this.menu(btns, 'moves');
+    $('battleMenu').querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
   }
   // Doppelkampf: bei zwei Gegnern das Ziel wählen (Flächenattacken und Statusattacken auf sich selbst nicht)
   chooseTarget(m, i) {
@@ -388,45 +441,61 @@ export class BattleUI {
     btns.push({ label: 'Zurück', cls: 'back', fn: () => this.moveMenu() });
     this.menu(btns);
   }
-  bagMenu() {
-    const btns = [];
-    if (this.state.kind !== 'trainer') {
-      for (const [k, n] of Object.entries(this.state.balls)) if (n > 0) btns.push({ html: `${itemIcon(k)}${ITEMS[k]?.name || k} x${n}`, disabled: !this.state.catchable || (this.state.double && this.slot !== this.ownSlots()[0]), fn: () => this.act({ type: 'ball', ball: k }) });
-    }
-    for (const [k, it] of Object.entries(this.state.bag || {})) {
-      btns.push({ html: `${itemIcon(k)}${it.name} x${it.count}`, color: it.kind === 'battle' ? '#a0522d' : '#3f8a7a', fn: () => (it.kind === 'battle' ? this.act({ type: 'item', item: k, index: 0 }) : this.itemTarget(k, it.name, it.pp)) });
-    }
-    $('battleText').textContent = !btns.length ? 'Dein Beutel ist leer.' : this.state.kind === 'trainer' ? 'Welchen Gegenstand?' : !this.state.catchable ? 'Dieses Pokémon kannst du nicht fangen.' : 'Welchen Gegenstand?';
-    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.mainMenu() });
-    this.menu(btns);
+  bagMenu(pocket = this.bagPocket) {
+    const s = this.state;
+    const own = { ...Object.fromEntries(Object.entries(s.balls || {}).filter(([, n]) => n > 0).map(([k, n]) => [k, { name: ITEMS[k]?.name || k, count: n, kind: 'ball' }])), ...(s.bag || {}) };
+    const ids = Object.keys(own);
+    this.bagPocket = pocket;
+    const rows = sortItems(ids.filter((k) => pocketOf(k) === pocket));
+    const noBalls = pocket === 'balls' && (s.kind === 'trainer' || !s.catchable || (s.double && this.slot !== this.ownSlots()[0]));
+    const items = rows.map((k) => {
+      const it = own[k];
+      const fn = pocketOf(k) === 'balls' ? () => this.act({ type: 'ball', ball: k })
+        : it.kind === 'battle' ? () => this.act({ type: 'item', item: k, index: 0 }) : () => this.itemTarget(k, it.name, it.pp);
+      return { cls: 'bp-item', html: `${itemIcon(k)}<span class="bp-name">${esc(it.name)}</span><b>x${it.count}</b>`, disabled: pocketOf(k) === 'balls' && noBalls, fn };
+    });
+    const info = noBalls ? (s.kind === 'trainer' ? 'Auf Pokémon anderer Trainer kannst du keine Bälle werfen.' : 'Dieses Pokémon kannst du nicht fangen.')
+      : !ids.length ? 'Dein Beutel ist leer.' : rows.length ? '' : 'Diese Tasche ist leer.';
+    this.showPanel({
+      title: 'Welchen Gegenstand?', cls: 'bp-bag', items, info, back: () => this.mainMenu(),
+      tabs: BATTLE_POCKETS.map(([k, l]) => ({ label: l, cls: 'bp-tab' + (k === pocket ? ' on' : '') + (ids.some((i) => pocketOf(i) === k) ? '' : ' empty'), fn: () => this.bagMenu(k) }))
+    });
+  }
+  partyButtons(fnFor, disabledFor, withStatus = false) {
+    return this.state.party.map((p, i) => {
+      const pct = p.alive ? Math.max(0, Math.round((p.hp / p.maxHp) * 100)) : 0;
+      const st = withStatus && p.status && STATUS[p.status] ? `<span class="st" style="background:${STATUS[p.status][1]}">${STATUS[p.status][0]}</span>` : '';
+      return {
+        cls: 'bp-mon' + (p.alive ? '' : ' dead') + (p.id === this.state.ally.id ? ' lead' : ''),
+        html: `<img src="${monsterIcon(p)}" alt=""><span class="bp-mn"><b>${p.alive ? '' : '† '}${esc(p.name)}</b><small>Lv${p.level}${st}</small></span>`
+          + `<span class="bp-hp"><span class="hpbar ${pct <= 20 ? 'low' : pct <= 50 ? 'mid' : ''}"><i style="width:${pct}%"></i></span><small>${p.alive ? p.hp : 0}/${p.maxHp}</small></span>`,
+        disabled: disabledFor(p), fn: () => fnFor(i)
+      };
+    });
   }
   itemTarget(item, name, pickMove) {
-    $('battleText').textContent = `${name}: Für welches Pokémon?`;
-    const btns = this.state.party.map((p, i) => ({
-      html: `${p.alive ? '' : '† '}${p.name} Lv${p.level}<small>${p.hp}/${p.maxHp}${p.status ? ' · ' + p.status.toUpperCase() : ''}</small>`, cls: 'mv',
-      disabled: !p.alive, fn: () => (pickMove ? this.itemMove(item, name, i) : this.act({ type: 'item', item, index: i }))
-    }));
-    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.bagMenu() });
-    this.menu(btns);
+    this.showPanel({
+      title: `${name}: Für welches Pokémon?`, cls: 'bp-party',
+      items: this.partyButtons((i) => (pickMove ? this.itemMove(item, name, i) : this.act({ type: 'item', item, index: i })), (p) => !p.alive, true),
+      back: () => this.bagMenu()
+    });
   }
   // Äther und Top-Äther: Attacke wählen
   itemMove(item, name, index) {
     const p = this.state.party[index];
-    $('battleText').textContent = `${name}: Welche Attacke?`;
-    const btns = (p.moves || []).map((m, j) => ({ html: `${m.name}<small>AP ${m.pp}/${m.maxPp}</small>`, cls: 'mv', fn: () => this.act({ type: 'item', item, index, moveIndex: j }) }));
-    btns.push({ label: 'Zurück', cls: 'back', fn: () => this.itemTarget(item, name, true) });
-    this.menu(btns);
+    this.showPanel({
+      title: `${name}: Welche Attacke?`, cls: 'bp-party',
+      items: (p.moves || []).map((m, j) => ({ cls: 'bp-item', html: `${typeBadge(m.type)}<span class="bp-name">${esc(m.name)}</span><b>AP ${m.pp}/${m.maxPp}</b>`, fn: () => this.act({ type: 'item', item, index, moveIndex: j }) })),
+      back: () => this.itemTarget(item, name, true)
+    });
   }
   partyMenu(forced, free = false) {
-    $('battleText').textContent = forced ? 'Welches Pokémon soll kämpfen?' : 'Pokémon wechseln';
     const busy = new Set([this.state.ally?.id, this.state.ally2?.id, ...(this.plan || []).filter((a) => a.type === 'switch').map((a) => this.state.party[a.index]?.id)]);
-    const btns = this.state.party.map((p, i) => ({
-      html: `${p.alive ? '' : '† '}${p.name} Lv${p.level}<small>${p.hp}/${p.maxHp}</small>`, cls: 'mv',
-      disabled: !p.alive || p.hp <= 0 || p.egg || busy.has(p.id),
-      fn: () => this.act(free ? { type: 'switch', index: i, free: true } : { type: 'switch', index: i, ...(forced && this.state.double ? { slot: this.state.pending?.[0] } : {}) })
-    }));
-    if (!forced) btns.push({ label: 'Zurück', cls: 'back', fn: () => (free ? this.shiftPrompt() : this.mainMenu()) });
-    this.menu(btns);
+    this.showPanel({
+      title: forced ? 'Welches Pokémon soll kämpfen?' : 'Pokémon wechseln', cls: 'bp-party',
+      items: this.partyButtons((i) => this.act(free ? { type: 'switch', index: i, free: true } : { type: 'switch', index: i, ...(forced && this.state.double ? { slot: this.state.pending?.[0] } : {}) }), (p) => !p.alive || p.hp <= 0 || p.egg || busy.has(p.id)),
+      back: forced ? null : () => (free ? this.shiftPrompt() : this.mainMenu())
+    });
   }
 }
 
