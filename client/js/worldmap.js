@@ -18,8 +18,11 @@ const CAVE_COLORS = { X: '#2a2420', O: '#4a4038' };
 function computeLayout() {
   const pos = {};
   const outdoor = Object.keys(MAPS).filter((id) => !MAPS[id].indoor);
-  pos[SPAWN.map] = { x: 0, y: 0 };
-  const queue = [SPAWN.map];
+  // Originalkarten (Matrix 0) liegen schon an ihrer echten Stelle in Sinnoh
+  const orig = outdoor.filter((id) => MAPS[id].orig?.m === 0);
+  for (const id of orig) pos[id] = { x: MAPS[id].orig.x, y: MAPS[id].orig.z };
+  if (!orig.length) pos[SPAWN.map] = { x: 0, y: 0 };
+  const queue = orig.length ? [...orig] : [SPAWN.map];
   while (queue.length) {
     const id = queue.shift(); const a = MAPS[id]; const p = pos[id];
     for (const [edge, c] of Object.entries(a.connections || {})) {

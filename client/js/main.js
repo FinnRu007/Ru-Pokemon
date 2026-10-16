@@ -299,7 +299,7 @@ function openMenu() {
 input.on('mute', () => toggleMute());
 input.on('freecam', () => toggleFreeCam());
 input.on('zoomIn', () => { if (freeCam) freeCam.zoom = Math.min(1, freeCam.zoom * 1.25); });
-input.on('zoomOut', () => { if (freeCam) freeCam.zoom = Math.max(0.08, freeCam.zoom / 1.25); });
+input.on('zoomOut', () => { if (freeCam) freeCam.zoom = Math.max(0.02, freeCam.zoom / 1.25); });
 $('freeCamBtn').onclick = () => toggleFreeCam();
 input.on('poketch', () => {
   if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;

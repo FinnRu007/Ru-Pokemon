@@ -12,6 +12,9 @@ import { overworldSheet } from './art/realSheets.js';
 import { fieldReady } from './art/realField.js';
 import { forestTile } from './art/realTiles.js';
 import { FIELD, fieldFlags } from '/shared/world.js';
+import { visibleNpcs } from '/shared/data/story.js';
+import { fieldObject } from './art/realField.js';
+import * as OV from './origView.js';
 
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
 const CLEARABLE = ['Q', 'Z', 'M'];
@@ -80,6 +83,7 @@ export class Renderer {
     if (!world.me) { g.fillStyle = '#000'; g.fillRect(0, 0, this.c.width, this.c.height); return; }
     const map = MAPS[world.me.map];
     const me = world.selfPos(now);
+    if (OV.origReady(map)) return this.drawOrig(world, map, me, now);
     const camX = me.x - (VIEW_W - 1) / 2;
     const camY = me.y - (VIEW_H - 1) / 2;
     const ox = Math.round(-camX * T); const oy = Math.round(-camY * T);
@@ -123,9 +127,103 @@ export class Renderer {
     }
   }
 
+  // Original-Oberwelt: Kartenteile aus Platin, Figuren auf ihrer Bodenhoehe, Verdeckung ueber die Tiefenkarte
+  drawOrig(world, map, me, now) {
+    const g = this.g; const T = this.T; const W = this.c.width; const H = this.c.height;
+    const o = map.orig; const m = o.m;
+    const gx = o.x + me.x, gz = o.z + me.y;
+    const h = OV.heightF(map, gx, gz);
+    const Ox = Math.round(W / 2 - (gx + 0.5) * 16 * S), Oy = Math.round(H / 2 - ((gz + 0.5) * 16 - OV.CY * h) * S);
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    OV.drawCells(g, m, Ox, Oy, S, W, H);
+    const ox = Ox + o.x * T, oy = Oy + o.z * T;
+    this.amb.drawGround(g, world.me.map, ox, oy, T, now);
+
+    // Figuren der eigenen und (Hauptmatrix) der Nachbarkarten im Bild
+    const ents = [];
+    const maps = new Set([world.me.map]);
+    if (m === 0 && MAPS._owner) for (let cy = (gz >> 5) - 1; cy <= (gz >> 5) + 1; cy++) for (let cx = (gx >> 5) - 1; cx <= (gx >> 5) + 1; cx++) {
+      const id = MAPS._owner[cy]?.[cx]; if (id && MAPS[id]?.orig) maps.add(id);
+    }
+    for (const id of maps) {
+      const mm = MAPS[id];
+      for (const n of id === world.me.map ? world.visibleNpcs() : visibleNpcs(id, this.flags)) ents.push({ kind: 'npc', o: n, p: { x: n.x, y: n.y, hop: 0 }, map: mm });
+    }
+    for (const other of world.others.values()) ents.push({ kind: 'player', o: other, p: world.otherPos(other, now), anim: other.anim, map });
+    ents.push({ kind: 'self', o: world.me, p: me, anim: world.anim, map });
+    // Feldhindernisse (Zerschneider-Baum, Felsen, Brocken) als Figuren
+    const open = openSet(fieldFlags(this.flags, this.party));
+    const OBJ = { Z: 'cut_tree', Q: 'rock_smash', M: 'strength_boulder' };
+    for (const id of maps) {
+      const mm = MAPS[id];
+      for (let y = Math.max(0, Math.floor(gz - mm.orig.z - 8)); y < Math.min(mm.height, gz - mm.orig.z + 10); y++) {
+        const row = mm.tiles[y];
+        for (let x = Math.max(0, Math.floor(gx - mm.orig.x - 9)); x < Math.min(mm.width, gx - mm.orig.x + 10); x++) {
+          const t = row[x];
+          if (OBJ[t] && !open.has(t)) ents.push({ kind: 'obj', o: { obj: OBJ[t] }, p: { x, y, hop: 0 }, map: mm });
+        }
+      }
+    }
+    for (const e of ents) {
+      e.gx = e.map.orig.x + e.p.x; e.gz = e.map.orig.z + e.p.y;
+      e.h = OV.heightF(map, e.gx, e.gz);
+      e.feetY = (e.gz + 1) * 16 - OV.CY * e.h;
+    }
+    ents.sort((a, b) => a.gz - b.gz);
+    for (const e of ents) {
+      e.ox = Ox + e.map.orig.x * T; e.oy = Math.round(Oy + e.map.orig.z * T - OV.CY * e.h * S);
+      e.orig = true;
+      let fw = 32;
+      if (e.kind === 'obj') {
+        const img = fieldObject(e.o.obj);
+        fw = img ? img.width : 16;
+        const sx = Math.round(e.ox + e.p.x * T + T / 2 - (fw / 2) * S), sy = Math.round(e.oy + (e.p.y + 1) * T - (img ? img.height : 16) * S);
+        if (img) g.drawImage(img, sx, sy, img.width * S, img.height * S);
+      } else {
+        e.tile = OV.tileAt(map, Math.round(e.gx), Math.round(e.gz));
+        this.drawEntity(e, e.map, e.ox, e.oy, now);
+        fw = e.fw || 20;
+        // Hohes Gras verdeckt die Fuesse
+        const a = e.anim; const half = a && e.p.t < 0.5;
+        const tx = e.map.orig.x + (half ? a.fromX : Math.round(e.p.x)), tz = e.map.orig.z + (half ? a.fromY : Math.round(e.p.y));
+        if (!e.p.hop && OV.tileAt(map, tx, tz) === '"') OV.drawTileBottom(g, m, Ox, Oy, tx, tz, OV.heightF(map, tx, tz));
+      }
+      const top = e.feetY - fw - (e.p.hop || 0) * 16 - 2;
+      OV.occlude(g, m, Ox, Oy, { x: (e.gx + 0.5) * 16 - fw / 2 - 1, y: top, w: fw + 2, h: e.feetY + 4 - top }, Math.round(e.gz));
+    }
+    this.amb.drawSky(g, map, world.me.map, W, H, now, { x: W / 2, y: H / 2 }, { ox, oy, T });
+    for (const e of ents) if (e.o.emote) {
+      const sx = Math.round(e.ox + e.p.x * T); const sy = Math.round(e.oy + (e.p.y - (e.p.hop || 0)) * T);
+      this.drawEmote(sx, sy + T - 20 * S - 6 - (e.kind === 'player' ? 20 : 0), e.o.emote);
+    }
+  }
+
+  // Freikamera auf der Originalwelt: ganz Sinnoh (Hauptmatrix) frei verschiebbar und zoombar
+  drawFreeOrig(world, cam, now) {
+    const g = this.g; const W = this.c.width; const H = this.c.height;
+    const k = S * cam.zoom; const T = 16 * k;
+    const Ox = W / 2 - cam.x * T, Oy = H / 2 - cam.y * T;
+    g.fillStyle = '#183058'; g.fillRect(0, 0, W, H);
+    OV.drawCells(g, 0, Ox, Oy, k, W, H);
+    const dots = [world.me, ...world.others.values()];
+    for (const pl of dots) {
+      const mm = pl && MAPS[pl.map];
+      if (!mm?.orig || mm.orig.m !== 0) continue;
+      const x = Ox + (mm.orig.x + pl.x + 0.5) * T; const y = Oy + (mm.orig.z + pl.y + 0.5) * T;
+      g.fillStyle = pl.color || '#e53935'; g.strokeStyle = '#fff'; g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, Math.max(5, T * 0.4), 0, Math.PI * 2); g.fill(); g.stroke();
+      this.drawLabel(pl.name, x, y - Math.max(8, T * 0.5) - 14);
+    }
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(W / 2 - 10, H / 2); g.lineTo(W / 2 + 10, H / 2); g.moveTo(W / 2, H / 2 - 10); g.lineTo(W / 2, H / 2 + 10); g.stroke();
+    const id = MAPS._owner?.[Math.floor(cam.y) >> 5]?.[Math.floor(cam.x) >> 5];
+    return id || null;
+  }
+
   // Freikamera: alle Aussenkarten an ihrer Lage auf der Weltkarte, frei verschiebbar und zoombar.
   // cam = { x, y, zoom } in Weltkacheln (Mitte des Bildes). Liefert die Karte unter der Bildmitte.
   drawFree(world, cam, now, layout) {
+    if (OV.origReady(MAPS[world.me?.map]) || (MAPS._owner && OV.matrixOf({ orig: { m: 0 } }))) return this.drawFreeOrig(world, cam, now);
     const g = this.g; const W = this.c.width; const H = this.c.height;
     const T = this.T * cam.zoom;
     const ox = W / 2 - cam.x * T; const oy = H / 2 - cam.y * T;
@@ -172,7 +270,7 @@ export class Renderer {
     if (o.look === 'item_ball') return this.drawItemBall(o, sx, sy);
     // Auf dem Wasser: Spieler reitet auf seinem Pokemon (Surfer), sonst Schatten
     const fx = Math.round(p.x); const fy = Math.round(p.y);
-    if (e.kind !== 'npc' && map.tiles[fy]?.[fx] === '~') this.drawSurfer(sx, Math.round(oy + p.y * T), now);
+    if (e.kind !== 'npc' && (e.tile ?? map.tiles[fy]?.[fx]) === '~') this.drawSurfer(sx, Math.round(oy + p.y * T), now);
     else {
       g.fillStyle = 'rgba(0,0,0,.22)';
       g.beginPath(); g.ellipse(sx + T / 2, Math.round(oy + p.y * T) + T - 5, T * 0.3, 5, 0, 0, Math.PI * 2); g.fill();
@@ -192,6 +290,7 @@ export class Renderer {
       headY = sy + T - (fw - 2) * S;
       g.drawImage(sheet, frameIdx * fw, row * fw, fw, fw, sx + T / 2 - (fw / 2) * S, headY, fw * S, fw * S);
       headY += Math.round(fw * 0.25 * S);
+      e.fw = fw;
     } else {
       const sheet = e.kind === 'npc' ? characterSheet(o.look || 'youngster') : (this.images.player || characterSheet(o.look || 'player', o.color));
       g.drawImage(sheet, frameIdx * 16, row * 20, 16, 20, sx, headY, 16 * S, 20 * S);
@@ -205,7 +304,7 @@ export class Renderer {
     // Hohes Gras verdeckt die Fuesse
     const tx = anim && p.t < 0.5 ? anim.fromX : Math.round(p.x);
     const ty = anim && p.t < 0.5 ? anim.fromY : Math.round(p.y);
-    if (!p.hop && map.tiles[ty]?.[tx] === '"') g.drawImage(this.tallOverlay, 0, 8, 16, 8, Math.round(ox + tx * T), Math.round(oy + ty * T) + T / 2, T, T / 2);
+    if (!e.orig && !p.hop && map.tiles[ty]?.[tx] === '"') g.drawImage(this.tallOverlay, 0, 8, 16, 8, Math.round(ox + tx * T), Math.round(oy + ty * T) + T / 2, T, T / 2);
 
     if (e.kind === 'player') this.drawLabel(o.name + (o.inBattle ? ' ⚔' : ''), sx + T / 2, headY - 3);
   }
