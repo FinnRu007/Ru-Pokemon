@@ -247,7 +247,7 @@ function client(name) {
       const hit = inbox.find(pred); if (hit) { inbox.splice(inbox.indexOf(hit), 1); return res(hit); }
       const w = { pred: (m) => { if (pred(m)) { inbox.splice(inbox.indexOf(m), 1); return true; } return false; }, res };
       waiters.push(w);
-      setTimeout(() => rej(new Error('Timeout beim Warten in ' + name)), ms);
+      setTimeout(() => rej(new Error('Timeout beim Warten in ' + name + (process.env.DBG ? ': ' + pred.toString() + ' letzte: ' + JSON.stringify(inbox.slice(-3)).slice(0, 600) : ''))), ms);
     }),
     open: new Promise((r) => ws.once('open', r))
   };
@@ -537,7 +537,7 @@ function beforeTrigger(map, script) {
   for (let y = t.y; y < t.y + t.h; y++) for (let x = t.x; x < t.x + t.w; x++) for (const [d, [dx, dy]] of Object.entries(DV)) {
     const ox = x - dx, oy = y - dy;
     if (ox >= t.x && ox < t.x + t.w && oy >= t.y && oy < t.y + t.h) continue;
-    if (isStandable(MAPS, map, ox, oy) && !story.npcAt(map, ox, oy, {})) return [ox, oy, d];
+    if (isStandable(MAPS, map, x, y) && isStandable(MAPS, map, ox, oy) && !story.npcAt(map, ox, oy, {})) return [ox, oy, d];
   }
   throw new Error('kein Feld vor ' + script);
 }
@@ -596,7 +596,7 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   assert.equal(s.party[0].speciesId, 393);
   assert.equal(s.player.items['poke-ball'] || 0, 0);
   // Labor: Pokedex und Baelle
-  tp('sandgem_lab', 6, 9); await step('up');
+  { const [lx, ly, ld] = beforeTrigger('sandgem_lab', 'lab'); tp('sandgem_lab', lx, ly); await step(ld); }
   await a.wait((m) => m.t === 'progress' && m.flags.lab_done, 8000);
   assert.equal(s.player.items['poke-ball'], 5);
   // Trainer Tim schaut in eine Richtung: ein Schritt in seine Sichtlinie startet den Kampf
@@ -610,7 +610,7 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   await a.wait((m) => m.t === 'progress' && m.flags.beat_youngster_tim);
   assert.ok(s.player.money > 3000);
   // Markt: kaufen mit Geld
-  tp('sandgem_mart', 2, 3); s.player.dir = 'left'; a.send({ t: 'interact' });
+  { const c = story.NPCS.sandgem_mart.find((n) => n.look === 'clerk'); tp('sandgem_mart', c.x + 2, c.y); } s.player.dir = 'left'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'shop');
   const before = s.player.money;
   a.send({ t: 'buy', item: 'potion', count: 2 });
@@ -638,7 +638,10 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
   let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); return a.wait((m) => m.t === 'moveAck' && m.seq === seq); };
   // Felsbrocken: ohne Zertruemmerer blockiert, mit frei
-  tp('ravaged_path', 43, 4);
+  // Ein Felsbrocken mit freiem Feld darunter
+  const rp = MAPS.ravaged_path; let rx = 0, ry = 0;
+  for (let y = 0; y < rp.height - 1 && !rx; y++) for (let x = 0; x < rp.width; x++) if (rp.tiles[y][x] === 'Q' && isStandable(MAPS, 'ravaged_path', x, y + 1)) { rx = x; ry = y + 1; break; }
+  tp('ravaged_path', rx, ry);
   assert.equal((await step('up')).ok, false);
   s.player.flags.hm_rocksmash = true;
   // Feldattacke braucht Orden und ein Pokémon, das sie beherrscht
@@ -676,7 +679,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await a.wait((m) => m.t === 'notice' && /geschlüpft/.test(m.text), 5000);
   assert.ok(s.party.some((p) => p.speciesId === 447 && !p.egg && p.level === 1 && p.hp > 0));
   // Seehöhle: nach der Speersäule wartet Selfe
-  await sleep(100); tp('acuity_cavern', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await sleep(100); { const u = story.NPCS.acuity_cavern.find((n) => n.id === 'uxie'); tp('acuity_cavern', u.x, u.y + 1); } s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 480, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.met_uxie, 30000);
   // Liga: Eingang setzt die Top Vier zurueck, die Ruhmeshalle macht zum Champ
@@ -698,7 +701,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 485, 8000);
   await a.wait((m) => m.t === 'progress' && m.flags.met_heatran, 30000);
   // Vesprit flieht und wandert, im Kampf flieht es sofort wieder
-  await sleep(100); tp('verity_cavern', 7, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await sleep(100); { const u = story.NPCS.verity_cavern.find((n) => n.id === 'mesprit'); tp('verity_cavern', u.x, u.y + 1); } s.player.dir = 'up'; a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.met_mesprit, 8000);
   assert.ok(s.player.roamers?.[481]?.map, 'Vesprit wandert');
   // Regigigas erwacht nur mit den drei Titanen im Team

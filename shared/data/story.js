@@ -378,7 +378,7 @@ for (const [m, list] of Object.entries(FIELD_ITEMS)) {
 applyStory8({ TRAINERS, SCRIPTS, NPCS, TRIGGERS });
 applyStory9({ SCRIPTS, NPCS, TRIGGERS });
 // Auf die Originalkarten umrechnen (origLayout.js, feste Stellen in origFix.js)
-applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, fixes: ORIG_FIX }, MAPS);
+applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORIG_FIX }, MAPS);
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

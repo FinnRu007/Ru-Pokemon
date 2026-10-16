@@ -383,10 +383,17 @@ export class GameServer {
   interact(s) {
     if (s.battle || s.script) return;
     const p = s.player;
-    const f = facingTile(p.x, p.y, p.dir);
-    if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
     const map = MAPS[p.map];
-    const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y);
+    let f = facingTile(p.x, p.y, p.dir);
+    // Ueber eine Theke hinweg reden (Verkaeufer, Pflegerin) wie im Original
+    const beh = map.orig?.beh;
+    const counter = beh && beh[f.y * map.width + f.x] === 0x80 && !map.events.some((e) => e.x === f.x && e.y === f.y);
+    if (counter) f = facingTile(f.x, f.y, p.dir);
+    const near = (e) => Math.abs(e.x - f.x) + Math.abs(e.y - f.y) <= 1 && (e.type === 'shop' || e.type === 'heal');
+    const desk = counter && map.events.find(near);
+    if (desk) return desk.type === 'heal' ? this.healAt(s, desk) : this.openShop(s, desk);
+    if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
+    const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y) || null;
     if (!ev) return;
     if (ev.type === 'heal') return this.healAt(s, ev);
     if (ev.type === 'shop') return this.openShop(s, ev);

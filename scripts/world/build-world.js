@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readLandData, cellTris, renderCell, groundHeights, parseNsbmd, resolveTextures, parseTex0, ROW_BIAS } from './render.js';
+import { readLandData, cellTris, renderCell, groundHeights, groundCover, parseNsbmd, resolveTextures, parseTex0, ROW_BIAS } from './render.js';
 import { encodePNG } from './png.js';
 import { ORIG_SPEC } from '../../shared/data/origSpec.js';
 
@@ -209,9 +209,20 @@ export async function buildWorld({ log = console.log } = {}) {
       if (spec.m === 0) (owner[`${cx},${cy}`] = id);
       const c = cellInfo[`${spec.m},${cx},${cy}`];
       const perms = LAND[c.land].perms;
+      const cov = spec.indoor ? groundCover(LAND[c.land]) : null;
+      // Treppen und Moebel gehoeren nicht zum Bodenmodell: begehbare Kacheln direkt daneben zaehlen mit
+      if (cov) for (let pass = 0; pass < 2; pass++) {
+        const add = [];
+        for (let i = 0; i < 1024; i++) {
+          if (cov[i] || (perms[i] & 0x8000)) continue;
+          const x = i & 31, y = i >> 5;
+          if ((x > 0 && cov[i - 1]) || (x < 31 && cov[i + 1]) || (y > 0 && cov[i - 32]) || (y < 31 && cov[i + 32])) add.push(i);
+        }
+        for (const i of add) cov[i] = 1;
+      }
       for (let ty = 0; ty < 32; ty++) for (let tx = 0; tx < 32; tx++) {
         const gx = (cx - x0) * 32 + tx, gy = (cy - y0) * 32 + ty;
-        grid[gy][gx] = tileChar(perms[ty * 32 + tx]);
+        grid[gy][gx] = cov && !cov[ty * 32 + tx] ? ' ' : tileChar(perms[ty * 32 + tx]);
         beh[gy * W + gx] = perms[ty * 32 + tx] & 0xff;
         hgt[gy * W + gx] = Math.round(c.heights[ty * 32 + tx]);
       }

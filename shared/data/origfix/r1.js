@@ -10,6 +10,8 @@ const SEA = [slot(72, 20, 30, 60), slot(278, 20, 30, 30), slot(73, 20, 40, 9), s
 const LAKE = [slot(54, 20, 30, 90), slot(55, 20, 40, 10)];
 
 export const FIX = {
+  // Barry wartet im Zimmer neben der Treppe (die Originalstelle liegt hinter dem Treppengelaender)
+  twinleaf_home_2f: { barry_room: [8, 6, 'left'] },
   // Rivale vor dem Ausgang nach Route 201, Ausloeser wie in Platin am Ortsausgang
   route_201: {
     barry_201: [16, 23, 'down'],

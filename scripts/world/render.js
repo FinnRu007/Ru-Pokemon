@@ -70,6 +70,28 @@ export function renderCell(tris) {
   return { w, h, ox: minX, oy: minY, color: cv.data, rows };
 }
 
+// Welche Kacheln das Bodenmodell ueberhaupt abdeckt (Innenraeume: ausserhalb des Raums ist nichts)
+export function groundCover(land) {
+  const cov = new Uint8Array(1024);
+  if (!land.model) return cov;
+  const g = parseNsbmd(land.model);
+  for (const t of g.tris) {
+    const P = t.v.map(([x, , z]) => [x + 256, z + 256]);
+    const area = (P[1][0] - P[0][0]) * (P[2][1] - P[0][1]) - (P[2][0] - P[0][0]) * (P[1][1] - P[0][1]);
+    if (Math.abs(area) < 1e-6) continue;
+    const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]);
+    for (let tz = Math.max(0, Math.floor(Math.min(...zs) / 16)); tz <= Math.min(31, Math.floor(Math.max(...zs) / 16)); tz++) {
+      for (let tx = Math.max(0, Math.floor(Math.min(...xs) / 16)); tx <= Math.min(31, Math.floor(Math.max(...xs) / 16)); tx++) {
+        const px = tx * 16 + 8, pz = tz * 16 + 8;
+        const w0 = ((P[1][0] - px) * (P[2][1] - pz) - (P[2][0] - px) * (P[1][1] - pz)) / area;
+        const w1 = ((P[2][0] - px) * (P[0][1] - pz) - (P[0][0] - px) * (P[2][1] - pz)) / area;
+        if (w0 >= -0.01 && w1 >= -0.01 && 1 - w0 - w1 >= -0.01) cov[tz * 32 + tx] = 1;
+      }
+    }
+  }
+  return cov;
+}
+
 // Hoehe des Bodens je Kachel aus den BDHC-Daten (Ebenen mit Ebenengleichung, wie das Spiel sie fuer
 // Figuren nutzt). Liegen mehrere Ebenen uebereinander (Bruecken), zaehlt die hoechste.
 export function groundHeights(land, altitude) {

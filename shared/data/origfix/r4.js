@@ -66,7 +66,11 @@ export const FIX = {
   // ------------------------------------------------------------ Sonnewik: Jasmin auf dem Aussichtsfelsen
   sunyshore_city: {
     jasmine: [25, 5, 'right'],
-    ball_sunyshore_city_0: [49, 43]
+    // Ignaz steht direkt vor der Arenatuer
+    flint_sun: [13, 12, 'down'],
+    ball_sunyshore_city_0: [49, 43],
+    // stand oben auf der Kraxelwand vor dem Haus im Osten
+    sun_kid: [52, 36, 'right']
   },
   // ------------------------------------------------------------ Route 223 (Schwimmer Gabrielle, Troy, Cassandra)
   route_223: {

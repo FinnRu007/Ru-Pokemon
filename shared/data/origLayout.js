@@ -16,6 +16,19 @@ export const ORIG_ON = !!W;
 
 const SOLID = new Set([' ', '#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O', 'Q', 'Z', 'M', 'N', 'J', 'D', 'C', 'G', 'U', 'L', '<', '>', '^']);
 const DIRV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const ODIR = ['up', 'down', 'left', 'right']; // initial_dir der Original-Figuren
+// Figuren unseres Spiels (look) zu Grafiken der Original-Figuren, fuer Innenraeume
+const LOOK_GFX = {
+  nurse: /^POKECENTER_NURSE$/, clerk: /^(CASHIER_[MF]|CLERK.*)$/, rival: /^BARRY$/, prof: /^PROF_ROWAN$/, mom: /^MOM$/,
+  oldman: /^OLD_MAN$/, scientist: /^SCIENTIST_[MF]$/, police: /^POLICEMAN$/, worker: /^WORKER$/, lass: /^LASS$/,
+  youngster: /^YOUNGSTER$/, hiker: /^HIKER$/, girl: /^(TWIN|SCHOOL_KID_F|LASS)$/, boy: /^(SCHOOL_KID_M|YOUNGSTER|BOY)$/,
+  grunt: /^GRUNT_[MF]$/
+};
+function gfxMatch(n, g) {
+  if (!g) return false;
+  const re = LOOK_GFX[n.look];
+  return (re && re.test(g)) || g.toLowerCase() === n.look || g.toLowerCase() === n.id;
+}
 const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
 // Kachelverhalten der Warp-Felder (pret: MB_WARP_*)
 const OFF_DIR = { 0x6c: 'right', 0x6d: 'left', 0x6e: 'up', 0x6f: 'down' };
@@ -245,7 +258,9 @@ export function applyOrigMaps(MAPS) {
   for (const [id, list] of Object.entries(ents)) {
     const map = MAPS[id];
     list.forEach((g, gi) => {
-      const dest = g.dest;
+      let dest = g.dest;
+      // Ziel-Header ohne eigene Karte (z. B. Liga-Gelaende aus zwei Feldern): die Karte, deren Tuer hierher fuehrt
+      if (!dest && ORIG_SPEC[id]?.indoor) dest = Object.keys(ents).find((mid) => mid !== id && ents[mid].some((x) => x.dest === id)) || null;
       let target = null; // { to, tx, ty, dir }
       if (dest && migrated(dest)) {
         const t = g.tiles[0];
@@ -280,10 +295,25 @@ export function applyOrigMaps(MAPS) {
     });
   }
 
+  // ------------------------------------------------------------ Feste Umleitungen (origFix.js, _retarget)
+  for (const [k, v] of Object.entries(ORIG_FIX._retarget || {})) {
+    const [from, to] = k.split('>');
+    for (const w of MAPS[from]?.warps || []) {
+      if (w.to !== to) continue;
+      if (v[1] === 'entrance') {
+        const g = (ents[v[0]] || []).find((e) => e.dest === from && e.target);
+        if (!g) continue;
+        const a = arrival(g.tiles[Math.floor((g.tiles.length - 1) / 2)]);
+        Object.assign(w, { to: v[0], tx: a.x, ty: a.y, dir: a.dir, fixed: true });
+      } else Object.assign(w, { to: v[0], tx: v[1], ty: v[2], dir: v[3] || w.dir, fixed: true });
+    }
+  }
+
   // ------------------------------------------------------------ Warps alter Raeume zurueck auf die Originalkarten
   for (const [rid, room] of Object.entries(MAPS)) {
     if (room.orig) continue;
     for (const w of room.warps || []) {
+      if (w.fixed) { delete w.fixed; continue; }
       if (!migrated(w.to)) continue;
       const list = ents[w.to] || [];
       // Passenden Eingang finden: gleicher Raum als Ziel, bei mehreren der naechste zur alten Lage
@@ -312,20 +342,6 @@ export function applyOrigMaps(MAPS) {
     }
   }
 
-  // ------------------------------------------------------------ Feste Umleitungen (origFix.js, _retarget)
-  for (const [k, v] of Object.entries(ORIG_FIX._retarget || {})) {
-    const [from, to] = k.split('>');
-    for (const w of MAPS[from]?.warps || []) {
-      if (w.to !== to) continue;
-      if (v[1] === 'entrance') {
-        const g = (ents[v[0]] || []).find((e) => e.dest === from && e.target);
-        if (!g) continue;
-        const a = arrival(g.tiles[Math.floor((g.tiles.length - 1) / 2)]);
-        Object.assign(w, { to: v[0], tx: a.x, ty: a.y, dir: a.dir });
-      } else Object.assign(w, { to: v[0], tx: v[1], ty: v[2], dir: v[3] || w.dir });
-    }
-  }
-
   // Feste Durchgaenge und Kacheln in eigenen Raeumen, Kartenfelder (origFix.js)
   for (const l of ORIG_FIX._links || []) {
     if (l[0] === 'tile' && MAPS[l[1]]) setTile(MAPS[l[1]], l[2], l[3], l[4]);
@@ -350,6 +366,16 @@ export function applyOrigMaps(MAPS) {
         const s = (free.length ? free : signs).reduce((b, c) => (dist(c, [px, py]) < dist(b, [px, py]) ? c : b));
         used.add(s.join());
         return { ...e, x: s[0], y: s[1] };
+      }
+      // Pflegerin und Kasse: auf der Theke vor der Original-Figur
+      if (map.indoor && (e.type === 'heal' || e.type === 'shop')) {
+        const re = e.type === 'heal' ? /^POKECENTER_NURSE$/ : /^CASHIER_[MF]$/;
+        const ob = map.orig.objects.find((ob) => re.test(ob.g) && !used.has('o' + ob.id));
+        if (ob) {
+          used.add('o' + ob.id);
+          const [dx, dy] = DIRV[ODIR[ob.dir] || 'down'];
+          return { ...e, x: ob.x + dx, y: ob.y + dy };
+        }
       }
       const [x, y] = R.pt(e.x, e.y);
       return { ...e, x, y };
@@ -434,10 +460,19 @@ export function applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns = [], fixes = {
     const R = REMAP[id];
     const fx = fixes[id] || {};
     const avoid = new Set();
+    const map = MAPS[id]; const usedObj = new Set();
     NPCS[id] = list.filter((n) => {
       const f = fx[n.id];
       if (f === null) return false;
       if (n._fixed) { delete n._fixed; avoid.add(`${n.x},${n.y}`); return true; }
+      // Innenraeume: Figur auf den Platz der passenden Original-Figur (Pflegerin, Verkaeufer, Mutter ...)
+      const ob = !f && R && map?.indoor && map.orig?.objects.find((o) => !usedObj.has(o) && gfxMatch(n, o.g));
+      if (ob) {
+        usedObj.add(ob); n.x = ob.x; n.y = ob.y; n.dir = ODIR[ob.dir] || n.dir;
+        if (n.path) delete n.path;
+        avoid.add(`${n.x},${n.y}`);
+        return true;
+      }
       if (Array.isArray(f)) { [n.x, n.y] = f; if (f[2]) n.dir = f[2]; } else if (f) { Object.assign(n, f); } else if (R) [n.x, n.y] = R.pt(n.x, n.y, { avoid });
       if (R && n.path) n.path = n.path.map(([x, y]) => R.pt(x, y));
       avoid.add(`${n.x},${n.y}`);
