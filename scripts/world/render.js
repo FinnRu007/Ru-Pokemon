@@ -35,7 +35,7 @@ export function cellTris(land, altitude, mapTex, propTex, propModel) {
   const dy = altitude * 8;
   if (land.model) {
     const g = parseNsbmd(land.model);
-    resolveTextures(g, mapTex);
+    resolveTextures(g, ...[].concat(mapTex));
     for (const t of g.tris) tris.push({ ...t, v: t.v.map(([x, y, z]) => [x + 256, y + dy, z + 256]), ground: true });
   }
   for (const p of land.props) {

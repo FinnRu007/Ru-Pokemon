@@ -204,6 +204,14 @@ export class Renderer {
     const k = S * cam.zoom; const T = 16 * k;
     const Ox = W / 2 - cam.x * T, Oy = H / 2 - cam.y * T;
     g.fillStyle = '#183058'; g.fillRect(0, 0, W, H);
+    // Felder ohne Karte mitten im Land (im Spiel nie zu sehen) als Wald fuellen
+    const M = OV.matrixOf({ orig: { m: 0 } });
+    g.fillStyle = '#2f5a34';
+    for (let cy = 1; cy < M.h - 1; cy++) for (let cx = 1; cx < M.w - 1; cx++) {
+      if (M.cells[cy][cx]) continue;
+      const n = [[0, 1], [1, 0], [0, -1], [-1, 0]].filter(([a, b]) => M.cells[cy + b][cx + a]).length;
+      if (n >= 3) g.fillRect(Math.floor(Ox + cx * 512 * k), Math.floor(Oy + cy * 512 * k), Math.ceil(512 * k) + 1, Math.ceil(512 * k) + 1);
+    }
     OV.drawCells(g, 0, Ox, Oy, k, W, H);
     const dots = [world.me, ...world.others.values()];
     for (const pl of dots) {

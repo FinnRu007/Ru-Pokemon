@@ -380,8 +380,10 @@ export function applyOrigMaps(MAPS) {
 
 // Flugziel: vor der Tuer des Pokemon-Centers, sonst der umgerechnete Punkt
 function flyPoint(map, p) {
-  const c = (map.warps || []).find((w) => /_center$/.test(w.to) && !w.off);
+  // In der Pokemon Liga liegt das Center im Hauptgebaeude, in Zweiblattdorf landet man vor dem eigenen Haus
+  const c = (map.warps || []).find((w) => /_center$|^league_lobby$|^twinleaf_home_1f$/.test(w.to) && (!w.off || w.off === 'up'));
   if (c && standable(map, c.x, c.y + 1)) return [c.x, c.y + 1];
+  if (c?.off && standable(map, c.x, c.y)) return [c.x, c.y];
   return snap(map, p[0], p[1]);
 }
 
