@@ -326,7 +326,7 @@ export const SCRIPTS = {
     { flag: 'rival2' }
   ],
   gymBlocked: [
-    ['Arenaberater', 'Moment! Veit ist gerade gar nicht in der Arena. Er arbeitet unten in der Erzelingen-Mine, südlich der Stadt.'],
+    ['Arenaberater', 'Moment! Veit ist gerade gar nicht in der Arena. Er arbeitet unten in der Erzelingen-Mine. Der Eingang liegt ganz im Süden der Stadt, hinter der Kohlegrube.'],
     { back: true }
   ],
   gymGuide: [
@@ -373,7 +373,7 @@ for (const [m, list] of Object.entries(FIELD_ITEMS)) {
 
 // Begleiter, Doppelkämpfe, Wanderer, Kampfturm und restliche Kampfzone (story8.js)
 applyStory8({ TRAINERS, SCRIPTS, NPCS, TRIGGERS });
-applyStory9({ SCRIPTS, NPCS });
+applyStory9({ SCRIPTS, NPCS, TRIGGERS });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

@@ -193,8 +193,8 @@ export const TRIGGERS2 = {
   jubilife_city: [{ x: 31, y: 12, w: 1, h: 3, when: '!grunts_jub', script: 'jubEast' }],
   oreburgh_city: [{ x: 22, y: 7, w: 1, h: 1, when: ['badge_coal', '!barry_ore'], script: 'barryOre' }],
   route_205_south: [{ x: 18, y: 4, w: 3, h: 1, when: '!windworks_done', script: 'grunt205' }],
-  eterna_city: [{ x: 15, y: 26, w: 4, h: 1, when: '!bike', script: 'needBike' }],
-  route_207: [{ x: 3, y: 6, w: 1, h: 2, when: '!bike', script: 'bikeSlope' }],
+  eterna_city: [{ x: 15, y: 26, w: 4, h: 1, when: '!riding', script: 'needBike' }],
+  route_207: [{ x: 3, y: 6, w: 1, h: 2, when: '!riding', script: 'bikeSlope' }],
   mt_coronet: [{ x: 24, y: 3, w: 1, h: 1, when: '!galactic_hq_done', script: 'coronetTop' }]
 };
 
@@ -225,10 +225,10 @@ export const SCRIPTS2 = {
     { flag: 'hm_cut' },
     ['Cynthia', 'Pass gut auf deine Pokémon auf. Wir sehen uns bestimmt wieder.']
   ],
-  bikeShop: gift('bike', [['Radladenbesitzer', 'Du hast mich gerettet! Als Dank bekommst du mein bestes Fahrrad. Ganz umsonst!'], [null, 'Du erhältst das Fahrrad! Damit kommst du über den Radweg und steile Hänge hinauf.']],
+  bikeShop: gift('bike', [['Radladenbesitzer', 'Du hast mich gerettet! Als Dank bekommst du mein bestes Fahrrad. Ganz umsonst!'], { give: 'bicycle' }, [null, 'Mit dem Fahrrad kommst du über den Radweg und steile Hänge hinauf. Aufsteigen: im Beutel bei Basis-Items oder mit der Taste R.']],
     [['Radladenbesitzer', 'Wie fährt sich das Rad? Über den Radweg im Süden kommst du zum Kraterberg.']]),
-  needBike: [['Radwegwächter', 'Ab hier beginnt der Radweg. Ohne Fahrrad darf hier niemand durch!'], { back: true }],
-  bikeSlope: [[null, 'Der Hang ist steil und schlammig. Zu Fuß rutschst du immer wieder ab. Mit einem Fahrrad käme man hinauf.'], { back: true }],
+  needBike: [{ if: 'bike', then: [['Radwegwächter', 'Ab hier beginnt der Radweg. Zu Fuß darf hier niemand durch! Steig auf dein Fahrrad (Taste R).']], else: [['Radwegwächter', 'Ab hier beginnt der Radweg. Ohne Fahrrad darf hier niemand durch!']] }, { back: true }],
+  bikeSlope: [{ if: 'bike', then: [[null, 'Der Hang ist steil und schlammig. Zu Fuß rutschst du ab. Mit dem Fahrrad (Taste R) und Schwung käme man hinauf.']], else: [[null, 'Der Hang ist steil und schlammig. Zu Fuß rutschst du immer wieder ab. Mit einem Fahrrad käme man hinauf.']] }, { back: true }],
   coronetTop: [[null, 'Eine uralte Treppe führt nach oben. Eine seltsame, kalte Kraft hält dich zurück. Noch ist es nicht so weit.'], { back: true }],
   guideForest: [{ if: '!badge_forest', then: [['Arenaberater', 'Silvana setzt auf Pflanzen-Pokémon. Feuer, Eis, Flug, Gift und Käfer sind hier deine Freunde!']],
     else: [['Arenaberater', 'Der Waldorden! Glückwunsch, Champion in spe!']] }]

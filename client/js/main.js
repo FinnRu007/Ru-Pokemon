@@ -42,7 +42,7 @@ new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { updateLock(); flushDialogs(); if (world.me) audio.music(musicForMap(world.me.map, MAPS[world.me.map]), trackForMap(world.me.map, MAPS[world.me.map])); },
+  onEnd: () => { updateLock(); flushDialogs(); if (world.me) playMapMusic(); },
   onLearnPrompt: (ev) => learnQueue.push(ev),
   terrain: () => world.me && terrainFor(world.me.map, MAPS[world.me.map])
 });
@@ -108,7 +108,7 @@ net.on('welcome', (m) => {
   try { localStorage.setItem('platin.session', JSON.stringify({ token: m.token, name: m.player.name })); } catch { /* privat */ }
   net.helloMsg = { t: 'hello', token: m.token };
   $('login').classList.add('hidden');
-  world.walkMs = m.walkMs; world.runMs = m.runMs;
+  world.walkMs = m.walkMs; world.runMs = m.runMs; if (m.bikeMs) world.bikeMs = m.bikeMs;
   world.setSelf(m.player);
   world.setOthers(m.players);
   worldMap.setPlayer(m.player.name);
@@ -146,7 +146,7 @@ world.onBump = () => audio.sfx('bump');
 function enterMap(mapId, fromServer) {
   showMapName(mapId);
   worldMap.visit(mapId);
-  if (!battle.active) audio.music(musicForMap(mapId, MAPS[mapId]), trackForMap(mapId, MAPS[mapId]));
+  if (!battle.active) playMapMusic(mapId);
   drawMinimap(true);
 }
 net.on('playerJoined', (m) => { if (m.player.map === world.me?.map) { world.addOther(m.player); hud.log(`${m.player.name} ist hier.`); } });
@@ -182,7 +182,7 @@ net.on('battleStart', (m) => { world.locked = true; world.anim = null; battle.st
 // Story: Dialoge vom Server. Waehrend eines Kampfes warten sie, bis der Kampfbildschirm zu ist.
 net.on('dialog', (m) => { pendingDialogs.push(m); flushDialogs(); });
 net.on('script', (m) => { scriptActive = m.active; updateLock(); });
-net.on('progress', (m) => { world.flags = m.flags || {}; hud.setProgress(m); menu.refresh(); });
+net.on('progress', (m) => { const wasRiding = !!world.flags?.riding; world.flags = m.flags || {}; if (wasRiding !== !!world.flags.riding && world.me && !battle.active) playMapMusic(); hud.setProgress(m); menu.refresh(); });
 net.on('npcEmote', (m) => { world.emote(m.id); audio.sfx('exclaim'); });
 net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
@@ -277,6 +277,13 @@ hud.onOpenItem = (k) => {
   if (mapOpen) toggleMap(false);
   menu.openItem(k); updateLock();
 };
+// Kartenmusik, auf dem Fahrrad wie in Platin die Fahrradmusik (nicht auf Wasser und in Höhlen)
+function playMapMusic(mapId = world.me?.map) {
+  if (!mapId) return;
+  const map = MAPS[mapId];
+  if (world.flags?.riding && !map.indoor) return audio.music('bicycle', 'Bicycle');
+  audio.music(musicForMap(mapId, map), trackForMap(mapId, map));
+}
 function openMenu() {
   if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;
   if (mapOpen) toggleMap(false);
@@ -287,6 +294,13 @@ input.on('freecam', () => toggleFreeCam());
 input.on('zoomIn', () => { if (freeCam) freeCam.zoom = Math.min(1, freeCam.zoom * 1.25); });
 input.on('zoomOut', () => { if (freeCam) freeCam.zoom = Math.max(0.08, freeCam.zoom / 1.25); });
 $('freeCamBtn').onclick = () => toggleFreeCam();
+input.on('poketch', () => {
+  if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;
+  if (mapOpen) toggleMap(false);
+  menu.openPoketch(); updateLock();
+});
+net.on('poketch', (m) => menu.onPoketch(m));
+input.on('bike', () => { if (world.me && !battle.active && !menu.isOpen && !dialog.open && !scriptActive) net.send({ t: 'bike' }); });
 input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };

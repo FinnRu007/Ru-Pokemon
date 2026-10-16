@@ -12,6 +12,7 @@ import { options, setOption, OPTION_DEFS, textStep } from './options.js';
 import { audio } from './audio.js';
 import { RIBBONS } from '/shared/data/ribbons.js';
 import { layout } from './worldmap.js';
+import { poketchScreen } from './poketch.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,6 +57,12 @@ export class GameMenu {
     this.push(this.bagScreen({ pocket }));
     this.useBagItem(k);
   }
+  openPoketch() {
+    if (!this.flags.poketch) return;
+    if (!this.isOpen) audio.sfx('start');
+    this.push(poketchScreen(this));
+  }
+  onPoketch(d) { this.stack[this.stack.length - 1]?.onData?.(d); }
   open() { if (!this.isOpen) { audio.sfx('start'); this.push(this.startScreen()); } }
   push(screen) { this.stack.push(screen); this.root.classList.remove('hidden'); this.render(); }
   replace(screen) { this.stack[this.stack.length - 1] = screen; this.render(); }
@@ -172,6 +179,7 @@ export class GameMenu {
       this.flags.dex && ['dex', 'Pokédex', 'ic-dex'],
       this.party.length && ['party', 'Pokémon', 'ic-ball'],
       ['bag', 'Beutel', 'ic-bag'],
+      this.flags.poketch && ['poketch', 'Pokétch', 'ic-poketch'],
       ['card', esc(this.me?.name || 'Trainer'), 'ic-card'],
       ['save', 'Speichern', 'ic-save'],
       ['options', 'Optionen', 'ic-opt'],
@@ -188,6 +196,7 @@ export class GameMenu {
     if (k === 'dex') return this.push(this.dexScreen());
     if (k === 'party') return this.push(this.partyScreen());
     if (k === 'bag') return this.push(this.bagScreen());
+    if (k === 'poketch') return this.push(poketchScreen(this));
     if (k === 'card') return this.push(this.cardScreen());
     if (k === 'save') return this.push(this.saveScreen());
     if (k === 'options') return this.push(this.optionsScreen());
@@ -491,6 +500,7 @@ export class GameMenu {
       return this.push(this.partyScreen({ title: `${it.name} welchem Pokémon geben?`, label: (p) => (p.egg ? 'Unmöglich' : p.item ? 'Trägt etwas' : ''), onPick: async (mon) => { if (mon.egg) return this.say('Ein Ei kann nichts tragen.'); await this.giveItem(mon, k); } }));
     }
     if (c !== 0) return;
+    if (it.bike) { this.ctx.net.send({ t: 'bike' }); this.close(); return; }
     if (it.kind === 'tm') return this.teachTm(k);
     // Schutz und Fluchtseil wirken ohne Pokemon
     if (it.repel || it.rope) {

@@ -303,3 +303,23 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .lvstats { position: absolute; right: 12px; top: 12px; z-index: 60; min-width: 200px; padding: 10px 14px; background: #fafaf2; color: #2a2f45; border: 3px solid #3d4a6b; border-radius: 10px; box-shadow: 0 4px 0 rgba(0,0,0,.25); cursor: pointer; font-size: 14px; }
 .lvstats div { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; }
 .lvstats b { min-width: 36px; text-align: right; }
+.ic-poketch { background: linear-gradient(#e04040 30%, #9cc88c 30% 85%, #e04040 85%); border-radius: 4px; }
+.poketch { width: min(380px, 92%); margin: 24px auto; padding: 14px; background: #d23a3a; border-radius: 18px; box-shadow: inset 0 -6px 0 #9a2020, 0 6px 0 rgba(0,0,0,.25); }
+.pt-screen { position: relative; min-height: 260px; padding: 12px; background: #9cc88c; color: #183018; border: 4px solid #183018; border-radius: 8px; text-align: center; image-rendering: pixelated; }
+.pt-title { font-size: 12px; text-align: left; opacity: .8; margin-bottom: 8px; }
+.pt-clock { font-size: 64px; letter-spacing: 4px; margin-top: 30px; line-height: 1; }
+.pt-clock .blink { animation: ptblink 1s steps(1) infinite; }
+@keyframes ptblink { 50% { opacity: 0; } }
+.pt-sub { margin-top: 10px; font-size: 14px; }
+.pt-map { width: 100%; border: 2px solid #183018; background: #9cc88c; image-rendering: pixelated; }
+.pt-list { font-size: 12px; text-align: left; margin-top: 6px; }
+.pt-btn { margin-top: 18px; padding: 6px 14px; background: #5c8c54; color: #eaf6e0; border-radius: 6px; }
+.pt-btn:focus { outline: 2px solid #183018; }
+.pt-party { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.pt-mon { position: relative; padding: 4px; border: 2px solid #5c8c54; border-radius: 6px; }
+.pt-mon img { width: 48px; height: 48px; image-rendering: pixelated; filter: grayscale(1) sepia(1) hue-rotate(50deg) saturate(2) brightness(.7); }
+.pt-hp { height: 5px; background: #5c8c54; border-radius: 3px; overflow: hidden; } .pt-hp i { display: block; height: 100%; background: #183018; }
+.pt-item { position: absolute; right: 4px; top: 2px; font-size: 10px; }
+.pt-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #fff; }
+.pt-nav button { padding: 6px 18px; background: #9a2020; color: #fff; border-radius: 8px; font-size: 16px; }
+.pt-nav button:focus { outline: 2px solid #fff; }

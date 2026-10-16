@@ -25,6 +25,7 @@ export const C2S = {
   SERVICE_DONE: 'serviceDone',    // {} Lehrer, Erinnerer oder Verlerner verlassen
   HOLD: 'hold',                   // { pokemonId, item|null } Item tragen lassen oder abnehmen
   POKETCH: 'poketch',             // {} Daten für den Pokétch anfordern
+  BIKE: 'bike',                   // {} auf das Fahrrad steigen oder absteigen
   PING: 'ping'
 };
 
@@ -67,3 +68,4 @@ export const EMOTES = ['!', '?', '♥', '♪', '…', '☺'];
 
 export const WALK_MS = 250;
 export const RUN_MS = 125;
+export const BIKE_MS = 80;

@@ -66,6 +66,10 @@ const S = {
     bpm: 140, chords: 'Em C D G Em C B7 B7', bass: 'oct', arp: 'up', drums: ['k.h.s.hkk.h.s.hh'],
     lead: 'e5.2 g5.2 b5.4 e6.4 d6.4 | c6.6 b5.2 g5.8 | a5.4 f#5.4 d5.4 a5.4 | b5.8 g5.4 d5.4 | e5.2 g5.2 b5.4 e6.6 f#6.2 | g6.4 e6.4 c6.8 | b5.4 d#6.4 f#6.4 b5.4 | d#6.8 f#5.8'
   },
+  bicycle: {
+    bpm: 160, chords: 'G C D G Em C D D', bass: 'oct', arp: 'up', drums: ['k.h.s.hkk.h.s.h.'],
+    lead: 'd5.2 g5.2 b5.2 d6.2 b5.4 g5.4 | c6.4 e6.4 c6.4 g5.4 | a5.2 b5.2 c6.2 d6.2 f#6.4 d6.4 | g6.8 d6.8 | e6.4 d6.4 b5.4 g5.4 | c6.4 b5.4 a5.4 g5.4 | a5.4 d6.4 f#6.4 a6.4 | g6.12 r.4'
+  },
   lake: {
     bpm: 72, chords: 'Dm Bb Gm A Dm Bb Gm A', bass: 'pulse', arp: 'soft', drums: null,
     lead: 'a5.8 f5.4 d5.4 | d6.8 bb5.8 | g5.6 a5.2 bb5.8 | a5.12 c#5.4 | d5.4 f5.4 a5.4 d6.4 | f6.8 d6.8 | e6.6 d6.2 bb5.8 | a5.16'

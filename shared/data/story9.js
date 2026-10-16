@@ -54,7 +54,37 @@ export const SCRIPTS9 = {
 // Regi-Ruinen: die innere Kammer öffnet sich nur mit Regigigas im Team
 const lockTitan = (script) => [{ ifParty: [486], then: script, else: TITAN_LOCK }];
 
-export function applyStory9({ SCRIPTS, NPCS }) {
+// Erzelingen wie in Platin: Ein Junge bringt dich zur Arena, Barry steht vor der Tür und schickt dich in die Mine
+const ORE_INTRO = {
+  oreIntro: [
+    ['Junge', 'He, du! Du bist ein Trainer, oder? Ohne Orden nimmt dich hier keiner ernst.'],
+    ['Junge', 'Komm mit, ich bring dich zur Arena!'],
+    { warp: ['oreburgh_city', 22, 9, 'up'] },
+    ['Junge', 'Da ist sie! Die Pokémon-Arena von Erzelingen. Viel Glück!'],
+    { flag: 'ore_intro' },
+    ['Barry', 'Was?! Du bist auch schon hier? Hör zu, der Arenaleiter ist gar nicht da!'],
+    ['Barry', 'Veit ist unten in der Erzelingen-Mine. Der Eingang liegt ganz im Süden der Stadt, hinter der Kohlegrube.'],
+    ['Barry', 'Geh ihn holen, sonst kann keiner von uns den Orden bekommen. Und beeil dich, sonst bekommst du eine Strafe von mir!']
+  ],
+  barryGym: [
+    ['Barry', 'Was?! Du bist auch schon hier? Hör zu, der Arenaleiter ist gar nicht da!'],
+    ['Barry', 'Veit ist unten in der Erzelingen-Mine. Der Eingang liegt ganz im Süden der Stadt, hinter der Kohlegrube.'],
+    ['Barry', 'Geh ihn holen, sonst kann keiner von uns den Orden bekommen. Und beeil dich, sonst bekommst du eine Strafe von mir!']
+  ]
+};
+
+export function applyStory9({ SCRIPTS, NPCS, TRIGGERS }) {
+  Object.assign(SCRIPTS, ORE_INTRO);
+  NPCS.oreburgh_city.push({ id: 'barry_gym', x: 22, y: 7, dir: 'down', look: 'rival', name: 'Barry', show: '!roark_mine', talk: 'barryGym' });
+  (TRIGGERS.oreburgh_city ||= []).push({ x: 2, y: 9, w: 2, h: 2, when: ['has_starter', '!ore_intro', '!roark_mine'], script: 'oreIntro' });
+  const mine = NPCS.oreburgh_mine.find((n) => n.id === 'veit_mine');
+  if (mine) mine.talk = 'veitMine';
+  SCRIPTS.veitMine = [
+    ['Veit', 'Hm? Ein Herausforderer? Hier unten in der Mine?'],
+    ['Veit', 'Ich räume gerade Geröll mit Zertrümmerer weg. Mit dem Orden meiner Arena kannst du das außerhalb von Kämpfen auch.'],
+    ['Veit', 'Ich bin Veit, der Arenaleiter von Erzelingen. Wenn du einen Orden willst, komm in die Arena. Ich gehe schon vor!'],
+    { flag: 'roark_mine' }
+  ];
   for (const [m, list] of Object.entries(NPCS9)) NPCS[m] = [...(NPCS[m] || []), ...list];
   for (const id of ['regirock', 'regice', 'registeel']) SCRIPTS[id] = lockTitan(SCRIPTS[id]);
   Object.assign(SCRIPTS, SCRIPTS9);

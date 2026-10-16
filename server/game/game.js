@@ -5,7 +5,7 @@ import { POKEMON, STARTERS } from '../../shared/data/pokemon.js';
 import { MOVES } from '../../shared/data/moves.js';
 import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, WATER, DIRS, isStandable, fieldFlags } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
-import { C2S, S2C, WALK_MS, RUN_MS, EMOTES } from '../../shared/protocol.js';
+import { C2S, S2C, WALK_MS, RUN_MS, BIKE_MS, EMOTES } from '../../shared/protocol.js';
 import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
 import { WildBattle, TrainerBattle } from './battle.js';
 import { DoubleBattle } from './double.js';
@@ -92,6 +92,7 @@ export class GameServer {
       case C2S.MOVE_SWAP: return this.moveSwap(s, msg);
       case C2S.SERVICE_DONE: return this.serviceDone(s);
       case C2S.HOLD: return this.holdItem(s, msg);
+      case C2S.BIKE: return this.toggleBike(s);
       case C2S.POKETCH: return this.poketch(s);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
@@ -139,6 +140,7 @@ export class GameServer {
     if (!player.playMs) player.playMs = 0;
     // Feldattacken aus der Story gibt es auch als VM im Beutel
     for (const [flag, hm] of Object.entries(HM_FLAGS)) if (player.flags?.[flag] && !player.items[hm]) player.items[hm] = 1;
+    if (player.flags?.bike && !player.items.bicycle) player.items.bicycle = 1;
     if (this.storyOn && !player.flags.intro) Object.assign(player, NEW_PLAYER_SPAWN);
 
     // Nach Kartenumbauten kann ein alter Spielstand auf einem ungueltigen Feld stehen
@@ -169,7 +171,7 @@ export class GameServer {
       player: this.publicPlayer(player),
       run: player.runId ? this.repo.getRun(player.runId) : null,
       players: this.playersOnMap(player.map, player.id),
-      walkMs: WALK_MS, runMs: RUN_MS
+      walkMs: WALK_MS, runMs: RUN_MS, bikeMs: BIKE_MS
     });
     this.sendParty(s);
     this.sendNuzlocke(s);
@@ -246,7 +248,7 @@ export class GameServer {
 
   publicPlayer(p) {
     const s = this.sessions.get(p.id);
-    return { id: p.id, name: p.name, map: p.map, x: p.x, y: p.y, dir: p.dir, color: p.color, inBattle: !!(s && s.battle), runId: p.runId };
+    return { id: p.id, name: p.name, map: p.map, x: p.x, y: p.y, dir: p.dir, color: p.color, inBattle: !!(s && s.battle), runId: p.runId, bike: !!p.flags?.riding };
   }
   playersOnMap(mapId, exceptId) {
     return [...this.sessions.values()].filter((s) => s.player.map === mapId && s.player.id !== exceptId).map((s) => this.publicPlayer(s.player));
@@ -324,7 +326,7 @@ export class GameServer {
     const ack = (ok) => this.send(s.ws, { t: S2C.MOVE_ACK, seq: msg.seq, ok, map: p.map, x: p.x, y: p.y, dir: p.dir });
     if (!DIRS[msg.dir] || s.battle || s.script || (!p.starterChosen && !this.storyOn)) return ack(false);
     const now = Date.now();
-    const minGap = (msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
+    const minGap = (p.flags.riding ? BIKE_MS : msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
     p.dir = msg.dir;
     const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined, this.storyOn ? fieldFlags(p.flags, s.party) : undefined);
@@ -338,6 +340,7 @@ export class GameServer {
     ack(true);
 
     p.steps = (p.steps || 0) + 1;
+    if (p.flags.riding && MAPS[p.map].tiles[p.y]?.[p.x] === '~') this.setRiding(s, false);
     if (this.storyOn) this.eggStep(s);
     if (oldMap !== p.map) {
       this.onMapChange(s, oldMap);
@@ -346,7 +349,7 @@ export class GameServer {
       this.broadcastMap(p.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(p) }, p.id);
       this.send(s.ws, { t: S2C.MAP_CHANGE, map: p.map, x: p.x, y: p.y, dir: p.dir, players: this.playersOnMap(p.map, p.id) });
     } else {
-      this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir, running: !!msg.running, jump: r.jump }, p.id);
+      this.broadcastMap(p.map, { t: S2C.PLAYER_MOVED, id: p.id, x: p.x, y: p.y, dir: p.dir, running: !!msg.running, bike: !!p.flags.riding, jump: r.jump }, p.id);
     }
 
     // Fluchtseil merkt sich den Platz vor dem Hoehleneingang
@@ -448,6 +451,7 @@ export class GameServer {
     if (s.battle || s.script) return;
     const it = ITEMS[msg.item];
     if (!it || !(s.player.items[msg.item] > 0)) return;
+    if (it.bike) return this.toggleBike(s);
     if (it.repel) return this.useRepel(s, msg.item);
     if (it.rope) return this.useRope(s, msg.item);
     const mon = s.party.find((m) => m.id === msg.pokemonId);

@@ -102,3 +102,9 @@ export function isStandable(maps, mapId, x, y, flags) {
   const t = tileAt(map, x, y);
   return passable(t, flags) && !PORTAL.has(t) && t !== 'L';
 }
+
+// Fahrrad: draußen und in Höhlen ja, in Gebäuden nicht
+export function bikeAllowed(maps, id) {
+  const m = maps[id];
+  return !!m && (!m.indoor || m.theme === 'cave');
+}

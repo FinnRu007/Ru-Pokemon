@@ -24,6 +24,8 @@ export class Input {
       if (e.code === 'KeyM') { e.preventDefault(); this.emit('map'); }
       if (e.code === 'KeyN') { e.preventDefault(); this.emit('mute'); }
       if (e.code === 'KeyF') { e.preventDefault(); this.emit('fly'); }
+      if (e.code === 'KeyR') { e.preventDefault(); this.emit('bike'); }
+      if (e.code === 'KeyP') { e.preventDefault(); this.emit('poketch'); }
       if (e.code === 'KeyC') { e.preventDefault(); this.emit('freecam'); }
       if (['Equal', 'NumpadAdd', 'BracketRight'].includes(e.code)) this.emit('zoomIn');
       if (['Minus', 'NumpadSubtract', 'Slash'].includes(e.code)) this.emit('zoomOut');

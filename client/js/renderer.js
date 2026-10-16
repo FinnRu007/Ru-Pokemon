@@ -185,7 +185,7 @@ export class Renderer {
     }
     const row = DIR_ROW[o.dir] ?? 0;
     // Original-Sprites (npm run sprites) haben Vorrang, sonst die eigene Figur
-    const real = !this.images.player && overworldSheet(o, e.kind !== 'npc');
+    const real = !this.images.player && overworldSheet(o, e.kind !== 'npc', e.kind === 'self' ? !!this.flags?.riding : !!o.bike);
     let headY = sy + T - 20 * S - 3;
     if (real) {
       const { sheet, fw } = real;
@@ -195,6 +195,11 @@ export class Renderer {
     } else {
       const sheet = e.kind === 'npc' ? characterSheet(o.look || 'youngster') : (this.images.player || characterSheet(o.look || 'player', o.color));
       g.drawImage(sheet, frameIdx * 16, row * 20, 16, 20, sx, headY, 16 * S, 20 * S);
+      // Eigene Figur auf dem Fahrrad: Räder unter den Füßen
+      if (e.kind !== 'npc' && (e.kind === 'self' ? this.flags?.riding : o.bike)) {
+        g.fillStyle = '#2a2f45'; const fy = sy + T - 5; const side = o.dir === 'left' || o.dir === 'right';
+        for (const d of side ? [-T * 0.28, T * 0.28] : [0]) { g.beginPath(); g.arc(sx + T / 2 + d, fy, side ? 5 : 4, 0, Math.PI * 2); g.fill(); }
+      }
     }
 
     // Hohes Gras verdeckt die Fuesse

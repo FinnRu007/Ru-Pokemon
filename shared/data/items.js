@@ -92,7 +92,8 @@ export const ITEMS = {
   'star-piece': { name: 'Sternenstück', price: 9800, kind: 'item', buy: false },
   'adamant-orb': { name: 'Diamantkugel', price: 0, kind: 'key', sell: false },
   'lustrous-orb': { name: 'Weißkugel', price: 0, kind: 'key', sell: false },
-  'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false }
+  'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false },
+  bicycle: { name: 'Fahrrad', price: 0, kind: 'key', sell: false, bike: true }
 };
 
 // Items zum Tragen (Wirkung im Kampf: HELD weiter unten und server/game/held.js)

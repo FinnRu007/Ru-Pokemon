@@ -38,7 +38,7 @@ export const OW_BY_LOOK = {
   item_ball: 'objects/pokeball', jasmine: 'npc/jasmine', riley: 'npc/riley', uxie: 'pokemon/uxie', mesprit: 'pokemon/mesprit', azelf: 'pokemon/azelf',
   dialga: 'pokemon/dialga', palkia: 'pokemon/palkia', heatran: 'pokemon/heatran', regigigas: 'pokemon/regigigas', cresselia: 'pokemon/cresselia', swimmer: 'npc/swimmer_m', ace: 'npc/ace_trainer_m', skier: 'npc/skier_m', giratina: 'pokemon/giratina_altered', psychic: 'npc/psychic'
 };
-export const OW_FILES = [...new Set([OW_PLAYER, ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])].filter((f) => !f.startsWith('mon:'));
+export const OW_FILES = [...new Set([OW_PLAYER, OW_PLAYER + '_bike', ...Object.values(OW_BY_NAME), ...Object.values(OW_BY_CLASS), ...Object.values(OW_BY_LOOK)])].filter((f) => !f.startsWith('mon:'));
 
 export function overworldFor({ name = '', look = '' } = {}) {
   return [OW_BY_NAME[name], OW_BY_CLASS[name.split(' ')[0]], OW_BY_LOOK[look]].filter(Boolean);

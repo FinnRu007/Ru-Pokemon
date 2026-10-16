@@ -1,7 +1,7 @@
 // Erweiterungen der Spiellogik wie in Platin: Begleiter im Kampf, wandernde Pokémon, Eier,
 // Icognito-Formen und der Kampfturm mit Siegesserie. Wird in GameServer eingemischt.
 import { MAPS } from '../../shared/data/maps.js';
-import { DIRS, tileAt, FIELD, FIELD_NAMES, fieldFlags } from '../../shared/world.js';
+import { DIRS, tileAt, FIELD, FIELD_NAMES, fieldFlags, bikeAllowed } from '../../shared/world.js';
 import { POKEMON } from '../../shared/data/pokemon.js';
 import { ITEMS } from '../../shared/data/items.js';
 import { MOVES } from '../../shared/data/moves.js';
@@ -56,6 +56,22 @@ export const Extras = {
     const party = d.party.map(([sp, lv]) => createPokemon(sp, lv, { metRoute: 'partner', shiny: false }));
     return { id, name: d.name, party, mon: party[0] };
   },
+  // Fahrrad wie in Platin: aufsteigen und absteigen über den Beutel oder Taste R
+  toggleBike(s) {
+    const p = s.player;
+    if (s.battle || s.script) return;
+    if (!(p.items.bicycle > 0)) return this.notice(s, 'Du hast kein Fahrrad.', 'error');
+    if (!p.flags.riding && !bikeAllowed(MAPS, p.map)) return this.notice(s, 'Hier kannst du nicht Fahrrad fahren.', 'error');
+    if (!p.flags.riding && MAPS[p.map].tiles[p.y]?.[p.x] === '~') return this.notice(s, 'Auf dem Wasser geht das nicht.', 'error');
+    if (p.flags.riding && p.map === 'route_206') return this.notice(s, 'Auf dem Radweg kannst du nicht absteigen.', 'error');
+    this.setRiding(s, !p.flags.riding);
+  },
+  setRiding(s, on) {
+    const p = s.player;
+    p.flags.riding = !!on;
+    this.sendProgress(s);
+    this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id);
+  },
   onMapChange(s, oldMap) {
     const p = s.player;
     const d = p.partner && PARTNERS[p.partner];
@@ -63,6 +79,8 @@ export const Extras = {
       p.partner = null;
       if (d.bye) this.notice(s, d.bye, 'dialog');
     }
+    // In Gebäuden steigt man vom Fahrrad ab, in Höhlen nicht
+    if (p.flags.riding && !bikeAllowed(MAPS, p.map)) this.setRiding(s, false);
     // Wandernde Pokémon wechseln die Route, sobald du die Karte wechselst
     for (const r of Object.values(p.roamers || {})) if (!r.defeated) r.map = pick(roamMaps());
   },

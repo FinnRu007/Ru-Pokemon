@@ -13,7 +13,7 @@ export class World {
     this.anim = null;         // { fromX, fromY, toX, toY, start, dur, jump }
     this.others = new Map();  // id -> { ...publicPlayer, rx, ry, anim }
     this.seq = 0;
-    this.walkMs = 250; this.runMs = 125;
+    this.walkMs = 250; this.runMs = 125; this.bikeMs = 80;
     this.locked = false;      // Kampf, Dialog, Starterwahl
     this.onMapChange = () => {};
     this.onStep = () => {};   // Effekte und Klang (Gras, Staub, Sprung)
@@ -58,13 +58,13 @@ export class World {
     const o = this.others.get(m.id);
     if (!o) return;
     const now = performance.now();
-    o.anim = { fromX: o.rx, fromY: o.ry, toX: m.x, toY: m.y, start: now, dur: m.running ? this.runMs : this.walkMs, jump: m.jump };
-    o.x = m.x; o.y = m.y; o.dir = m.dir;
+    o.anim = { fromX: o.rx, fromY: o.ry, toX: m.x, toY: m.y, start: now, dur: m.bike ? this.bikeMs : m.running ? this.runMs : this.walkMs, jump: m.jump };
+    o.x = m.x; o.y = m.y; o.dir = m.dir; o.bike = !!m.bike;
   }
   updateOther(p) {
     const o = this.others.get(p.id);
     if (!o) return this.addOther(p);
-    Object.assign(o, { dir: p.dir, inBattle: p.inBattle, name: p.name, color: p.color });
+    Object.assign(o, { dir: p.dir, inBattle: p.inBattle, name: p.name, color: p.color, bike: !!p.bike });
 
     if (o.x !== p.x || o.y !== p.y) { o.x = o.rx = p.x; o.y = o.ry = p.y; o.anim = null; }
   }
@@ -93,7 +93,7 @@ export class World {
       return;
     }
     const running = input.running;
-    const dur = (running ? this.runMs : this.walkMs) * (r.jump ? 2 : 1);
+    const dur = (this.flags?.riding ? this.bikeMs : running ? this.runMs : this.walkMs) * (r.jump ? 2 : 1);
     if (r.warp) {
       // Tuer, Treppe oder Hoehle: harter Wechsel mit Abblende
       Object.assign(this.me, { map: r.map, x: r.x, y: r.y, dir: r.dir || dir });

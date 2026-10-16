@@ -53,7 +53,7 @@ export const SONG_TRACKS = {
   battle_leader: 'Battle! (Gym Leader)', victory: 'Victory! (Wild Pokémon)', victory_trainer: 'Victory! (Trainer Battle)',
   victory_leader: 'Victory! (Gym Leader)', twinleaf: TOWN.twinleaf, sandgem: TOWN.sandgem, jubilife: TOWN.jubilife,
   oreburgh: TOWN.oreburgh, route1: T('Route 201'), route2: T('Route 203'), lake: 'Lake', cave: 'Oreburgh Gate',
-  center: T('Pokémon Center'), gym: 'Pokémon Gym',
+  center: T('Pokémon Center'), gym: 'Pokémon Gym', bicycle: 'Bicycle',
   battle_rival: 'Battle! (Rival)', battle_galactic: 'Battle! (Team Galactic)', battle_commander: 'Battle! (Team Galactic Commander)',
   battle_boss: 'Battle! (Team Galactic Boss)', battle_elite: 'Battle! (Elite Four)', battle_champion: 'Battle! (Champion)',
   battle_legend: 'Battle! (Legendary Pokémon)', battle_lakes: 'Battle! (Azelf/Mesprit/Uxie)', battle_creation: 'Battle! (Dialga/Palkia)',

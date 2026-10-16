@@ -50,8 +50,8 @@ function loadMon(file) {
 }
 
 // { sheet, fw } fuer eine Figur ({ name, look }) oder den Spieler (player = true), sonst null
-export function overworldSheet(o, player = false) {
-  const file = (player ? [OW_PLAYER] : overworldFor(o)).find((f) => (f.startsWith('mon:') ? hasFront(+f.slice(4)) : hasReal('overworld', f)));
+export function overworldSheet(o, player = false, bike = false) {
+  const file = (player ? (bike ? [OW_PLAYER + '_bike', OW_PLAYER] : [OW_PLAYER]) : overworldFor(o)).find((f) => (f.startsWith('mon:') ? hasFront(+f.slice(4)) : hasReal('overworld', f)));
   if (!file) return null;
   const e = sheets.get(file) || (file.startsWith('mon:') ? loadMon(file) : load(file));
   return e.sheet ? e : null;
