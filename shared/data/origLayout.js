@@ -365,6 +365,15 @@ export function applyOrigMaps(MAPS) {
     }
     if (map.fly) map.fly = flyPoint(map, map.fly);
   }
+  // Feste Schildtexte (origFix.js, _signs): Text an genau dieser Stelle, null entfernt das Ereignis
+  for (const [id, list] of Object.entries(ORIG_FIX._signs || {})) {
+    const map = MAPS[id]; if (!map) continue;
+    for (const [k, text] of Object.entries(list)) {
+      const [x, y] = k.split(',').map(Number);
+      map.events = (map.events || []).filter((e) => e.x !== x || e.y !== y);
+      if (text) map.events.push({ x, y, type: 'text', text });
+    }
+  }
   return true;
 }
 
