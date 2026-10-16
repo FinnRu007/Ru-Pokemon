@@ -164,6 +164,7 @@ net.on('notice', (m) => {
   if (m.kind === 'dialog') showDialog(m.text);
 });
 net.on('party', (m) => { hud.setParty(m); world.party = m.party; menu.onParty(); });
+net.on('berries', (m) => { world.berries = m.patches; });
 net.on('saved', (m) => menu.onSaved(m));
 net.on('learnPrompt', (m) => { learnQueue.push(m); setTimeout(processLearnQueue, 300); });
 net.on('service', (m) => {

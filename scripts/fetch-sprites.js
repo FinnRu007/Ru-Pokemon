@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ITEMS } from '../shared/data/items.js';
 import { MOVES } from '../shared/data/moves.js';
+import { BERRIES } from '../shared/data/berries.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
 import { TOWNMAP_SOURCES, TOWNMAP_DIR, buildTownMap } from './townmap-build.js';
@@ -83,6 +84,16 @@ for (const f of FIELD_SETS) jobs.push({ url: `${FIELD_BASE}/field/maps/texture_s
 // Gebaeude im Stil der 4. Generation (Kachelsatz aus Pokemon Essentials)
 jobs.push({ url: 'https://raw.githubusercontent.com/Manurocker95/Pokemon-Essentials-21-With-Unofficial-EBDX/main/Graphics/Tilesets/Outside.png', file: path.join(OUT, 'field', 'Outside.png') });
 for (const f of FIELD_OBJECTS) jobs.push({ url: `${FIELD_BASE}/graphics/field_sprites/objects/${f}.png`, file: path.join(OUT, 'field', `${f}.png`) });
+// Beerenpflanzen: Keimling und je Beere wachsend, bluehend, mit Fruechten (Labrus und Apiko bluehen mit Einzelbildern)
+const BERRY_DIR = path.join(OUT, 'berry_trees');
+fs.mkdirSync(BERRY_DIR, { recursive: true });
+const BERRY_BASE = `${FIELD_BASE}/graphics/field_sprites/berry_trees`;
+jobs.push({ url: `${BERRY_BASE}/berry_sprout.png`, file: path.join(BERRY_DIR, 'berry_sprout.png') });
+for (const [k] of BERRIES) {
+  for (const st of ['growing', 'fruit']) jobs.push({ url: `${BERRY_BASE}/${k}_${st}.png`, file: path.join(BERRY_DIR, `${k}_${st}.png`) });
+  if (k === 'grepa' || k === 'apicot') for (const f of [1, 2]) jobs.push({ url: `${BERRY_BASE}/${k}_blooming/frame_${f}.png`, file: path.join(BERRY_DIR, `${k}_blooming_${f}.png`) });
+  else jobs.push({ url: `${BERRY_BASE}/${k}_blooming.png`, file: path.join(BERRY_DIR, `${k}_blooming.png`) });
+}
 // Formen (Icognito-Buchstaben) und das Ei
 const FORMS = { 201: [...'bcdefghijklmnopqrstuvwxyz'.split(''), 'exclamation', 'question'] };
 for (const [kind, dir] of Object.entries(KINDS)) {
@@ -166,8 +177,9 @@ index.forms = Object.keys(KINDS).flatMap((kind) => fs.readdirSync(path.join(OUT,
 index.egg = fs.existsSync(path.join(OUT, 'egg.png'));
 try { index.townmap = buildTownMap(); } catch (e) { index.townmap = false; console.log(`\nKarte von Sinnoh nicht erstellt: ${e.message}`); }
 index.evolution = fs.existsSync(EVO_BG);
+index.berryTrees = fs.readdirSync(BERRY_DIR).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 // Originale Oberwelt (Karten, Hoehen, Tueren, Grafik je Kartenteil) aus pret/pokeplatinum
 try { await buildWorld(); } catch (e) { console.log(`\nOriginalkarten nicht erstellt: ${e.message}`); }
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, battlebg: index.battlebg, field: index.field })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, battlebg: index.battlebg, field: index.field, berryTrees: index.berryTrees })) console.log(`  ${k}: ${ids.length}`);

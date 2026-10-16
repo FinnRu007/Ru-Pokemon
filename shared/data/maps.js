@@ -40,6 +40,7 @@ function grid(rows) {
 import { MAPS2, LINKS2 } from './maps2.js';
 import { TILES8, EVENTS8 } from './maps8.js';
 import { applyOrigMaps, REMAP } from './origLayout.js';
+import { placeBerrySoil } from './berries.js';
 
 const house = (x, y, w, h, doorX, door = 'D') => [['rect', x, y, w, h, 'H'], ['tile', doorX, y + h - 1, door]];
 
@@ -521,3 +522,5 @@ export const SPAWN = { map: 'twinleaf_town', x: 10, y: 7, dir: 'down' };
 
 // Originalkarten aus Platin (wenn per `npm run sprites` geladen) ueber die eigenen Karten legen
 if (applyOrigMaps(MAPS) && REMAP[SPAWN.map]) [SPAWN.x, SPAWN.y] = REMAP[SPAWN.map].pt(SPAWN.x, SPAWN.y);
+// Weicher Boden fuer Beeren an den Stellen aus Platin (berries.js)
+placeBerrySoil(MAPS);
