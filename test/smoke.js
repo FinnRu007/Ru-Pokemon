@@ -480,7 +480,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'floaroma_meadow', 'valley_windworks'], ['eterna_forest', 'windworks_inside']],
     [{ windworks_key: true }, ['windworks_inside'], ['eterna_forest']],
     [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
-    [{ badge_forest: true }, ['eterna_galactic'], ['route_206']],
+    [{ badge_forest: true, hm_cut: true }, ['eterna_galactic'], ['route_206']],
     [{ eterna_done: true, bike: true, riding: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
     [{ rival3: true, badge_relic: true }, ['solaceon_town', 'solaceon_ruins', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
     [{ badge_cobble: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
