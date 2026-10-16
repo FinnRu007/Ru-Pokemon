@@ -1,6 +1,7 @@
 // Seitenleiste: Team, Nuzlocke-Uebersicht, Seelenbaender, Box, Log und Chat.
 import { monsterIcon, itemIcon } from './art/monsters.js';
-import { ITEMS } from '/shared/data/items.js';
+import { ITEMS, POCKETS, pocketOf, sortItems } from '/shared/data/items.js';
+import { moveOf } from './texts.js';
 import { BADGES } from '/shared/data/story.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -11,13 +12,20 @@ const CAUSE = { fainted: 'im Kampf gefallen', soulbound: 'Seelenband', soulbound
 export class Hud {
   constructor(net, manifest, maps) {
     this.net = net; this.m = manifest; this.maps = maps;
-    this.party = []; this.box = []; this.items = {}; this.progress = { flags: {}, money: 0 };
-    document.querySelectorAll('.tabs button').forEach((b) => {
-      b.onclick = () => {
-        document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
-        document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('hidden', t.id !== 'tab-' + b.dataset.tab));
-      };
-    });
+    this.party = []; this.box = []; this.items = {}; this.progress = { flags: {}, money: 0 }; this.pocket = 'items';
+    document.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => this.showTab(b.dataset.tab); });
+  }
+
+  showTab(tab) {
+    document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x.dataset.tab === tab));
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('hidden', t.id !== 'tab-' + tab));
+  }
+  // Reiter Nuzlocke und Seelenband nur, wenn die Regel in diesem Spiel gilt
+  setRuleTabs(rules) {
+    const on = { nuzlocke: !!rules?.nuzlocke, links: !!(rules?.nuzlocke && rules?.soulbound) };
+    for (const [tab, show] of Object.entries(on)) document.querySelector(`.tabs button[data-tab="${tab}"]`)?.classList.toggle('hidden', !show);
+    const active = document.querySelector('.tabs button.active');
+    if (!active || active.classList.contains('hidden')) this.showTab('party');
   }
 
   routeName(r) { return ROUTE_NAMES[r] || this.maps[r]?.name || r; }
@@ -49,14 +57,22 @@ export class Hud {
       ? badges.map((b) => `<i class="badge-icon" style="background:${b.color}" title="${esc(b.name)}"></i>${esc(b.name)}`).join(' ') : 'keine'}</span>`;
   }
 
+  // Beutel wie in Platin: Taschen als Reiter, innerhalb nach Itemnummer sortiert
   renderBag() {
-    const entries = Object.entries(this.items).filter(([k, n]) => n > 0 && ITEMS[k]);
-    const alive = this.party.filter((p) => p.alive);
-    $('tab-bag').innerHTML = entries.length ? entries.map(([k, n]) => {
-      const it = ITEMS[k];
+    const owned = Object.keys(this.items).filter((k) => this.items[k] > 0 && ITEMS[k]);
+    const count = (p) => owned.filter((k) => pocketOf(k) === p).length;
+    const alive = this.party.filter((p) => p.alive && !p.egg);
+    const rows = sortItems(owned.filter((k) => pocketOf(k) === this.pocket));
+    const name = (k) => (ITEMS[k].kind === 'tm' ? `${ITEMS[k].name} ${moveOf(ITEMS[k].move)?.name || ''}` : ITEMS[k].name);
+    const tabs = `<div class="bag-pockets">${POCKETS.map(([k, l]) => `<button data-pocket="${k}" class="${k === this.pocket ? 'on' : ''}${count(k) ? '' : ' empty'}">${l}</button>`).join('')}</div>`;
+    const list = rows.length ? rows.map((k) => {
+      const it = ITEMS[k]; const n = this.items[k];
       const use = it.kind === 'med' && (it.heal || it.cure || it.revive) && alive.length ? `<div class="use">${alive.map((p) => `<button data-item="${k}" data-id="${p.id}" title="${esc(p.name)}"><img class="icon" src="${monsterIcon(p)}" alt=""></button>`).join('')}</div>` : '';
-      return `<div class="bag-row"><span>${itemIcon(k)}${esc(it.name)}</span><span>x${n}</span>${use}</div>`;
-    }).join('') + '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll.</div>' : '<div class="hint">Dein Beutel ist leer.</div>';
+      return `<div class="bag-row"><span>${itemIcon(k)}${esc(name(k))}</span><span>${it.hm ? '' : 'x' + n}</span>${use}</div>`;
+    }).join('') + (this.pocket === 'medicine' ? '<div class="hint">Heilmittel: auf das Pokémon klicken, das es bekommen soll.</div>' : '')
+      : `<div class="hint">${owned.length ? 'Diese Tasche ist leer.' : 'Dein Beutel ist leer.'}</div>`;
+    $('tab-bag').innerHTML = tabs + `<div class="bag-items">${list}</div>`;
+    for (const b of document.querySelectorAll('#tab-bag button[data-pocket]')) b.onclick = () => { this.pocket = b.dataset.pocket; this.renderBag(); };
     for (const b of document.querySelectorAll('#tab-bag button[data-item]')) b.onclick = () => this.net.send({ t: 'useItem', item: b.dataset.item, pokemonId: b.dataset.id });
   }
 
@@ -79,7 +95,8 @@ export class Hud {
   }
 
   setNuzlocke(msg) {
-    const r = msg.rules;
+    const r = msg.rules || {};
+    this.setRuleTabs(r);
     const flags = [r.nuzlocke && 'Nuzlocke', r.soulbound && 'Soulbound', r.dupesClause && 'Dupes', r.shinyClause && 'Shiny'].filter(Boolean).join(' · ');
     $('tab-nuzlocke').innerHTML = `<div class="hint">Regeln: ${flags || 'keine'}</div>` + (msg.encounters.length
       ? msg.encounters.map((e) => `<div class="route"><span>${esc(this.routeName(e.route))}</span><span>${esc(e.species)} <span class="badge ${e.outcome}">${OUTCOME[e.outcome] || e.outcome}</span></span></div>`).join('')

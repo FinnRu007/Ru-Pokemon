@@ -3,7 +3,7 @@
 // Alle Bildschirme liegen als HTML ueber dem Spielfeld und lassen sich mit Tastatur und Maus bedienen:
 // Pfeiltasten waehlen, Z/Enter bestaetigt, X/Esc geht zurueck.
 import { MAPS } from '/shared/data/maps.js';
-import { ITEMS, isHmMove } from '/shared/data/items.js';
+import { ITEMS, isHmMove, POCKETS, pocketOf, sortItems } from '/shared/data/items.js';
 import { BADGES } from '/shared/data/story.js';
 import { monsterDataUrl, monsterIcon, typeBadge, itemIcon } from './art/monsters.js';
 import { DEX, speciesOf, moveOf, moveText, dexText, abilityName, abilityText, itemText, spriteMon, fmtHeight, fmtWeight } from './texts.js';
@@ -14,14 +14,9 @@ import { layout } from './worldmap.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const TYPE_DE = {
-  normal: 'Normal', fire: 'Feuer', water: 'Wasser', electric: 'Elektro', grass: 'Pflanze', ice: 'Eis', fighting: 'Kampf', poison: 'Gift',
-  ground: 'Boden', flying: 'Flug', psychic: 'Psycho', bug: 'Käfer', rock: 'Gestein', ghost: 'Geist', dragon: 'Drache', dark: 'Unlicht', steel: 'Stahl'
-};
 const CAT_DE = { physical: 'Physisch', special: 'Spezial', status: 'Status' };
 const STAT_ROWS = [['hp', 'KP'], ['atk', 'Angriff'], ['def', 'Verteidigung'], ['spa', 'Sp.-Angriff'], ['spd', 'Sp.-Vert.'], ['spe', 'Initiative']];
-const POCKETS = [['item', 'Items'], ['med', 'Medizin'], ['ball', 'Bälle'], ['tm', 'TM/VM'], ['berry', 'Beeren'], ['battle', 'Kampf-Items'], ['key', 'Basis-Items']];
-const typeTag = (t) => typeBadge(t) || `<span class="type-tag t-${t}">${TYPE_DE[t] || t}</span>`;
+const typeTag = (t) => typeBadge(t);
 const pad3 = (n) => String(n).padStart(3, '0');
 export const fmtTime = (ms) => { const m = Math.floor((ms || 0) / 60000); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 const genderSym = (g) => (g === 'm' ? '<b class="g-m">♂</b>' : g === 'f' ? '<b class="g-f">♀</b>' : '');
@@ -416,9 +411,8 @@ export class GameMenu {
 
   // ---------------------------------------------------------------- Beutel
   bagScreen(opts = {}) {
-    const st = { pocket: opts.pocket || 'item', sel: null };
-    const list = () => Object.entries(this.items).filter(([k, n]) => n > 0 && ITEMS[k] && (ITEMS[k].kind === st.pocket || (st.pocket === 'item' && !POCKETS.some(([p]) => p === ITEMS[k].kind))))
-      .sort(([a], [b]) => (ITEMS[a].kind === 'tm' ? (a.startsWith('hm') ? 1 : 0) - (b.startsWith('hm') ? 1 : 0) || a.localeCompare(b) : 0));
+    const st = { pocket: opts.pocket || 'items', sel: null };
+    const list = () => sortItems(Object.keys(this.items).filter((k) => this.items[k] > 0 && ITEMS[k] && pocketOf(k) === st.pocket)).map((k) => [k, this.items[k]]);
     const label = (k) => (ITEMS[k].kind === 'tm' ? `${ITEMS[k].name} ${esc(moveOf(ITEMS[k].move)?.name || '')}` : esc(ITEMS[k].name));
     const scr = {
       cls: 'm-bag',

@@ -51,7 +51,12 @@ function realUrl(mon, kind) {
   return REAL[k]?.has(id) ? `/sprites/${k}/${id}.png` : null;
 }
 // Typ-Schild und Gegenstandssymbol als <img>, leer ohne Originalbilder
-export const typeBadge = (type) => NAMED.types.has(type) ? `<img class="type-badge" src="/sprites/types/${type}.png" alt="">` : '';
+// Typ-Schilder im Platin-Stil mit den deutschen Namen (gezeichnet per CSS, Klasse type-tag)
+export const TYPE_DE = {
+  normal: 'Normal', fire: 'Feuer', water: 'Wasser', grass: 'Pflanze', electric: 'Elektro', ice: 'Eis', fighting: 'Kampf', poison: 'Gift', ground: 'Boden',
+  flying: 'Flug', psychic: 'Psycho', bug: 'Käfer', rock: 'Gestein', ghost: 'Geist', dragon: 'Drache', dark: 'Unlicht', steel: 'Stahl', unknown: '???'
+};
+export const typeBadge = (type) => (type ? `<span class="type-tag t-${TYPE_DE[type] ? type : 'unknown'}">${TYPE_DE[type] || '???'}</span>` : '');
 export const itemIcon = (id) => NAMED.items.has(id) ? `<img class="item-ic" src="/sprites/items/${id}.png" alt="">` : '';
 // Trainerbild fuer den Kampf: { name, cls, look } -> URL oder null
 export function trainerImage(t) {
