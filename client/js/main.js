@@ -300,6 +300,7 @@ input.on('poketch', () => {
   menu.openPoketch(); updateLock();
 });
 net.on('poketch', (m) => menu.onPoketch(m));
+net.on('trade', (m) => { menu.onTrade(m).then(updateLock); updateLock(); });
 input.on('bike', () => { if (world.me && !battle.active && !menu.isOpen && !dialog.open && !scriptActive) net.send({ t: 'bike' }); });
 input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); });
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });

@@ -208,6 +208,7 @@ export class DoubleBattle extends WildBattle {
 
   validate(b, a, slot, chosenSwitch) {
     if (!a || !a.type) return 'Ungültige Aktion';
+    if (this.forcedMove(b) && a.type !== 'run') return null;
     if (a.type === 'move') {
       const usable = b.mon.moves.some((m) => m.pp > 0);
       const mv = b.mon.moves[a.index];
@@ -237,7 +238,7 @@ export class DoubleBattle extends WildBattle {
 
   turnStart() {
     this.turn++;
-    for (const b of this.all()) { b.vol.hitThisTurn = false; b.vol.flinch = false; b.vol.endure = false; b.moved = false; }
+    for (const b of this.all()) { b.vol.hitThisTurn = false; b.vol.flinch = false; b.vol.endure = false; b.vol.protect = false; b.moved = false; }
   }
 
   // ---------------------------------------------------------------- KI
@@ -252,6 +253,8 @@ export class DoubleBattle extends WildBattle {
     return (mv.power || 40) * eff * stab * spread * hurtsAlly * ((mv.acc ?? 100) / 100) * (0.85 + Math.random() * 0.3);
   }
   aiAction(b) {
+    const forced = this.forcedMove(b);
+    if (forced) return { type: 'move', id: forced, target: this.targetFromKey(b, b.vol.lock?.target) };
     const usable = b.mon.moves.filter((m) => m.pp > 0);
     const foes = this.foesOf(b);
     if (!usable.length) return { type: 'move', id: 'struggle', target: foes[0] };
@@ -274,6 +277,8 @@ export class DoubleBattle extends WildBattle {
   runTurn(plan, ev) {
     const queue = [];
     for (const p of plan) {
+      const forced = this.forcedMove(p.b);
+      if (forced) { queue.push({ b: p.b, kind: 'move', id: forced, target: this.targetFromKey(p.b, p.b.vol.lock?.target) }); continue; }
       if (p.a.type === 'move') {
         const usable = p.b.mon.moves.some((m) => m.pp > 0);
         const id = usable ? p.b.mon.moves[p.a.index].id : 'struggle';
@@ -339,12 +344,16 @@ export class DoubleBattle extends WildBattle {
     }
     if (!this.beforeMove(user, moveId, move, ev, targets[0])) return;
     this.spreadHit = targets.length > 1;
+    let landedAny = false;
     for (const t of targets) {
       if (this.state === 'ended' || user.mon.hp <= 0) break;
       if (t.mon.hp <= 0) continue;
       this.hitTarget(user, t, move, ev, !t.moved);
+      landedAny ||= this.lastLanded;
     }
     this.spreadHit = false;
+    this.lastLanded = landedAny;
+    this.afterMove(user, moveId, ev);
   }
 
   // Im Doppelkampf beenden Teleport, Wirbelwind und Brüllen nichts

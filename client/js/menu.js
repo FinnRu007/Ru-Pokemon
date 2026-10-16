@@ -13,6 +13,7 @@ import { audio } from './audio.js';
 import { RIBBONS } from '/shared/data/ribbons.js';
 import { layout } from './worldmap.js';
 import { poketchScreen } from './poketch.js';
+import { tradeScreen } from './trade.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,6 +64,19 @@ export class GameMenu {
     this.push(poketchScreen(this));
   }
   onPoketch(d) { this.stack[this.stack.length - 1]?.onData?.(d); }
+  // Tausch mit einem anderen Spieler: der Server schickt jeden Stand, der Bildschirm zeigt ihn an
+  async onTrade(m) {
+    const scr = this.stack.find((x) => x.cls === 'm-trade');
+    if (m.open) {
+      if (scr) return scr.update(m);
+      if (!this.isOpen) audio.sfx('start');
+      this.stack = [];
+      return this.push(tradeScreen(this, m));
+    }
+    if (!scr) return;
+    for (const t of m.texts || (m.text ? [m.text] : [])) await this.say(t);
+    this.close();
+  }
   open() { if (!this.isOpen) { audio.sfx('start'); this.push(this.startScreen()); } }
   push(screen) { this.stack.push(screen); this.root.classList.remove('hidden'); this.render(); }
   replace(screen) { this.stack[this.stack.length - 1] = screen; this.render(); }

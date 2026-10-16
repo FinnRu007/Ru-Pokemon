@@ -8,6 +8,7 @@ import {
 } from '../../shared/formulas.js';
 import { species, displayName, addExp, gainEvs, publicPokemon } from './pokemonFactory.js';
 import { ITEMS, applyItem, heldOf } from '../../shared/data/items.js';
+import { MOVE_RULES, SEMI_HITS } from '../../shared/data/moveRules.js';
 
 const rnd = (n) => Math.floor(Math.random() * n);
 const chance = (pct) => Math.random() * 100 < pct;
@@ -148,8 +149,13 @@ export class WildBattle {
     this.wild.vol.flinch = false;
     this.ally.vol.endure = false;
     this.wild.vol.endure = false;
+    this.ally.vol.protect = false;
+    this.wild.vol.protect = false;
 
-    const foeMove = this.pickWildMove();
+    const foeMove = this.forcedMove(this.wild) || this.pickWildMove();
+    // Aufladen, Erholen und Wutanfall: die Attacke steht fest, wie im Original
+    const forcedA = this.forcedMove(this.ally);
+    if (forcedA && ['move', 'switch', 'item', 'ball'].includes(action.type)) action = { type: 'move', forced: forcedA };
 
     if (action.type === 'run') {
       if (this.ally.vol.trap > 0 && this.ally.mon.ability !== 'run-away') {
@@ -215,10 +221,11 @@ export class WildBattle {
       const slot = this.ally.mon.moves[action.index];
       const usable = this.ally.mon.moves.some((m) => m.pp > 0);
       let allyMove;
-      if (!usable) allyMove = 'struggle';
+      if (action.forced) allyMove = action.forced;
+      else if (!usable) allyMove = 'struggle';
       else if (!slot || slot.pp <= 0) return { events: [], error: 'Keine AP mehr fuer diese Attacke' };
       else allyMove = slot.id;
-      const lock = this.choiceLock(this.ally);
+      const lock = !action.forced && this.choiceLock(this.ally);
       if (lock && allyMove !== lock && allyMove !== 'struggle') return { events: [], error: `Wegen ${this.itemName(this.ally)} geht nur ${MOVES[lock].name}!` };
       const order = this.turnOrder(allyMove, foeMove);
       for (let i = 0; i < order.length; i++) {
@@ -245,6 +252,13 @@ export class WildBattle {
   choiceLock(b) {
     const id = b.vol.choiceMove;
     return id && heldOf(b.mon)?.choice && b.mon.moves.some((m) => m.id === id && m.pp > 0) ? id : null;
+  }
+
+  // Feste Attacke: Erholung nach Hyperstrahl, zweite Runde von Aufladern, Wutanfall
+  forcedMove(b) {
+    if (!b || b.mon.hp <= 0) return null;
+    if (b.vol.recharge) return b.vol.lastMove || 'struggle';
+    return b.vol.lock?.id || null;
   }
 
   pickWildMove() {
@@ -365,11 +379,31 @@ export class WildBattle {
     const move = MOVES[moveId];
     if (!this.beforeMove(user, moveId, move, ev, target)) return;
     this.hitTarget(user, target, move, ev, movedFirst);
+    this.afterMove(user, moveId, ev);
   }
+
+  // Nachteile nach dem Angriff: Finale, Erholung, Erschöpfung nach Wutanfall
+  afterMove(user, moveId, ev) {
+    const R = MOVE_RULES[moveId] || {};
+    if (R.selfKO && user.mon.hp > 0) this.applyDamage(user, user.mon.hp, ev);
+    if (R.recharge && this.lastLanded && user.mon.hp > 0) user.vol.recharge = true;
+    if (user.vol.rampageEnd) {
+      user.vol.rampageEnd = false;
+      if (user.mon.hp > 0 && !user.vol.confused) { ev.push({ type: 'text', text: `${this.name(user)} ist vor Erschöpfung verwirrt!` }); user.vol.confused = 2 + rnd(4); }
+    }
+  }
+  // Schlägt eine Aufladung oder ein Wutanfall fehl (Schlaf, Paralyse ...), endet sie
+  interrupt(user) { user.vol.lock = null; user.vol.semi = null; return false; }
 
   // Statusprobleme, AP und Ansage. Liefert false, wenn der Anwender nicht angreifen kann.
   beforeMove(user, moveId, move, ev, target) {
     const uName = this.name(user);
+    const R = MOVE_RULES[moveId] || {};
+    if (user.vol.recharge) {
+      user.vol.recharge = false;
+      ev.push({ type: 'text', text: `${uName} muss sich erholen!` });
+      return false;
+    }
 
     // Statusprobleme vor dem Angriff
     if (user.mon.status === 'slp') {
@@ -377,7 +411,7 @@ export class WildBattle {
         user.vol.sleep--;
         ev.push({ type: 'text', text: `${uName} schläft tief und fest.` });
         user.vol.furyCutter = 0;
-        return false;
+        return this.interrupt(user);
       }
       user.mon.status = null;
       ev.push({ type: 'text', text: `${uName} ist aufgewacht!` }, this.statusEvent(user));
@@ -388,13 +422,13 @@ export class WildBattle {
         ev.push({ type: 'text', text: `${uName} ist wieder aufgetaut!` }, this.statusEvent(user));
       } else {
         ev.push({ type: 'text', text: `${uName} ist eingefroren!` });
-        return false;
+        return this.interrupt(user);
       }
     }
     if (user.vol.flinch) {
       ev.push({ type: 'text', text: `${uName} schreckt zurück!` });
       user.vol.flinch = false;
-      return false;
+      return this.interrupt(user);
     }
     if (user.vol.confused > 0) {
       user.vol.confused--;
@@ -406,19 +440,43 @@ export class WildBattle {
           const dmg = calcDamage({ level: user.mon.level, power: 40, attack: this.statFor(user, 'atk', false), defense: this.statFor(user, 'def', false), stab: false, typeMult: 1, crit: false, burned: false, physical: true });
           ev.push({ type: 'text', text: 'Es hat sich vor Verwirrung selbst verletzt!' });
           this.applyDamage(user, dmg, ev);
-          return false;
+          return this.interrupt(user);
         }
       }
     }
     if (user.mon.status === 'par' && chance(25)) {
       ev.push({ type: 'text', text: `${uName} ist paralysiert! Es kann nicht angreifen!` });
-      return false;
+      return this.interrupt(user);
     }
 
-    // AP verbrauchen
-    if (moveId !== 'struggle') {
+    // AP verbrauchen (in der zweiten Runde einer festen Attacke nicht noch einmal)
+    const locked = user.vol.lock?.id === moveId;
+    if (moveId !== 'struggle' && !locked) {
       const slot = user.mon.moves.find((m) => m.id === moveId);
       if (slot) slot.pp = Math.max(0, slot.pp - 1);
+    }
+    if (!R.protect) user.vol.protectCount = 0;
+    if (R.focus && user.vol.hitThisTurn) {
+      ev.push({ type: 'text', text: `${uName} hat seine Konzentration verloren und kann nicht angreifen!` });
+      return false;
+    }
+    // Aufladen: erste Runde ohne Angriff (Energiekraut überspringt das)
+    if (R.charge && !locked) {
+      ev.push({ type: 'text', text: `${uName} ${R.charge}` });
+      if (R.chargeStats) this.changeStages(user, R.chargeStats, ev, user);
+      user.vol.lastMove = moveId;
+      if (user.mon.item === 'power-herb') {
+        ev.push({ type: 'text', text: `${uName} ist durch sein Energiekraut sofort bereit!` });
+        this.consumeItem(user);
+      } else {
+        user.vol.lock = { id: moveId, target: target ? this.side(target) : null };
+        user.vol.semi = R.semi || null;
+        return false;
+      }
+    } else if (R.charge && locked) { user.vol.lock = null; user.vol.semi = null; }
+    if (R.rampage) {
+      if (!locked) user.vol.lock = { id: moveId, target: target ? this.side(target) : null, turns: 1 + rnd(2) };
+      else if (--user.vol.lock.turns <= 0) { user.vol.lock = null; user.vol.rampageEnd = true; }
     }
     ev.push({ type: 'text', text: `${uName} setzt ${move.name} ein!` });
     ev.push({ type: 'anim', side: this.side(user), target: this.side(target), move: moveId, moveType: move.type, cat: move.cat, power: move.power || 0 });
@@ -431,6 +489,32 @@ export class WildBattle {
   // Trifft ein Ziel: Genauigkeit, Statusattacke oder Schaden mit Zusatzeffekten
   hitTarget(user, target, move, ev, movedFirst) {
     const uName = this.name(user);
+    const R = MOVE_RULES[move.id] || {};
+    this.lastLanded = false;
+    if (R.protect) {
+      const n = user.vol.protectCount || 0;
+      if (Math.random() < 1 / 2 ** n) { user.vol.protect = true; user.vol.protectCount = n + 1; ev.push({ type: 'text', text: `${uName} schützt sich selbst!` }); }
+      else { user.vol.protectCount = 0; ev.push({ type: 'text', text: 'Es schlug fehl!' }); }
+      return;
+    }
+    if (R.rest) {
+      if (user.mon.hp >= user.mon.stats.hp || user.mon.ability === 'insomnia' || user.mon.ability === 'vital-spirit') { ev.push({ type: 'text', text: 'Es schlug fehl!' }); return; }
+      user.mon.status = 'slp'; user.vol.sleep = 2;
+      ev.push(this.statusEvent(user));
+      this.heal(user, user.mon.stats.hp, ev, `${uName} schläft ein und füllt seine KP auf!`);
+      return;
+    }
+    const selfOnly = move.cat === 'status' && (move.effect?.target === 'self' || !move.effect);
+    if (target !== user && !selfOnly && target.vol.protect) {
+      ev.push({ type: 'text', text: `${this.name(target)} schützt sich selbst!` });
+      if (R.crash) this.crash(user, target, move, ev);
+      return;
+    }
+    if (target !== user && !selfOnly && target.vol.semi && !SEMI_HITS[target.vol.semi]?.has(move.id)) {
+      ev.push({ type: 'text', text: `Die Attacke von ${this.nameDat(user)} ging daneben!` });
+      if (R.crash) this.crash(user, target, move, ev);
+      return;
+    }
 
     // Genauigkeit
     if (move.acc !== null && !(move.cat === 'status' && move.effect?.target === 'self')) {
@@ -441,8 +525,9 @@ export class WildBattle {
       if (hu?.zoom && target.moved) hitChance *= hu.zoom;
       if (ht?.evade) hitChance *= ht.evade;
       if (Math.random() * 100 >= hitChance) {
-        ev.push({ type: 'text', text: `Die Attacke von ${uName} ging daneben!` });
+        ev.push({ type: 'text', text: `Die Attacke von ${this.nameDat(user)} ging daneben!` });
         user.vol.furyCutter = 0;
+        if (R.crash) this.crash(user, target, move, ev);
         return;
       }
     }
@@ -456,6 +541,7 @@ export class WildBattle {
     const typeMult = move.type === '???' ? 1 : typeEffectiveness(move.type, species(target.mon.speciesId).types);
     if (typeMult === 0) {
       ev.push({ type: 'text', text: `Es hat keine Wirkung auf ${this.nameAcc(target)}...` });
+      if (R.crash) this.crash(user, target, move, ev);
       return;
     }
 
@@ -476,6 +562,7 @@ export class WildBattle {
       this.contactAbility(user, target, move, ev);
     }
     if (hits > 1) ev.push({ type: 'text', text: `${landed}-mal getroffen!` });
+    this.lastLanded = landed > 0;
     const hu = heldOf(user.mon);
     if (total > 0 && user.mon.hp > 0) {
       if (hu?.shell) this.heal(user, Math.max(1, Math.floor(total * hu.shell)), ev, `${this.name(user)} füllt mit der Muschelglocke KP auf!`);
@@ -508,6 +595,15 @@ export class WildBattle {
       if (e.kind === 'stat' && e.target === 'foe' && chance(e.chance ?? 100)) this.changeStages(target, e.stats, ev, user);
     }
     if (e.kind === 'stat' && e.target === 'self' && chance(e.chance ?? 100)) this.changeStages(user, e.stats, ev, user);
+  }
+
+  // Sprungkick und Turmkick: daneben heißt hart landen (halber Schaden, höchstens halbe KP des Ziels)
+  crash(user, target, move, ev) {
+    if (user.mon.hp <= 0) return;
+    const est = this.computeDamage(user, target, move, 1).damage;
+    const d = Math.max(1, Math.min(Math.floor(est / 2), Math.floor(target.mon.stats.hp / 2)));
+    ev.push({ type: 'text', text: `${this.name(user)} landet hart und verletzt sich!` });
+    this.applyDamage(user, d, ev);
   }
 
   statFor(b, key, crit, isAttacker = true) {
@@ -546,7 +642,8 @@ export class WildBattle {
     const critStage = (move.highCrit ? 1 : 0) + (user.vol.focus ? 2 : 0) + (hu?.crit || 0);
     const crit = Math.random() < critChance(critStage);
     let attack = this.statFor(user, physical ? 'atk' : 'spa', crit, true);
-    const defense = this.statFor(target, physical ? 'def' : 'spd', crit, false);
+    let defense = this.statFor(target, physical ? 'def' : 'spd', crit, false);
+    if (MOVE_RULES[move.id]?.halveDef) defense = Math.max(1, Math.floor(defense / 2));
     const guts = user.mon.ability === 'guts' && user.mon.status;
     if (guts && physical) attack = Math.floor(attack * 1.5);
     if (hu?.choice === (physical ? 'atk' : 'spa')) attack = Math.floor(attack * 1.5);
