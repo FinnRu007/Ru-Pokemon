@@ -9,6 +9,9 @@ import { GameServer } from './game/game.js';
 import { loadCache, applyData, fetchSpecies, saveCache } from './data/pokeapiLoader.js';
 import { POKEMON } from '../shared/data/pokemon.js';
 import { MOVES } from '../shared/data/moves.js';
+import { codeVersion } from './version.js';
+
+const VERSION = codeVersion();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -19,6 +22,18 @@ const STATIC = { '/shared/': path.join(ROOT, 'shared'), '/': path.join(ROOT, 'cl
 
 function serveStatic(req, res) {
   const url = new URL(req.url, 'http://x');
+  if (url.pathname === '/api/version') {
+    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-cache' });
+    return res.end(JSON.stringify({ version: VERSION }));
+  }
+  // Ein neuerer Server auf demselben Rechner bittet den alten, Platz zu machen (nur von localhost)
+  if (url.pathname === '/api/shutdown' && req.method === 'POST') {
+    const local = /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
+    if (!local || url.searchParams.get('version') === VERSION) { res.writeHead(403); return res.end(); }
+    res.writeHead(200); res.end('ok');
+    console.log('Neuere Version gestartet, dieser Server macht Platz.');
+    return setTimeout(shutdown, 100);
+  }
   if (url.pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': MIME['.json'] });
     return res.end(JSON.stringify({ ok: true, players: game.sessions.size, storage: repo.kind, species: Object.keys(POKEMON).length, moves: Object.keys(MOVES).length }));
@@ -53,6 +68,8 @@ const repo = openStorage(config.dataDir);
 const game = new GameServer(repo);
 const server = http.createServer(serveStatic);
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
+// Belegter Port wird oben am HTTP-Server behandelt
+wss.on('error', () => {});
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
@@ -66,9 +83,31 @@ const heartbeat = setInterval(() => {
   }
 }, 15000);
 
-server.listen(config.port, config.host, () => {
-  console.log(`Platin Multiplayer laeuft auf http://localhost:${config.port}  (Speicher: ${repo.kind}, Daten: ${config.dataDir})`);
+// Laeuft auf dem Port noch ein Server mit altem Code (z. B. nach einem Update), wird er abgeloest.
+let retried = false;
+server.on('error', async (e) => {
+  if (e.code === 'EADDRINUSE' && retried) {
+    console.error(`Port ${config.port} ist noch von einem alten Server belegt. Bitte alle Fenster des Spielservers schliessen und neu starten.`);
+    process.exit(1);
+  }
+  if (e.code !== 'EADDRINUSE') throw e;
+  retried = true;
+  const base = `http://127.0.0.1:${config.port}`;
+  let old = null;
+  try { old = (await (await fetch(base + '/api/version')).json()).version; } catch {}
+  if (old === VERSION) { console.log(`Der Server laeuft schon auf http://localhost:${config.port}`); process.exit(0); }
+  console.log('Alter Server mit veraltetem Stand gefunden, er wird ersetzt ...');
+  try { await fetch(`${base}/api/shutdown?version=${VERSION}`, { method: 'POST' }); } catch {}
+  for (let i = 0; i < 50; i++) {
+    await new Promise((r) => setTimeout(r, 200));
+    try { await fetch(base + '/api/version'); } catch { break; }
+  }
+  server.listen(config.port, config.host);
 });
+server.on('listening', () => {
+  console.log(`Platin Multiplayer laeuft auf http://localhost:${config.port}  (Stand ${VERSION}, Speicher: ${repo.kind}, Daten: ${config.dataDir})`);
+});
+server.listen(config.port, config.host);
 
 function shutdown() {
   console.log('Fahre herunter ...');

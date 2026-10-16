@@ -27,6 +27,19 @@ function Test-Port($p) {
   try { $c.Connect('127.0.0.1', $p); return $true } catch { return $false } finally { $c.Close() }
 }
 
+# Laeuft noch ein Server mit altem Stand (z. B. von vor einem Update), wird er beendet
+if (Test-Port $port) {
+  $want = (& node server/version.js).Trim()
+  $have = $null
+  try { $have = (Invoke-RestMethod -UseBasicParsing -TimeoutSec 3 "http://127.0.0.1:$port/api/version").version } catch {}
+  if ($have -ne $want) {
+    Write-Host 'Alter Server mit veraltetem Stand gefunden, starte ihn neu ...'
+    Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+      ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 2
+  }
+}
+
 $server = $null
 if (Test-Port $port) {
   Write-Host "Server laeuft schon auf Port $port, nutze ihn."
