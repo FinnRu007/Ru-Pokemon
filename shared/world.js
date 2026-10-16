@@ -3,10 +3,25 @@ export const DIRS = {
   up: { dx: 0, dy: -1 }, down: { dx: 0, dy: 1 }, left: { dx: -1, dy: 0 }, right: { dx: 1, dy: 0 }
 };
 const EDGE = { up: 'north', down: 'south', left: 'west', right: 'east' };
-export const SOLID = new Set(['#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O', 'Q', 'Z', 'M', 'N', 'J']);
+export const SOLID = new Set([' ', '#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O', 'Q', 'Z', 'M', 'N', 'J']);
 // Tueren, Treppen und Hoehleneingaenge sind nur mit Warp begehbar
 const PORTAL = new Set(['D', 'C', 'G', 'U']);
 export const GRASS = '"';
+// Vorspruenge: nur in diese Richtung ueberspringbar
+export const LEDGE = { L: 'down', '>': 'right', '<': 'left', '^': 'up' };
+
+// Originale Oberwelt (Matrix 0): welche Karte liegt an einer globalen Kachel? maps._owner kommt aus
+// shared/data/origLayout.js (Matrixfeld -> Karten-ID).
+export function ownerAt(maps, gx, gz) {
+  const grid = maps._owner;
+  if (!grid || gx < 0 || gz < 0) return null;
+  const id = grid[gz >> 5]?.[gx >> 5];
+  const m = id && maps[id];
+  if (!m || !m.orig) return null;
+  const x = gx - m.orig.x, y = gz - m.orig.z;
+  if (x < 0 || y < 0 || x >= m.width || y >= m.height || m.tiles[y][x] === ' ') return null;
+  return { id, map: m, x, y };
+}
 export const WATER = '~';
 // Feldhindernisse: blockieren, bis der Spieler die passende Feldattacke beherrscht (Story-Flag).
 //   Q  Felsbrocken (Zertruemmerer)   Z  Duenner Baum (Zerschneider)   M  Schwerer Felsblock (Staerke)
@@ -53,8 +68,17 @@ export function resolveStep(maps, mapId, x, y, dir, blocked, flags) {
   let nx = x + d.dx;
   let ny = y + d.dy;
   let nMapId = mapId;
+  // Ausgangsfelder (Tor, Hoehle, Treppe): der Schritt in diese Richtung wechselt immer die Karte
+  const ex = exitWarp(map, x, y, dir);
+  if (ex) return warpResult(ex);
 
-  if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) {
+  const seamless = map.orig && map.orig.m === 0;
+  if (seamless && (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height || map.tiles[ny][nx] === ' ')) {
+    // Originale Oberwelt: Nachbarkarte ueber die Lage in der Matrix finden
+    const nb = ownerAt(maps, map.orig.x + nx, map.orig.z + ny);
+    if (!nb) return { ok: false };
+    nx = map.orig.x + nx - nb.map.orig.x; ny = map.orig.z + ny - nb.map.orig.z; nMapId = nb.id;
+  } else if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) {
     const conn = map.connections && map.connections[EDGE[dir]];
     if (!conn) {
       const w = exitWarp(map, x, y, dir);
@@ -67,9 +91,6 @@ export function resolveStep(maps, mapId, x, y, dir, blocked, flags) {
     if (dir === 'left') { nx = target.width - 1; ny = y + conn.offset; }
     if (dir === 'right') { nx = 0; ny = y + conn.offset; }
     nMapId = conn.map;
-  } else {
-    const w = exitWarp(map, x, y, dir);
-    if (w) return warpResult(w);
   }
 
   const target = maps[nMapId];
@@ -79,12 +100,13 @@ export function resolveStep(maps, mapId, x, y, dir, blocked, flags) {
     const w = warpAt(target, nx, ny);
     return w ? warpResult(w) : { ok: false };
   }
-  if (t === 'L') {
-    if (dir !== 'down') return { ok: false };
-    const landing = tileAt(target, nx, ny + 1);
-    if (!passable(landing, flags) || landing === 'L') return { ok: false };
-    if (blocked && blocked(nMapId, nx, ny + 1)) return { ok: false };
-    return { ok: true, map: nMapId, x: nx, y: ny + 1, jump: true };
+  if (LEDGE[t]) {
+    if (dir !== LEDGE[t]) return { ok: false };
+    // Ueber den Vorsprung springen (Landung kann auf der Nachbarkarte liegen)
+    const land = resolveStep(maps, nMapId, nx, ny, dir, null, flags);
+    if (!land.ok || land.warp || land.jump) return { ok: false };
+    if (blocked && blocked(land.map, land.x, land.y)) return { ok: false };
+    return { ok: true, map: land.map, x: land.x, y: land.y, jump: true };
   }
   if (blocked && blocked(nMapId, nx, ny)) return { ok: false };
   return { ok: true, map: nMapId, x: nx, y: ny, jump: false };
@@ -100,7 +122,7 @@ export function isStandable(maps, mapId, x, y, flags) {
   const map = maps[mapId];
   if (!map) return false;
   const t = tileAt(map, x, y);
-  return passable(t, flags) && !PORTAL.has(t) && t !== 'L';
+  return passable(t, flags) && !PORTAL.has(t) && !LEDGE[t];
 }
 
 // Fahrrad: draußen und in Höhlen ja, in Gebäuden nicht

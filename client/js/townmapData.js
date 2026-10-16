@@ -1,3 +1,4 @@
+import { MAPS } from '../../shared/data/maps.js'; // im Browser /shared/..., in den Tests relativ
 // Zuordnung der Karten dieses Spiels zur Karte von Sinnoh aus Platin (Karten-App).
 // Ein Feld der Karte entspricht einem Matrixfeld der Hauptmatrix (res/field/matrices/map_matrix_000.json,
 // je 32x32 Kacheln). PLACES: Karten-ID -> [Platin-Map-Header (generated/map_headers.txt), x0, z0, x1, z1]
@@ -93,6 +94,13 @@ export const PLACES = {
 // Flugziele der Karten-App (src/applications/town_map/fly_locations.c): Form und Farbe der Markierung,
 // Bildposition (spriteX/spriteY ohne den Versatz des Rasters). shape: 0 1x1, 1 hoch, 2 2x2, 3/4 Winkel, 5 quer, 6 klein
 const G = 7; // TOWN_MAP_GRID_SPACING
+// Originalkarten (shared/data/origLayout.js): Lage direkt aus der Hauptmatrix, Raeume und Tore auf ihre Tuer
+for (const [id, m] of Object.entries(MAPS)) {
+  if (PLACES[id] || !m.orig) continue;
+  if (m.orig.m === 0) PLACES[id] = [id.toUpperCase(), m.orig.x >> 5, m.orig.z >> 5, (m.orig.x + m.width - 1) >> 5, (m.orig.z + m.height - 1) >> 5];
+  else if (!m.indoor && m.like && PLACES[m.like]) PLACES[id] = PLACES[m.like];
+}
+
 export const FLY_SPOTS = [
   { map: 'twinleaf_town', shape: 0, city: false, x: 3 * G, y: 27 * G },
   { map: 'sandgem_town', shape: 0, city: false, x: 5 * G, y: 26 * G },

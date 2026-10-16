@@ -128,8 +128,45 @@ await test('Nuzlocke-Sperre verhindert Ballwurf', () => {
 console.log('\nWelt und Warps');
 const { MAPS } = await import('../shared/data/maps.js');
 const { resolveStep, isStandable, SOLID } = await import('../shared/world.js');
+const { ORIG_ON, REMAP } = await import('../shared/data/origLayout.js');
+const { ORIG_FIX } = await import('../shared/data/origFix.js');
+const { SPAWN } = await import('../shared/data/maps.js');
+// Alte Koordinaten auf die Originalkarten umrechnen (ohne Originaldaten unveraendert)
+const P = (map, x, y) => (ORIG_ON && REMAP[map] ? REMAP[map].pt(x, y) : [x, y]);
+// Kuerzester Weg (Liste von Richtungen) von einem Feld zu einem Ziel, mit derselben Schrittlogik wie Server und Client
+function findPath(map, x, y, goal, max = 4000) {
+  const key = (m, a, b) => `${m},${a},${b}`;
+  const seen = new Map([[key(map, x, y), null]]); const q = [[map, x, y]];
+  while (q.length && seen.size < max) {
+    const [m, a, b] = q.shift();
+    if (goal(m, a, b)) { const path = []; let k = key(m, a, b); while (seen.get(k)) { const [pk, d] = seen.get(k); path.unshift(d); k = pk; } return path; }
+    for (const d of ['up', 'down', 'left', 'right']) {
+      const r = resolveStep(MAPS, m, a, b, d);
+      if (!r.ok || r.warp) continue;
+      const k = key(r.map, r.x, r.y);
+      if (!seen.has(k)) { seen.set(k, [key(m, a, b), d]); q.push([r.map, r.x, r.y]); }
+    }
+  }
+  return null;
+}
 await test('Tueren, Treppen und Hoehlen fuehren hin und zurueck', () => {
   const go = (map, x, y, dir) => resolveStep(MAPS, map, x, y, dir);
+  if (ORIG_ON) {
+    // Originalkarten: jede Tuer fuehrt in einen Raum, aus dem ein Weg zurueck auf dieselbe Karte fuehrt
+    let r = go('twinleaf_town', 20, 22, 'up');
+    assert.deepEqual([r.warp, r.map], [true, 'twinleaf_home_1f']);
+    r = go('twinleaf_home_1f', r.x, r.y, 'down');
+    assert.deepEqual([r.map, r.x, r.y, r.dir], ['twinleaf_town', 20, 22, 'down']);
+    const reached = new Set(Object.values(MAPS).flatMap((m) => m.warps.map((w) => w.to)));
+    for (const [id, m] of Object.entries(MAPS)) for (const w of m.warps) {
+      if (!reached.has(id) && m.indoor) continue; // Raum, den es in Platin nicht gibt
+      if (!m.orig && !MAPS[w.to].orig) continue;
+      if (Object.entries(ORIG_FIX._retarget || {}).some(([k, v]) => k.startsWith(id + '>') && v[0] === w.to)) continue; // Boot zur Insel, zurueck per Matrose
+      if (!MAPS[w.to]) assert.fail(`${id}: Ziel ${w.to} fehlt`);
+      assert.ok(MAPS[w.to].warps.some((b) => b.to === id) || ['spear_pillar', 'distortion_world', 'hall_of_fame'].includes(w.to), `${id} -> ${w.to} ohne Rueckweg`);
+    }
+    return;
+  }
   let r = go('twinleaf_town', 3, 5, 'up');
   assert.deepEqual([r.warp, r.map, r.x, r.y], [true, 'twinleaf_home_1f', 4, 7]);
   r = go('twinleaf_home_1f', 4, 7, 'down');
@@ -232,11 +269,13 @@ await test('Zwei Spieler sehen sich und Bewegungen in Echtzeit', async () => {
   b.send({ t: 'chooseStarter', speciesId: 393 });
   await a.wait((m) => m.t === 'party' && m.party.length === 1);
   await b.wait((m) => m.t === 'party' && m.party.length === 1);
-  a.send({ t: 'move', dir: 'up', seq: 1 });
+  const dir = ['up', 'down', 'left', 'right'].find((d) => { const r = resolveStep(MAPS, SPAWN.map, SPAWN.x, SPAWN.y, d); return r.ok && !r.warp; });
+  const exp = resolveStep(MAPS, SPAWN.map, SPAWN.x, SPAWN.y, dir);
+  a.send({ t: 'move', dir, seq: 1 });
   const ack = await a.wait((m) => m.t === 'moveAck' && m.seq === 1);
   assert.equal(ack.ok, true);
   const seen = await b.wait((m) => m.t === 'playerMoved' && m.id === wa.selfId);
-  assert.equal(seen.y, 6);
+  assert.deepEqual([seen.x, seen.y], [exp.x, exp.y]);
   // Starter beider Spieler bilden eine Seelengruppe
   const n = await a.wait((m) => m.t === 'nuzlocke' && m.links.some((l) => l.members.length === 2));
   assert.equal(n.links[0].route, 'starter');
@@ -274,12 +313,18 @@ await test('Encounter im hohen Gras startet serverseitigen Kampf', async () => {
   await a.wait((m) => m.t === 'party' && m.party.length === 1);
   let seq = 0;
   const step = async (dir) => { a.send({ t: 'move', dir, seq: ++seq, running: true }); await sleep(110); };
-  for (let i = 0; i < 7; i++) await step('up');     // Zweiblattdorf -> Route 201 (10,13)
-  for (let i = 0; i < 3; i++) await step('up');     // (10,10)
-  for (let i = 0; i < 4; i++) await step('right');  // (14,10) hohes Gras
+  // Weg ins hohe Gras von Route 201
+  const path = findPath(SPAWN.map, SPAWN.x, SPAWN.y, (m, x, y) => m === 'route_201' && MAPS[m].tiles[y][x] === '"'
+    && ['left', 'right', 'up', 'down'].some((d) => { const r = resolveStep(MAPS, m, x, y, d); return r.ok && MAPS[r.map].tiles[r.y][r.x] === '"'; }));
+  assert.ok(path, 'kein Weg ins Gras');
+  for (const d of path) await step(d);
+  const s0 = game.sessions.get([...game.sessions.keys()].find((k) => game.sessions.get(k).player.name === 'Gary'));
+  const { map: gm, x: gx, y: gy } = s0.player;
+  const there = ['left', 'right', 'up', 'down'].find((d) => { const r = resolveStep(MAPS, gm, gx, gy, d); return r.ok && MAPS[r.map].tiles[r.y][r.x] === '"'; });
+  const OPPD = { left: 'right', right: 'left', up: 'down', down: 'up' };
   let started = null;
   for (let i = 0; i < 300 && !started; i++) {
-    await step(i % 2 ? 'left' : 'right');
+    await step(i % 2 ? OPPD[there] : there);
     started = a.inbox.find((m) => m.t === 'battleStart');
   }
   assert.ok(started, 'kein Encounter nach 300 Schritten');
@@ -305,14 +350,16 @@ await test('Tuer fuehrt serverseitig ins Haus und wieder hinaus', async () => {
   await a.wait((m) => m.t === 'party' && m.party.length === 1);
   let seq = 0;
   const step = async (dir) => { a.send({ t: 'move', dir, seq: ++seq, running: true }); await sleep(110); };
-  for (let i = 0; i < 2; i++) await step('up');
-  for (let i = 0; i < 7; i++) await step('left');
+  const door = MAPS.twinleaf_town.warps.find((w) => w.to === 'twinleaf_home_1f' && !w.off);
+  const path = findPath(SPAWN.map, SPAWN.x, SPAWN.y, (m, x, y) => m === 'twinleaf_town' && x === door.x && y === door.y + 1);
+  assert.ok(path, 'kein Weg zur Haustuer');
+  for (const d of path) await step(d);
   await step('up');
   const inside = await a.wait((m) => m.t === 'mapChange');
-  assert.deepEqual([inside.map, inside.x, inside.y], ['twinleaf_home_1f', 4, 7]);
+  assert.deepEqual([inside.map, inside.x, inside.y], ['twinleaf_home_1f', door.tx, door.ty]);
   await step('down');
   const out = await a.wait((m) => m.t === 'mapChange');
-  assert.deepEqual([out.map, out.x, out.y, out.dir], ['twinleaf_town', 3, 5, 'down']);
+  assert.deepEqual([out.map, out.x, out.y, out.dir], ['twinleaf_town', door.x, door.y + 1, 'down']);
   a.ws.close();
 });
 
@@ -421,7 +468,8 @@ await test('Welt: Raender, Warps, Ausloeser und Erreichbarkeit aller Karten', ()
   assert.deepEqual(errors, []);
 });
 await test('Weltkarte: alle Gebiete passen zusammen und ueberlappen sich nicht', () => {
-  assert.deepEqual(world.checkLayout(), []);
+  // Originalkarten liegen fest in der Matrix von Platin, nur die eigenen Karten werden hier geprueft
+  if (!ORIG_ON) assert.deepEqual(world.checkLayout(), []);
 });
 await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschritt', () => {
   const steps = (await_ => await_);
@@ -481,6 +529,37 @@ await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {
   for (const id of ['e4_aaron', 'e4_bertha', 'e4_flint', 'e4_lucian', 'champ_cynthia']) assert.ok(story.TRAINERS[id].rematch?.party.length >= 5, `Revanche ${id}`);
 });
 
+const DV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
+// Feld vor einem Ausloeser und Richtung hinein
+function beforeTrigger(map, script) {
+  const t = story.TRIGGERS[map].find((x) => x.script === script);
+  for (let y = t.y; y < t.y + t.h; y++) for (let x = t.x; x < t.x + t.w; x++) for (const [d, [dx, dy]] of Object.entries(DV)) {
+    const ox = x - dx, oy = y - dy;
+    if (ox >= t.x && ox < t.x + t.w && oy >= t.y && oy < t.y + t.h) continue;
+    if (isStandable(MAPS, map, ox, oy) && !story.npcAt(map, ox, oy, {})) return [ox, oy, d];
+  }
+  throw new Error('kein Feld vor ' + script);
+}
+// Feld knapp ausserhalb der Sichtweite eines Trainers, Schritt hinein
+function intoSight(map, id) {
+  const n = story.NPCS[map].find((x) => x.id === id);
+  const sight = story.TRAINERS[n.trainer].sight; const [dx, dy] = DV[n.dir];
+  return [n.x + dx * (sight + 1), n.y + dy * (sight + 1), OPPOSITE[n.dir]];
+}
+// Spieler neben einen NPC stellen und ihn anschauen lassen
+function talkTo(s, id) {
+  for (const [map, list] of Object.entries(story.NPCS)) {
+    const n = list.find((x) => x.id === id);
+    if (!n) continue;
+    for (const [d, [dx, dy]] of Object.entries(DV)) {
+      const x = n.x - dx, y = n.y - dy;
+      if (isStandable(MAPS, map, x, y)) { Object.assign(s.player, { map, x, y, dir: d }); return; }
+    }
+  }
+  throw new Error('NPC fehlt: ' + id);
+}
+
 // Spielt automatisch weiter: Dialoge bestaetigen, Starter waehlen, im Kampf immer Attacke 1.
 function autoplay(c) {
   const h = (m) => {
@@ -506,10 +585,12 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
   let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); await sleep(60); };
   // Ohne Pokemon schickt der Ausloeser zurueck
-  tp('route_201', 42, 7); await step('right');
-  await a.wait((m) => m.t === 'mapChange' && m.x === 42);
+  let [sx, sy, sd] = beforeTrigger('route_201', 'noPokemon');
+  tp('route_201', sx, sy); await step(sd);
+  await a.wait((m) => m.t === 'mapChange' && m.x === sx && m.y === sy);
   // See: Zyrus, Koffer, Starter, Wildkampf, Rivalenkampf
-  tp('lake_verity', 20, 7); await step('left');
+  [sx, sy, sd] = beforeTrigger('lake_verity', 'lake');
+  tp('lake_verity', sx, sy); await step(sd);
   await a.wait((m) => m.t === 'progress' && m.flags.lake_done, 20000);
   assert.equal(s.party.length, 1);
   assert.equal(s.party[0].speciesId, 393);
@@ -518,9 +599,10 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   tp('sandgem_lab', 6, 9); await step('up');
   await a.wait((m) => m.t === 'progress' && m.flags.lab_done, 8000);
   assert.equal(s.player.items['poke-ball'], 5);
-  // Trainer Tim (3,15) schaut nach rechts, Sichtweite 3
+  // Trainer Tim schaut in eine Richtung: ein Schritt in seine Sichtlinie startet den Kampf
   for (const m of s.party) { m.level = 30; m.hp = m.stats.hp = 200; }
-  tp('route_202', 7, 15); await step('left');
+  [sx, sy, sd] = intoSight('route_202', 'tim');
+  tp('route_202', sx, sy); await step(sd);
   await a.wait((m) => m.t === 'npcEmote' && m.id === 'tim');
   await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer');
   const end = await a.wait((m) => m.t === 'battleEnd', 20000);
@@ -566,7 +648,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   assert.equal((await step('up')).ok, true);
   // Fliegen zu einem besuchten Ort
   s.player.flags.hm_fly = true; s.player.flags.visit_floaroma_town = true;
-  tp('route_204', 7, 10); a.send({ t: 'fly' });
+  tp('route_204', ...P('route_204', 7, 10)); a.send({ t: 'fly' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'floaroma_town', 5000);
   // Speersaeule: nach Zyrus in die Zerrwelt, Giratina, zurueck
   Object.assign(s.player.flags, { galactic_hq_done: true, beat_zyrus2: true });
@@ -607,7 +689,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await a.wait((m) => m.t === 'progress' && m.flags.champion, 5000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'twinleaf_town', 8000);
   // Nach der Liga: Schiff zur Kampfzone, Charon am Kahlberg, Heatran
-  await sleep(100); tp('north_sea', 12, 17); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await sleep(100); talkTo(s, 'ferry_snow'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'fight_area', 8000);
   Object.assign(s.player.flags, { beat_stark_tag: true });
   await sleep(100); tp('stark_mountain_deep', 7, 6); s.player.dir = 'up'; a.send({ t: 'interact' });

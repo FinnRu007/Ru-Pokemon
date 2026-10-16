@@ -34,7 +34,7 @@ const box = (id) => { const p = PLACES[id]; return p && { x0: p[1], z0: p[2], x1
 // Globale Kachel (Hauptmatrix, 32 Kacheln je Feld) einer Position. Umgebaute Aussenkarten haben orig.
 export function globalTile(mapId, x, y, depth = 0) {
   const m = MAPS[mapId]; if (!m) return null;
-  if (m.orig) return { gx: m.orig.x + x + 0.5, gz: m.orig.z + y + 0.5, inside: !!m.indoor };
+  if (m.orig?.m === 0) return { gx: m.orig.x + x + 0.5, gz: m.orig.z + y + 0.5, inside: false };
   const b = box(mapId);
   if (b && !m.indoor) {
     // Ohne Originalmasse: Position anteilig auf die Felder des Headers verteilen
@@ -66,7 +66,7 @@ function indoorTile(mapId) { if (!CACHE.has(mapId)) CACHE.set(mapId, globalTile(
 // Bildpunkt auf der Karte (Koordinaten des oberen Bildschirms)
 export function mapPixel(mapId, x, y) {
   const m = MAPS[mapId]; if (!m) return null;
-  const g = m.indoor && !m.orig ? indoorTile(mapId) : globalTile(mapId, x, y);
+  const g = m.indoor ? indoorTile(mapId) : globalTile(mapId, x, y);
   return g && { x: GX + (G * g.gx) / 32, y: GY + (G * g.gz) / 32, inside: g.inside };
 }
 

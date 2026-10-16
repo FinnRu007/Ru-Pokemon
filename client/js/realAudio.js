@@ -75,6 +75,8 @@ const pick = (t, night) => Array.isArray(t) ? t[night ? 1 : 0] : t;
 
 // Titel fuer eine Karte (oder null)
 export function trackForMap(id, map, night = isNight()) {
+  // Neue Karten aus den Platin-Daten (map.like): Musik einer verwandten Karte
+  if (!MAP_TRACKS[id] && map?.like && map.like !== id) return trackForMap(map.like, null, night);
   let t = MAP_TRACKS[id] || THEME_TRACKS[map?.theme];
   if (!t) {
     const town = Object.keys(TOWN).find((k) => id.startsWith(k + '_'));

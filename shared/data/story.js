@@ -20,6 +20,9 @@
 import { TRAINERS2, NPCS2, TRIGGERS2, SCRIPTS2, BADGES2 } from './story2.js';
 import { SERVICE_NPCS, SERVICE_SCRIPTS } from './services.js';
 import { FIELD_ITEMS } from './fieldItems.js';
+import { MAPS } from './maps.js';
+import { applyOrigStory } from './origLayout.js';
+import { ORIG_FIX } from './origFix.js';
 
 export function cond(flags, c) {
   if (!c) return true;
@@ -374,6 +377,8 @@ for (const [m, list] of Object.entries(FIELD_ITEMS)) {
 // Begleiter, Doppelkämpfe, Wanderer, Kampfturm und restliche Kampfzone (story8.js)
 applyStory8({ TRAINERS, SCRIPTS, NPCS, TRIGGERS });
 applyStory9({ SCRIPTS, NPCS, TRIGGERS });
+// Auf die Originalkarten umrechnen (origLayout.js, feste Stellen in origFix.js)
+applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, fixes: ORIG_FIX }, MAPS);
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

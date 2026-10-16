@@ -122,6 +122,7 @@ const MAP_MUSIC = {
 };
 export function musicForMap(id, map) {
   if (MAP_MUSIC[id]) return MAP_MUSIC[id];
+  if (map?.like && map.like !== id && !map.music) return musicForMap(map.like, null);
   if (map?.music && S[map.music]) return map.music;
   const th = map?.theme;
   if (th === 'cave') return 'cave';

@@ -1,7 +1,7 @@
 // Weltpruefung: Kartenraender, Erreichbarkeit und Story-Blockaden. Simuliert den Spieler per
 // Breitensuche ueber alle Karten. NPCs mit show-Bedingung und Ausloeser mit { back } sperren
 // Felder je nach Story-Fortschritt, Feldhindernisse brauchen die passenden VM-Flags.
-import { MAPS } from '../shared/data/maps.js';
+import { MAPS, SPAWN } from '../shared/data/maps.js';
 import { NPCS, TRIGGERS, SCRIPTS, TRAINERS, cond, visibleNpcs } from '../shared/data/story.js';
 import { resolveStep, isStandable, SOLID } from '../shared/world.js';
 
@@ -12,7 +12,17 @@ function pushesBack(steps) {
   return (steps || []).some((s) => s && !Array.isArray(s) && (s.back || (s.then && pushesBack(s.then))));
 }
 
-export function reachable(flags, start = { map: 'twinleaf_town', x: 10, y: 7 }) {
+// Ziele von { warp } in einem Skript (Schiffe, Boote)
+function scriptWarps(steps, out = []) {
+  for (const s of steps || []) {
+    if (!s || Array.isArray(s)) continue;
+    if (s.warp) out.push(s.warp);
+    for (const k of ['then', 'else', 'yes', 'no']) scriptWarps(s[k], out);
+  }
+  return out;
+}
+
+export function reachable(flags, start = { map: SPAWN.map, x: SPAWN.x, y: SPAWN.y }) {
   const seen = new Set(); const maps = new Set();
   const key = (m, x, y) => `${m}|${x}|${y}`;
   const q = [start]; seen.add(key(start.map, start.x, start.y));
@@ -20,8 +30,22 @@ export function reachable(flags, start = { map: 'twinleaf_town', x: 10, y: 7 }) 
     if (visibleNpcs(m, flags).some((n) => n.x === x && n.y === y)) return true;
     return (TRIGGERS[m] || []).some((t) => x >= t.x && x < t.x + (t.w || 1) && y >= t.y && y < t.y + (t.h || 1) && cond(flags, t.when) && pushesBack(SCRIPTS[t.script]));
   };
+  const sailed = new Set();
   while (q.length) {
-    const p = q.shift(); maps.add(p.map);
+    const p = q.shift();
+    if (!maps.has(p.map)) {
+      // Figuren mit Fahrt-Skript bringen den Spieler woanders hin
+      for (const n of visibleNpcs(p.map, flags)) {
+        if (typeof n.talk !== 'string' || sailed.has(n.id)) continue;
+        for (const [m, x, y] of scriptWarps(SCRIPTS[n.talk])) {
+          if (!/Leinen los|Boot|Schiff/.test(JSON.stringify(SCRIPTS[n.talk]))) continue;
+          sailed.add(n.id);
+          const k = key(m, x, y);
+          if (!seen.has(k)) { seen.add(k); q.push({ map: m, x, y }); }
+        }
+      }
+    }
+    maps.add(p.map);
     for (const dir of ['up', 'down', 'left', 'right']) {
       const r = resolveStep(MAPS, p.map, p.x, p.y, dir, (m, x, y) => blockedTile(m, x, y), flags);
       if (!r.ok || (r.warp && blockedTile(r.map, r.x, r.y))) continue;
@@ -82,7 +106,7 @@ export function checkWorld() {
   }
   // Mit allen Faehigkeiten muss jede Karte erreichbar sein
   const all = reachable(ALL);
-  for (const id of Object.keys(MAPS)) if (!all.maps.has(id) && !MAPS[id].scripted) errors.push(`${id} ist nicht erreichbar`);
+  for (const id of Object.keys(MAPS)) if (!all.maps.has(id) && !MAPS[id].scripted && !MAPS[id].retired) errors.push(`${id} ist nicht erreichbar`);
   return errors;
 }
 
