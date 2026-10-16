@@ -860,7 +860,7 @@ await test('Attacken mit Nachteilen: Finale, Hyperstrahl, Fliegen, Wutanfall, Sp
   const duel = (moveId, foeMove = 'splash', lv = 50) => {
     const a = createPokemon(143, lv); a.moves = [{ id: moveId, pp: 10, maxPp: 10 }];
     const w = createPokemon(143, lv); w.moves = [{ id: foeMove, pp: 30, maxPp: 30 }];
-    a.stats.hp = a.hp = w.stats.hp = w.hp = 2000;
+    a.stats.hp = a.hp = w.stats.hp = w.hp = 2000; a.stats.spe = 200; w.stats.spe = 50; // kein Gleichstand beim Tempo
     const b = new WildBattle({ id: 'm', party: [a], wild: w, route: 'r', items: {}, catchable: false, onFaint: () => [] });
     b.intro();
     return { a, w, b, turn: () => b.act({ type: 'move', index: 0 }).events.map((e) => e.text).filter(Boolean).join(' | ') };
