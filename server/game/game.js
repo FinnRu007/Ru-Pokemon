@@ -6,7 +6,7 @@ import { MOVES } from '../../shared/data/moves.js';
 import { resolveStep, tileAt, facingTile, GRASS, CAVE_FLOOR, WATER, DIRS, isStandable, fieldFlags } from '../../shared/world.js';
 import { encounterRoll } from '../../shared/formulas.js';
 import { C2S, S2C, WALK_MS, RUN_MS, BIKE_MS, EMOTES } from '../../shared/protocol.js';
-import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves } from './pokemonFactory.js';
+import { createPokemon, publicPokemon, displayName, healPokemon, evolve, canEvolve, species, recalc, defaultMoves, evoView } from './pokemonFactory.js';
 import { WildBattle, TrainerBattle } from './battle.js';
 import { DoubleBattle } from './double.js';
 import { RulesEngine, sanitizeRules } from './rules.js';
@@ -94,6 +94,7 @@ export class GameServer {
       case C2S.HOLD: return this.holdItem(s, msg);
       case C2S.BIKE: return this.toggleBike(s);
       case C2S.POKETCH: return this.poketch(s);
+      case C2S.EVOLVE_CANCEL: return this.cancelEvolution(s, msg);
       default: return this.send(s.ws, { t: S2C.ERROR, message: 'Unbekannter Nachrichtentyp ' + msg.t });
     }
   }
@@ -491,10 +492,30 @@ export class GameServer {
     if (!opt) return this.notice(s, 'Es hätte keine Wirkung.', 'error');
     s.player.items[item]--;
     const from = displayName(mon);
+    const before = evoView(mon);
     mon.speciesId = opt.to; mon.ability = species(opt.to).ability; recalc(mon);
     this.dexMark(s, opt.to, true);
     this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s);
-    this.notice(s, `${from} hat sich zu ${species(opt.to).name} entwickelt!`);
+    const text = `${from} hat sich zu ${species(opt.to).name} entwickelt!`;
+    this.send(s.ws, { t: S2C.EVOLUTION, list: [{ pokemonId: mon.id, text, from: before, to: evoView(mon) }] });
+    this.notice(s, text);
+  }
+
+  // Entwicklung durch Level: wie im Original mit B abbrechbar. Der Client meldet den Abbruch waehrend der Szene.
+  rememberEvolution(s, e) {
+    (s.evoUndo ||= {})[e.pokemonId] = { from: e.from.speciesId, to: e.to.speciesId, at: Date.now() };
+    return { ...e, cancelable: true };
+  }
+  cancelEvolution(s, msg) {
+    const u = s.evoUndo?.[msg.pokemonId];
+    if (!u) return;
+    delete s.evoUndo[msg.pokemonId];
+    const mon = [...s.party, ...s.box].find((m) => m.id === msg.pokemonId);
+    if (!mon || mon.speciesId !== u.to || Date.now() - u.at > 120000) return;
+    const alive = mon.hp > 0;
+    mon.speciesId = u.from; mon.ability = species(u.from).ability; recalc(mon);
+    if (alive && mon.hp < 1) mon.hp = 1;
+    this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s);
   }
 
   // Sonderbonbon: ein Level hoeher, mit neuen Attacken und Entwicklung wie im Original
@@ -509,8 +530,10 @@ export class GameServer {
       if (e.type === 'learnPrompt') this.send(s.ws, { t: S2C.LEARN_PROMPT, ...e });
       else texts.push(e.text);
     }
-    if (canEvolve(mon)) { const e = evolve(mon); if (e) { texts.push(e.text); this.dexMark(s, mon.speciesId, true); } }
+    const evo = canEvolve(mon) && evolve(mon);
+    if (evo) { texts.push(evo.text); this.dexMark(s, mon.speciesId, true); }
     this.repo.savePokemon(mon); this.savePlayerNow(s); this.sendParty(s);
+    if (evo) this.send(s.ws, { t: S2C.EVOLUTION, list: [this.rememberEvolution(s, evo)] });
     this.notice(s, texts.join(' '));
   }
 
@@ -842,6 +865,7 @@ export class GameServer {
     s.battleMeta = null;
     const tr = meta?.trainerId ? TRAINERS[meta.trainerId] : null;
     const extra = [];
+    const evolutions = [];
     let victims = [];
 
     if (result === 'caught') {
@@ -888,7 +912,7 @@ export class GameServer {
       extra.push(tr ? `${tr.name}: Ha! Aber keine Sorge, das war nur ein Übungskampf.` : 'Dein Pokémon hat sich zum Glück schnell erholt.');
     } else if (result === 'win') {
       for (const m of s.party) {
-        if (m.alive && m.hp > 0 && canEvolve(m)) { const e = evolve(m); if (e) { extra.push(e.text); this.dexMark(s, m.speciesId, true); } }
+        if (m.alive && m.hp > 0 && canEvolve(m)) { const e = evolve(m); if (e) { extra.push(e.text); evolutions.push(this.rememberEvolution(s, e)); this.dexMark(s, m.speciesId, true); } }
       }
     }
 
@@ -915,7 +939,7 @@ export class GameServer {
 
     this.saveMons(s);
     this.savePlayerNow(s);
-    this.send(s.ws, { t: S2C.BATTLE_END, result, messages: extra });
+    this.send(s.ws, { t: S2C.BATTLE_END, result, messages: extra, ...(evolutions.length ? { evolutions } : {}) });
     this.sendParty(s);
     this.refreshRun(s.player);
     this.broadcastMap(s.player.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(s.player) }, s.player.id);

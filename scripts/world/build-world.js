@@ -237,6 +237,7 @@ export async function buildWorld({ log = console.log } = {}) {
       m: spec.m, x: x0 * 32, z: y0 * 32, width: W, height: H,
       tiles: grid.map((r) => r.join('')),
       heights: Buffer.from(hgt.buffer).toString('base64'),
+      beh: Buffer.from(beh).toString('base64'),
       warps, objects, coords, bgs,
       battleBG: HEAD[spec.h]?.battleBG || null
     };

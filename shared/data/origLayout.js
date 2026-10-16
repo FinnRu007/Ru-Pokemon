@@ -131,10 +131,12 @@ export function applyOrigMaps(MAPS) {
     Object.assign(map, { width: g.width, height: g.height, tiles: g.tiles.slice(), warps: [], connections: {} });
     if (spec.like) map.like = spec.like;
     if (spec.indoor) { map.indoor = true; map.theme = spec.theme || map.theme || 'gate'; }
-    let hcache = null;
+    let hcache = null, bcache = null;
     map.orig = {
       m: g.m, x: g.x, z: g.z, battleBG: g.battleBG, objects: g.objects, coords: g.coords, bgs: g.bgs, warps: g.warps,
-      get heights() { return hcache || (hcache = new Int16Array(b64(g.heights).buffer)); }
+      get heights() { return hcache || (hcache = new Int16Array(b64(g.heights).buffer)); },
+      // Verhalten je Kachel (Gras, Sand, Schnee ...), wie in include/constants/field/map_tile_behaviors.h
+      get beh() { return bcache || (bcache = g.beh ? b64(g.beh) : new Uint8Array(g.width * g.height)); }
     };
   }
   Object.defineProperty(MAPS, '_owner', { value: W.owner, enumerable: false, configurable: true });

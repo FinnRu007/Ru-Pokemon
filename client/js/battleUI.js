@@ -3,6 +3,8 @@ import { showLevelStats } from './levelStats.js';
 import { ITEMS, POCKETS, pocketOf, sortItems } from '/shared/data/items.js';
 import { monsterDataUrl, monsterIcon, typeBadge, itemIcon, trainerImage, hasReal } from './art/monsters.js';
 import { terrainImage } from './art/realTerrain.js';
+import { applyBattleBg } from './art/realBattleBg.js';
+import { playEvolutions } from './evolution.js';
 import { characterSheet } from './art/characters.js';
 import { BattleFx, battleTransition, spriteEl } from './battleFx.js';
 import { audio } from './audio.js';
@@ -256,7 +258,10 @@ export class BattleUI {
     (async () => {
       if (this.intro) await this.intro;
       if (msg.result === 'win' && !this.caught) audio.music(['wild', 'legend', 'lakes', 'creation'].includes(this.foeKind) ? 'victory' : 'victory_' + this.foeKind);
+      // Entwicklungen zeigt nach dem Kampf die eigene Szene (evolution.js), nicht das Textfeld
+      const evos = msg.evolutions || [];
       for (const t of msg.messages || []) {
+        if (evos.some((e) => e.text === t)) continue;
         if (/Orden/.test(t) && /erhältst/.test(t)) audio.jingle('badge');
         await this.say(t, 1300);
       }
@@ -265,6 +270,7 @@ export class BattleUI {
       $('fade').classList.remove('on'); void $('fade').offsetWidth; $('fade').classList.add('on');
       this.root.classList.add('hidden');
       this.fx.clear();
+      await playEvolutions(evos, this.hooks.evolution);
       this.shown = false;
       this.state = null;
       this.hooks.onEnd(msg);
@@ -298,9 +304,12 @@ export class BattleUI {
   // Original-Kampfboden (npm run sprites) statt der gezeichneten Ellipsen
   async renderTerrain() {
     const field = this.root.querySelector('.field');
-    const t = this.hooks.terrain?.();
+    // Hook liefert { bg, terrain, time } (realBattleBg.js) oder nur den Namen des Bodens
+    const scene = this.hooks.terrain?.();
+    const t = typeof scene === 'string' ? scene : scene?.terrain;
+    applyBattleBg(field, scene);
     if (!t || !hasReal('terrain', t)) { field.classList.remove('real-terrain'); return; }
-    const [enemy, player] = await Promise.all([terrainImage(t, 'enemy'), terrainImage(t, 'player')]);
+    const [enemy, player] = await Promise.all([terrainImage(t, 'enemy', scene?.time), terrainImage(t, 'player', scene?.time)]);
     if (!enemy || !player) return;
     field.style.setProperty('--terrain-enemy', `url(${enemy})`);
     field.style.setProperty('--terrain-player', `url(${player})`);

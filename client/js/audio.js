@@ -99,6 +99,11 @@ const S = {
     lead: 'c5.2 e5.2 g5.2 c6.2 g5.2 c6.2 e6.4 | f6.4 c6.4 a5.8 | d6.2 e6.2 f6.4 b5.4 d6.4 | c6.12 r.4'
   }
 };
+// Entwicklung: gleichbleibendes, spannungsvolles Arpeggio, steigt jede Runde etwas an
+S.evolution = {
+  bpm: 120, chords: 'Am Am F G Am Am Dm E', bass: 'pulse', arp: 'up', drums: null, leadWave: 'tri',
+  lead: 'a5.2 e5.2 a5.2 c6.2 b5.2 e5.2 b5.2 c6.2 | a5.2 e5.2 a5.2 c6.2 d6.4 c6.4 | a5.2 f5.2 a5.2 c6.2 f6.4 e6.4 | d6.2 b5.2 g5.2 b5.2 d6.4 g6.4 | a5.2 e5.2 a5.2 c6.2 b5.2 e5.2 b5.2 c6.2 | e6.2 c6.2 a5.2 c6.2 e6.4 a6.4 | f6.4 d6.4 a5.4 d6.4 | e6.4 g#5.4 b5.4 e6.4'
+};
 S.battle_leader = { ...S.battle_trainer, bpm: 188, drums: ['kkhsk.hskkhsk.ss'] };
 S.victory_trainer = S.victory_leader = S.victory;
 // Weitere Kampfarten ohne eigenen Chiptune: naechstes passendes Stueck
@@ -112,7 +117,8 @@ const J = {
   levelup: { bpm: 150, lead: 'g5.1 c6.1 e6.1 g6.3 e6.2 g6.8', chords: 'C' },
   caught: { bpm: 130, lead: 'e5.2 g5.2 c6.2 e6.2 d6.2 b5.2 g5.4 | c6.8 r.8', chords: 'C G' },
   badge: { bpm: 120, lead: 'g5.2 g5.2 g5.2 c6.6 e6.4 | d6.2 c6.2 d6.2 e6.2 g6.8 | c7.12 r.4', chords: 'C G C' },
-  item: { bpm: 140, lead: 'c6.2 d6.2 e6.2 g6.6 r.4', chords: 'C' }
+  item: { bpm: 140, lead: 'c6.2 d6.2 e6.2 g6.6 r.4', chords: 'C' },
+  evolved: { bpm: 132, lead: 'c6.2 c6.2 c6.2 g5.2 c6.2 e6.2 g6.4 | f6.2 e6.2 d6.2 e6.2 c6.8 | g6.12 r.4', chords: 'C F C' }
 };
 
 // Musik pro Karte: feste Zuordnung, sonst ueber Thema oder Ortsnamen
@@ -453,6 +459,11 @@ class Chip {
       case 'statDown': for (let i = 0; i < 6; i++) T('p25', 1350 - i * 150, i * 0.05, 0.05, 0.12); break;
       case 'heal': for (let i = 0; i < 5; i++) T('p25', hz(76 + [0, 4, 7, 12, 16][i]), i * 0.06, 0.08, 0.13); break;
       case 'map': T('p25', 660, 0, 0.05, 0.14); T('p25', 990, 0.05, 0.07, 0.14); break;
+      // Entwicklung: Leuchten (aufsteigend), Wechsel der Gestalt und heller Blitz am Ende
+      case 'evoShine': T('tri', 220, 0, 1.2, 0.16, { to: 880, glide: 1.1 }); this.noiseSweep(d, t, 1.2, 600, 5000, 0.1); break;
+      case 'evoPulse': T('p25', 1320, 0, 0.06, 0.08); T('p25', 1760, 0.05, 0.08, 0.06); break;
+      case 'evoFlash': this.noiseSweep(d, t, 0.8, 8000, 800, 0.3); T('p50', 1760, 0, 0.5, 0.12, { to: 440 }); break;
+      case 'evoSparkle': for (let i = 0; i < 8; i++) T('p25', hz(84 + [0, 4, 7, 12, 7, 12, 16, 19][i]), i * 0.05, 0.06, 0.1); break;
       case 'start': [0, 4, 7, 12].forEach((x, i) => T('p25', hz(72 + x), i * 0.07, 0.12, 0.2)); T('p25', hz(91), 0.3, 0.4, 0.2, { vib: 6 }); break;
       case 'move': {
         // arg: { move, type } oder nur der Typ

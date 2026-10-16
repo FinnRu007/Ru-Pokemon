@@ -1,6 +1,7 @@
 // Laedt die Pokemon-Sprites aus Platin (Vorder- und Rueckansicht, normal und schillernd), die Typ-Schilder
 // aus Platin und die Symbole der Gegenstaende aus dem Projekt PokeAPI/sprites sowie die Trainerbilder
-// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites, die Overworld-Figuren und Kampfboeden aus pret/pokeplatinum nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
+// aus Diamant/Perl/Platin aus dem Projekt smogon/sprites, die Overworld-Figuren, Kampfboeden und Kampfhintergruende
+// aus pret/pokeplatinum nach client/sprites/. Der Ordner ist gitignored: Die Bilder gehoeren
 // Nintendo und werden nicht mit dem Code verteilt. Fehlen sie, zeichnet der Client die eigene Pixelgrafik.
 // Aufruf: npm run sprites   (bereits vorhandene Dateien werden uebersprungen)
 import fs from 'node:fs';
@@ -11,8 +12,10 @@ import { ITEMS } from '../shared/data/items.js';
 import { MOVES } from '../shared/data/moves.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
-import { TERRAINS } from '../client/js/art/realTerrain.js';
 import { TOWNMAP_SOURCES, TOWNMAP_DIR, buildTownMap } from './townmap-build.js';
+import { TERRAINS, TIMED_TERRAINS } from '../client/js/art/realTerrain.js';
+import { BATTLE_BGS, TIMED_BGS, BG_TIMES } from '../client/js/art/realBattleBg.js';
+import { unpackNarc, lzDecompress, readPalette, readTiles, readScreen, composeScreen, encodePng, parseJascPal, swapPngPalette, decodeIndexedPng, tilesFromIndexedPng } from './nitro.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
@@ -67,6 +70,8 @@ const TERRAIN_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/r
 for (const t of TERRAINS) {
   fs.mkdirSync(path.join(OUT, 'terrain', t), { recursive: true });
   for (const side of ['enemy', 'player']) jobs.push({ url: `${TERRAIN_BASE}/${t}/${side}.png`, file: path.join(OUT, 'terrain', t, `${side}.png`) });
+  // Paletten fuer Abend und Nacht, daraus entstehen unten enemy_evening.png usw.
+  if (TIMED_TERRAINS.includes(t)) for (const time of ['evening', 'night']) jobs.push({ url: `${TERRAIN_BASE}/${t}/${time}.pal`, file: path.join(OUT, 'terrain', t, `${time}.pal`) });
 }
 // Bodentexturen (NSBTX, entpackt der Browser selbst) und Feldobjekte fuer die Weltgrafik
 const FIELD_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res';
@@ -87,6 +92,15 @@ jobs.push({ url: `${BASE}/pokemon/egg.png`, file: path.join(OUT, 'egg.png') });
 // Karte von Sinnoh (Karten-App): Kacheln, Palette, Tilemaps und Felder, zusammengesetzt von townmap-build.js
 fs.mkdirSync(path.join(TOWNMAP_DIR, 'src'), { recursive: true });
 for (const [name, url] of Object.entries(TOWNMAP_SOURCES)) jobs.push({ url, file: path.join(TOWNMAP_DIR, 'src', name) });
+// Kampfhintergruende: Archiv mit Kacheln, Paletten und Tilemap (wird unten zu PNGs zusammengesetzt)
+const BG_NARC = path.join(OUT, 'battlebg', 'pl_batt_bg.narc');
+fs.mkdirSync(path.dirname(BG_NARC), { recursive: true });
+const bgFiles = BATTLE_BGS.flatMap((bg) => (TIMED_BGS.includes(bg) ? BG_TIMES : ['day']).map((time) => ({ bg, time, file: path.join(OUT, 'battlebg', `${time === 'day' ? bg : `${bg}_${time}`}.png`) })));
+if (bgFiles.some((f) => !fs.existsSync(f.file))) jobs.push({ url: 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res/prebuilt/battle/graphic/pl_batt_bg.narc', file: BG_NARC });
+// Hintergrund der Entwicklungsszene (im Spiel derselbe wie beim Schluepfen aus dem Ei)
+const EVO_DIR = path.join(OUT, 'evolution'); const EVO_BG = path.join(EVO_DIR, 'background.png');
+fs.mkdirSync(EVO_DIR, { recursive: true });
+if (!fs.existsSync(EVO_BG)) for (const f of ['background.png', 'background.NSCR']) jobs.push({ url: `${FIELD_BASE}/graphics/egg_hatch/${f}`, file: path.join(EVO_DIR, `src_${f}`) });
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -103,6 +117,40 @@ async function worker() {
 console.log('Lade Sprites aus github.com/PokeAPI/sprites und github.com/smogon/sprites und github.com/pret/pokeplatinum ...');
 await Promise.all(Array.from({ length: useCurl ? 8 : 24 }, worker));
 
+// Kampfhintergruende wie im Spiel: Kacheln 3 + Nr, Palette 172 + Nr * 3 + Tageszeit, gemeinsame Tilemap 2.
+// Sichtbar ist oben links 256x144 (darunter liegt im Original das Textfeld).
+if (fs.existsSync(BG_NARC)) {
+  try {
+    const narc = unpackNarc(fs.readFileSync(BG_NARC)).map(lzDecompress);
+    const scr = readScreen(narc[2]);
+    for (const f of bgFiles) {
+      if (fs.existsSync(f.file)) continue;
+      const i = BATTLE_BGS.indexOf(f.bg);
+      const img = composeScreen(readTiles(narc[3 + i]), readPalette(narc[172 + i * 3 + BG_TIMES.indexOf(f.time)]), scr, { w: 256, h: 144 });
+      fs.writeFileSync(f.file, encodePng(img));
+    }
+    fs.rmSync(BG_NARC);
+  } catch (e) { console.log(`\nKampfhintergruende: ${e.message}`); }
+}
+const evoSrc = ['png', 'NSCR'].map((e) => path.join(EVO_DIR, `src_background.${e}`));
+if (!fs.existsSync(EVO_BG) && evoSrc.every((f) => fs.existsSync(f))) {
+  try {
+    const img = decodeIndexedPng(fs.readFileSync(evoSrc[0]));
+    fs.writeFileSync(EVO_BG, encodePng(composeScreen(tilesFromIndexedPng(img), img.pal, readScreen(fs.readFileSync(evoSrc[1])), { w: 256, h: 192 })));
+    for (const f of evoSrc) fs.rmSync(f);
+  } catch (e) { console.log(`\nEntwicklung: ${e.message}`); }
+}
+// Kampfboeden am Abend und in der Nacht: gleiche Bilder mit der Originalpalette der Tageszeit
+for (const t of TIMED_TERRAINS) for (const time of ['evening', 'night']) {
+  const pal = path.join(OUT, 'terrain', t, `${time}.pal`);
+  if (!fs.existsSync(pal)) continue;
+  const colors = parseJascPal(fs.readFileSync(pal, 'latin1'));
+  for (const side of ['enemy', 'player']) {
+    const src = path.join(OUT, 'terrain', t, `${side}.png`); const dst = path.join(OUT, 'terrain', t, `${side}_${time}.png`);
+    if (colors && fs.existsSync(src) && !fs.existsSync(dst)) fs.writeFileSync(dst, swapPngPalette(fs.readFileSync(src), colors));
+  }
+}
+
 // Verzeichnis, welche Bilder vorhanden sind (der Client fragt nur diese Datei ab)
 const index = { source: ['https://github.com/PokeAPI/sprites', 'https://github.com/smogon/sprites', 'https://github.com/pret/pokeplatinum'], kinds: {} };
 for (const kind of Object.keys(KINDS)) {
@@ -110,11 +158,13 @@ for (const kind of Object.keys(KINDS)) {
 }
 for (const dir of ['types', 'items', 'trainers']) index[dir] = fs.readdirSync(path.join(OUT, dir)).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 index.terrain = TERRAINS.filter((t) => ['enemy', 'player'].every((s) => fs.existsSync(path.join(OUT, 'terrain', t, `${s}.png`))));
+index.battlebg = fs.readdirSync(path.join(OUT, 'battlebg')).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4)).sort();
 index.field = [...FIELD_SETS, ...FIELD_OBJECTS, 'Outside'].filter((f) => fs.existsSync(path.join(OUT, 'field', `${f}.${f.startsWith('map_') ? 'nsbtx' : 'png'}`)));
 index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
 index.forms = Object.keys(KINDS).flatMap((kind) => fs.readdirSync(path.join(OUT, 'forms', kind)).filter((f) => f.endsWith('.png')).map((f) => `${kind}/${f.slice(0, -4)}`));
 index.egg = fs.existsSync(path.join(OUT, 'egg.png'));
 try { index.townmap = buildTownMap(); } catch (e) { index.townmap = false; console.log(`\nKarte von Sinnoh nicht erstellt: ${e.message}`); }
+index.evolution = fs.existsSync(EVO_BG);
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
-for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, field: index.field })) console.log(`  ${k}: ${ids.length}`);
+for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, battlebg: index.battlebg, field: index.field })) console.log(`  ${k}: ${ids.length}`);

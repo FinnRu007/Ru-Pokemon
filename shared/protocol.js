@@ -26,6 +26,7 @@ export const C2S = {
   HOLD: 'hold',                   // { pokemonId, item|null } Item tragen lassen oder abnehmen
   POKETCH: 'poketch',             // {} Daten für den Pokétch anfordern
   BIKE: 'bike',                   // {} auf das Fahrrad steigen oder absteigen
+  EVOLVE_CANCEL: 'evolveCancel',  // { pokemonId } Entwicklung mit B abgebrochen (nur direkt nach einer Entwicklung durch Level)
   PING: 'ping'
 };
 
@@ -46,7 +47,8 @@ export const S2C = {
   SOUL_DEATH: 'soulDeath',        // { pokemonName, playerName, partnerName, cause }
   BATTLE_START: 'battleStart',
   BATTLE_EVENTS: 'battleEvents',
-  BATTLE_END: 'battleEnd',
+  BATTLE_END: 'battleEnd',        // { result, messages, evolutions?: [{ pokemonId, text, from, to, cancelable }] }
+  EVOLUTION: 'evolution',         // { list: [{ pokemonId, text, from, to, cancelable? }] } Entwicklung ausserhalb des Kampfes (Stein, Sonderbonbon)
   GAME_OVER: 'gameOver',
   DIALOG: 'dialog',               // { token, lines: [{ speaker, text }], choices?, face? }
   SCRIPT: 'script',               // { active }

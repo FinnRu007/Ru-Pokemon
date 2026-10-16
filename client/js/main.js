@@ -16,7 +16,8 @@ import { audio, musicForMap } from './audio.js';
 import { trackForMap } from './realAudio.js';
 import { WorldMap, placeName, areaOf, layout as worldLayout } from './worldmap.js';
 import { Intro } from './intro.js';
-import { terrainFor } from './art/realTerrain.js';
+import { battleScene } from './art/realBattleBg.js';
+import { playEvolutions } from './evolution.js';
 import { EMOTES } from '/shared/protocol.js';
 import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
 import { GameMenu } from './menu.js';
@@ -42,9 +43,10 @@ new Intro($('stage'), () => { introDone = true; $('loginName').focus(); });
 
 const battle = new BattleUI(net, manifest, {
   log: (t, c) => hud.log(t, c),
-  onEnd: () => { updateLock(); flushDialogs(); if (world.me) playMapMusic(); },
+  onEnd: () => { updateLock(); flushDialogs(); setTimeout(processLearnQueue, 50); if (world.me) playMapMusic(); },
   onLearnPrompt: (ev) => learnQueue.push(ev),
-  terrain: () => world.me && terrainFor(world.me.map, MAPS[world.me.map])
+  terrain: () => world.me && battleScene(world.me.map, MAPS[world.me.map], world.me),
+  evolution: { log: (t, c) => hud.log(t, c), onCancel: (e) => net.send({ t: 'evolveCancel', pokemonId: e.pokemonId }) }
 });
 const learnQueue = [];
 let starterOpen = false;
@@ -186,6 +188,11 @@ net.on('progress', (m) => { const wasRiding = !!world.flags?.riding; world.flags
 net.on('npcEmote', (m) => { world.emote(m.id); audio.sfx('exclaim'); });
 net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
+// Entwicklung ausserhalb des Kampfes (Stein, Sonderbonbon): Szene ueber allem, danach wieder die Musik der Karte
+net.on('evolution', (m) => {
+  playEvolutions(m.list, { log: (t, c) => hud.log(t, c), onCancel: (e) => net.send({ t: 'evolveCancel', pokemonId: e.pokemonId }) })
+    .then(() => { if (world.me && !battle.active) audio.music(musicForMap(world.me.map, MAPS[world.me.map]), trackForMap(world.me.map, MAPS[world.me.map])); });
+});
 net.on('battleEnd', (m) => {
   battle.end(m);
   setTimeout(processLearnQueue, 50);
