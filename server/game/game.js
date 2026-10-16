@@ -788,12 +788,14 @@ export class GameServer {
       onFaint: tr.safe ? () => [] : (mon) => this.onAllyFaint(s, mon)
     };
     const partner = this.partnerFor(s, tr);
+    // Trainerpaar wie in Platin: allein mit nur einem kampfbereiten Pokémon geht es nicht
+    if (tr.double && !partner && s.party.filter((m) => !m.egg && m.alive !== false && m.hp > 0).length < 2) return false;
     // Doppelkampf: mit Begleiter, gegen ein Trainerpaar (Namen mit „und“) oder als Doppel-Trainer
     if (partner || tr.double) {
       const names = tr.name.split(' und ');
       const foes = names.length === 2 && foeParty.length > 1
         ? names.map((name, i) => ({ name, cls: tr.cls, look: tr.looks?.[i] || tr.look, party: i === 0 ? foeParty.slice(0, Math.ceil(foeParty.length / 2)) : foeParty.slice(Math.ceil(foeParty.length / 2)) }))
-        : [{ name: tr.name, cls: tr.cls, look: tr.look, leader: !!tr.leader, party: foeParty }];
+        : [{ name: tr.name, cls: tr.cls, look: tr.look, looks: tr.looks, pair: tr.double && names.length < 2, leader: !!tr.leader, party: foeParty }];
       s.battle = new DoubleBattle({ ...o, kind: 'trainer', foes, partner });
     } else s.battle = new TrainerBattle(o);
     this.beginBattle(s);

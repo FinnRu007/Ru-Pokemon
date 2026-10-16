@@ -15,13 +15,14 @@ export const TRAINER_BY_CLASS = {
   'Galaktik-Boss': 'Cyrus', Polizist: 'Policeman', Gentleman: 'Gentleman', Seemann: 'Sailor', Angler: 'Fisherman',
   'Ruinenmaniac': 'Ruin_Maniac', Kampfgirl: 'Battle_Girl', Schwarzgurt: 'Blackbelt', Vogelfan: 'Bird_Keeper',
   Ruinenforscher: 'Ruin_Maniac', Lady: 'Lady', 'Strandläuferin': 'Beauty', Gitarrist: 'Guitarist', Techniker: 'Worker',
-  Veteran: 'Veteran', Turmherr: 'Palmer', Sammler: 'Collector', 'Reicher Junge': 'Rich_Boy', Idol: 'Idol', Schirmdame: 'Parasol_Lady'
+  Veteran: 'Veteran', Turmherr: 'Palmer', Sammler: 'Collector', 'Reicher Junge': 'Rich_Boy', Idol: 'Idol', Schirmdame: 'Parasol_Lady',
+  Zwillinge: 'Twins', 'Junges Glück': 'Young_Couple', Duo: 'Double_Team'
 };
 export const TRAINER_BY_LOOK = {
   youngster: 'Youngster', lass: 'Lass', girl: 'School_Kid~F', boy: 'Camper', hiker: 'Hiker', worker: 'Worker',
   grunt: 'Galactic_Grunt', ace: 'Ace_Trainer', psychic: 'Psychic', skier: 'Skier', swimmer: 'Swimmer',
   scientist: 'Scientist', police: 'Policeman', rival: 'Barry', boss: 'Cyrus', commander: 'Mars', jupiter: 'Jupiter',
   saturn: 'Saturn', cynthia: 'Cynthia', byron: 'Byron', candice: 'Candice', fantina: 'Fantina', gardenia: 'Gardenia',
-  maylene: 'Maylene', wake: 'Crasher_Wake', leader: 'Roark', oldman: 'Gentleman'
+  maylene: 'Maylene', wake: 'Crasher_Wake', leader: 'Roark', oldman: 'Gentleman', cowgirl: 'Cowgirl', rancher: 'Rancher'
 };
 export const TRAINER_FILES = [...new Set([...Object.values(TRAINER_BY_NAME), ...Object.values(TRAINER_BY_CLASS), ...Object.values(TRAINER_BY_LOOK)])];

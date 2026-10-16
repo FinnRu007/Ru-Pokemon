@@ -544,7 +544,7 @@ function beforeTrigger(map, script) {
 // Feld knapp ausserhalb der Sichtweite eines Trainers, Schritt hinein
 function intoSight(map, id) {
   const n = story.NPCS[map].find((x) => x.id === id);
-  const sight = story.TRAINERS[n.trainer].sight; const [dx, dy] = DV[n.dir];
+  const sight = n.sight ?? story.TRAINERS[n.trainer].sight; const [dx, dy] = DV[n.dir];
   return [n.x + dx * (sight + 1), n.y + dy * (sight + 1), OPPOSITE[n.dir]];
 }
 // Spieler neben einen NPC stellen und ihn anschauen lassen
@@ -617,6 +617,60 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   await a.wait((m) => m.t === 'shop' && m.money === before - 600);
   a.send({ t: 'buy', item: 'great-ball', count: 1 });
   await a.wait((m) => m.t === 'notice' && m.kind === 'error');
+  a.ws.close();
+});
+
+await sleep(200);
+await test('Trainerpaar: Zwillinge auf Route 204 nur im Doppelkampf mit zwei Pokémon', async () => {
+  game.storyOn = true;
+  const a = client('D');
+  await a.open;
+  autoplay(a);
+  if (process.env.DEBUG_TEST) a.ws.on('message', (raw) => { const m = JSON.parse(raw); console.log('   <', m.t, m.t === 'dialog' ? m.lines.map((l) => l.text).join(' | ').slice(0, 120) : m.t === 'moveAck' ? `${m.ok}` : m.t === 'battleEnd' ? JSON.stringify(m) : ''); });
+  a.send({ t: 'hello', name: 'Paar', runCode: 'PAIR1' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  const s = game.sessions.get(w.selfId);
+  for (let i = 0; i < 100 && s.script; i++) await sleep(50);
+  const strong = () => {
+    const m = createPokemon(395, 60, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'test' });
+    Object.assign(m.stats, { hp: 999, atk: 999, def: 999, spa: 999, spd: 999, spe: 999 }); m.hp = 999;
+    m.moves[0] = { id: 'surf', pp: 99, maxPp: 99 };
+    return m;
+  };
+  s.party.push(strong()); s.player.starterChosen = true;
+  Object.assign(s.player.flags, { intro: true, has_starter: true, got_balls: true });
+  const tr = story.TRAINERS.twins_liz_lena;
+  assert.ok(tr.double && tr.party.length === 2);
+  assert.ok(story.NPCS.route_204_north.filter((n) => n.trainer === 'twins_liz_lena').length === 2, 'beide Zwillinge stehen auf der Karte');
+  let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); return a.wait((m) => m.t === 'moveAck' && m.seq === seq); };
+  // Mit nur einem Pokémon sehen sie dich nicht, ansprechen bringt den Hinweis aus dem Original
+  const [sx, sy, sd] = intoSight('route_204_north', 'twin_liz');
+  Object.assign(s.player, { map: 'route_204_north', x: sx, y: sy });
+  assert.equal((await step(sd)).ok, true);
+  await sleep(150);
+  assert.equal(s.battle, null);
+  assert.equal(s.script, null);
+  talkTo(s, 'twin_lena'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /Mit mir und Liz/.test(l.text)), 5000);
+  await sleep(150);
+  assert.equal(s.battle, null);
+  // Mit zwei Pokémon: ein Schritt in die Sichtlinie startet den Doppelkampf gegen beide
+  s.party.push(strong());
+  Object.assign(s.player, { map: 'route_204_north', x: sx, y: sy });
+  await step(sd);
+  const bs = await a.wait((m) => m.t === 'battleStart' && m.state.kind === 'trainer', 8000);
+  assert.equal(bs.state.double, true);
+  assert.equal(bs.state.foe.speciesId, 417);
+  assert.equal(bs.state.foe2.speciesId, 417);
+  assert.ok(bs.state.ally && bs.state.ally2, 'zwei eigene Pokémon im Feld');
+  assert.ok(bs.events.some((e) => /Zwillinge Liz & Lena möchten kämpfen/.test(e.text || '')));
+  const end = await a.wait((m) => m.t === 'battleEnd', 30000);
+  assert.equal(end.result, 'win');
+  assert.ok(end.messages.some((t) => /Du erhältst 176/.test(t)), 'Preisgeld wie in Platin');
+  await a.wait((m) => m.t === 'progress' && m.flags.beat_twins_liz_lena, 5000);
+  // Danach gelten beide als besiegt, jede hat ihren eigenen Satz
+  await sleep(150); talkTo(s, 'twin_lena'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /freut sich richtig/.test(l.text)), 5000);
   a.ws.close();
 });
 
