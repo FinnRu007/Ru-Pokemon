@@ -190,8 +190,8 @@ export function placeBerrySoil(MAPS) {
   }
   const mart = MAPS.floaroma_mart;
   const shop = mart?.events.find((e) => e.type === 'shop' && !e.stock);
-  // Zweite Kasse direkt neben der normalen (Theke eine Reihe weiter oben)
-  if (shop && !mart.events.some((e) => e.stock === 'mulch')) mart.events.push({ x: shop.x, y: shop.y - 1, type: 'shop', stock: 'mulch', text: 'Willkommen! Was darf es sein?' });
+  // Zweite Kasse direkt neben der normalen (hinter der Theke zwei Reihen weiter oben)
+  if (shop && !mart.events.some((e) => e.stock === 'mulch')) mart.events.push({ x: shop.x, y: shop.y - 2, type: 'shop', stock: 'mulch', text: 'Willkommen! Was darf es sein?' });
 }
 
 // Figuren im Blumenladen von Flori wie in Platin: Beere am Tag (Zuechterin) und Enton-Kanne (Göre)

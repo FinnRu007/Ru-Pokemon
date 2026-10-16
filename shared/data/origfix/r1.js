@@ -12,6 +12,8 @@ const LAKE = [slot(54, 20, 30, 90), slot(55, 20, 40, 10)];
 export const FIX = {
   // Barry wartet im Zimmer neben der Treppe (die Originalstelle liegt hinter dem Treppengelaender)
   twinleaf_home_2f: { barry_room: [8, 6, 'left'] },
+  // Mulch-Verkaeufer hinter dem oberen Teil der Theke
+  floaroma_mart: { floaroma_mart_mulch: [3, 4, 'right'] },
   // Rivale vor dem Ausgang nach Route 201, Ausloeser wie in Platin am Ortsausgang
   route_201: {
     barry_201: [16, 23, 'down'],
