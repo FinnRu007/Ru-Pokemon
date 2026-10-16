@@ -331,7 +331,6 @@ export function applyOrigMaps(MAPS) {
     if (l[0] === 'tile' && MAPS[l[1]]) setTile(MAPS[l[1]], l[2], l[3], l[4]);
     if (l[0] === 'pass' && MAPS[l[1]] && MAPS[l[4]]) MAPS[l[1]].warps.push({ x: l[2], y: l[3], to: l[4], tx: l[5], ty: l[6], dir: l[7] });
   }
-  for (const [id, f] of Object.entries(ORIG_FIX._maps || {})) if (MAPS[id]) Object.assign(MAPS[id], f);
 
   // Raeume und Karten, zu denen kein Weg mehr fuehrt (gibt es in Platin nicht, z. B. Nordmeer)
   const into = new Set(Object.values(MAPS).flatMap((m) => [...(m.warps || []).map((w) => w.to), ...Object.values(m.connections || {}).map((c) => c.map)]));
@@ -357,6 +356,8 @@ export function applyOrigMaps(MAPS) {
     });
     if (map.fly) map.fly = flyPoint(map, R.pt(...map.fly));
   }
+  // Kartenfelder aus origFix.js (_maps) erst nach der Umrechnung, damit eigene events und fly erhalten bleiben
+  for (const [id, f] of Object.entries(ORIG_FIX._maps || {})) if (MAPS[id]) Object.assign(MAPS[id], f);
   for (const [id, map] of Object.entries(MAPS)) {
     if (!map.orig) continue;
     // Schilder ohne eigenen Text: Ortsname wie auf dem Original-Schild
