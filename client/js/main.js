@@ -261,7 +261,7 @@ async function processLearnQueue() {
 
 input.on('action', () => {
   if (!introDone) return;
-  if (mapOpen) return toggleMap(false);
+  if (mapOpen) return wmAction();
   if (battle.active || starterOpen || gameOver || shopOpen || menu.isOpen) return;
   if (dialog.open) return dialog.advance();
   if (world.me && !world.anim && !scriptActive) net.send({ t: 'interact' });
@@ -295,11 +295,13 @@ wmc.addEventListener('pointerdown', (e) => { wmDrag = { ...wmPoint(e), moved: 0 
 wmc.addEventListener('pointermove', (e) => {
   const p = wmPoint(e); const { W, H } = wmSize();
   if (wmDrag) { worldMap.pan(p.x - wmDrag.x, p.y - wmDrag.y, W, H); wmDrag.moved += Math.abs(p.x - wmDrag.x) + Math.abs(p.y - wmDrag.y); wmDrag.x = p.x; wmDrag.y = p.y; }
-  const s = worldMap.spotAt(p.x, p.y, W, H);
-  worldMap.hover = s && s.fly && worldMap.canFlyTo(s.id) ? s.id : null;
+  wmHover(worldMap.spotAt(p.x, p.y, W, H));
   wmc.style.cursor = wmDrag?.moved > 4 ? 'grabbing' : worldMap.hover ? 'pointer' : 'grab';
-  $('wmFoot').textContent = worldMap.hover ? `Klicken: nach ${MAPS[worldMap.hover].name} fliegen` : 'Mausrad oder +/−: Zoom · Ziehen: verschieben · M oder Esc: schließen';
 });
+function wmHover(s) {
+  worldMap.hover = s && s.fly && worldMap.canFlyTo(s.id) ? s.id : null;
+  $('wmFoot').textContent = worldMap.hover ? `Klicken: nach ${MAPS[worldMap.hover].name} fliegen` : `Mausrad oder +/−: Zoom · Ziehen: verschieben${worldMap.original ? ' · Pfeiltasten: Cursor' : ''} · M oder Esc: schließen`;
+}
 wmc.addEventListener('pointerup', (e) => {
   const d = wmDrag; wmDrag = null;
   if (!d || d.moved > 4) return;
@@ -316,7 +318,16 @@ addEventListener('keydown', (e) => {
   if (!mapOpen) return;
   if (e.key === '+' || e.key === '=') wmZoom(1.4);
   if (e.key === '-') wmZoom(1 / 1.4);
+  // Pfeiltasten bewegen den Cursor der Originalkarte von Ort zu Ort
+  const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+  if (d && worldMap.original) { const s = worldMap.moveCursor(d[0], d[1]); wmHover(s); audio.sfx('select'); }
 });
+// Bestaetigen: auf ein freigeschaltetes Flugziel fliegen, sonst Karte schliessen
+function wmAction() {
+  const s = worldMap.cursorSpot();
+  if (s && s.fly && worldMap.canFlyTo(s.id)) { audio.sfx('throw'); toggleMap(false); net.send({ t: 'fly', to: s.id }); }
+  else toggleMap(false);
+}
 $('musicVol').value = Math.round(audio.prefs.music * 100);
 $('sfxVol').value = Math.round(audio.prefs.sfx * 100);
 $('musicVol').oninput = (e) => audio.setVolume('music', e.target.value / 100);

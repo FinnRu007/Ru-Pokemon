@@ -12,6 +12,7 @@ import { MOVES } from '../shared/data/moves.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
 import { TERRAINS } from '../client/js/art/realTerrain.js';
+import { TOWNMAP_SOURCES, TOWNMAP_DIR, buildTownMap } from './townmap-build.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'client', 'sprites');
@@ -83,6 +84,9 @@ for (const [kind, dir] of Object.entries(KINDS)) {
   for (const [id, forms] of Object.entries(FORMS)) for (const f of forms) jobs.push({ url: `${BASE}/${dir}/${id}-${f}.png`, file: path.join(OUT, 'forms', kind, `${id}-${f}.png`) });
 }
 jobs.push({ url: `${BASE}/pokemon/egg.png`, file: path.join(OUT, 'egg.png') });
+// Karte von Sinnoh (Karten-App): Kacheln, Palette, Tilemaps und Felder, zusammengesetzt von townmap-build.js
+fs.mkdirSync(path.join(TOWNMAP_DIR, 'src'), { recursive: true });
+for (const [name, url] of Object.entries(TOWNMAP_SOURCES)) jobs.push({ url, file: path.join(TOWNMAP_DIR, 'src', name) });
 const total = jobs.length;
 
 let done = 0, loaded = 0, failed = 0;
@@ -110,6 +114,7 @@ index.field = [...FIELD_SETS, ...FIELD_OBJECTS, 'Outside'].filter((f) => fs.exis
 index.overworld = OW_FILES.filter((f) => fs.existsSync(path.join(OUT, 'overworld', `${f}.png`)));
 index.forms = Object.keys(KINDS).flatMap((kind) => fs.readdirSync(path.join(OUT, 'forms', kind)).filter((f) => f.endsWith('.png')).map((f) => `${kind}/${f.slice(0, -4)}`));
 index.egg = fs.existsSync(path.join(OUT, 'egg.png'));
+try { index.townmap = buildTownMap(); } catch (e) { index.townmap = false; console.log(`\nKarte von Sinnoh nicht erstellt: ${e.message}`); }
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
 for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, field: index.field })) console.log(`  ${k}: ${ids.length}`);

@@ -152,6 +152,17 @@ await test('Alle Warp-Ziele sind begehbar und alle Karten rechteckig', () => {
     for (const e of m.encounters?.grass || []) assert.ok(e.species);
   }
 });
+await test('Originalkarte: jede Aussenkarte und jedes Flugziel hat ein Feld auf der Karte von Sinnoh', async () => {
+  const { PLACES, FLY_SPOTS } = await import('../client/js/townmapData.js');
+  for (const [id, m] of Object.entries(MAPS)) if (!m.indoor) assert.ok(PLACES[id], `${id} fehlt in PLACES`);
+  for (const [id, p] of Object.entries(PLACES)) {
+    assert.ok(MAPS[id], `PLACES: unbekannte Karte ${id}`);
+    const [, x0, z0, x1 = x0, z1 = z0] = p;
+    assert.ok(x0 >= 0 && z0 >= 0 && x1 >= x0 && z1 >= z0 && x1 < 30 && z1 < 30, `${id}: Felder ausserhalb`);
+  }
+  for (const f of FLY_SPOTS) assert.ok(MAPS[f.map]?.fly, `Flugziel ${f.map}`);
+  for (const [id, m] of Object.entries(MAPS)) if (m.fly) assert.ok(FLY_SPOTS.some((f) => f.map === id), `${id} ohne Markierung`);
+});
 await test('Jede Karte mit Pokemon-Center ist erreichbar und heilt', () => {
   for (const id of ['sandgem_center', 'jubilife_center', 'oreburgh_center']) assert.ok(MAPS[id].events.some((e) => e.type === 'heal'));
 });

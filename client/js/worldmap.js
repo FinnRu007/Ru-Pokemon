@@ -1,7 +1,10 @@
 // Weltkarte: setzt alle Aussenkarten ueber ihre Randverbindungen zu einer grossen Karte
 // zusammen, legt Hoehlen (Tor, Mine) passend dazwischen und zeigt, wo man selbst und alle
 // anderen Spieler gerade sind. Zusaetzlich gibt es eine kleine Umgebungskarte in der Seitenleiste.
+// Liegt die Originalkarte aus Platin vor (townmap.js), zeigen Weltkarte und Minikarte diese.
 import { MAPS, SPAWN } from '/shared/data/maps.js';
+import { TM, TownMap } from './townmap.js';
+import { PLACES } from './townmapData.js';
 
 const COLORS = {
   '#': '#2c6538', '~': '#3d7fd6', ',': '#80c45c', '"': '#4c9a3a', '.': '#e2d29c', '=': '#ecdca6', '*': '#b4dc72',
@@ -239,10 +242,15 @@ export class WorldMap {
     this.visited = new Set();
     this.key = null;
     this.baked = null;
-    this.view = null;     // { k, cx, cy } Zoom (Pixel pro Kachel) und Mittelpunkt in Kacheln
+    this._view = null;    // { k, cx, cy } Zoom (Pixel pro Kachel) und Mittelpunkt in Kacheln
     this.hover = null;    // Ort unter dem Mauszeiger
     this.canFlyTo = () => false; // wird vom Spiel gesetzt (VM Fliegen und besuchte Orte)
+    this.tm = new TownMap(this); // Originalkarte, sobald ihre Bilder geladen sind
+    this.placeLabel = () => (this.me ? placeName(this.me.map) : '');
   }
+  get view() { return this._view; }
+  set view(v) { this._view = v; if (!v) { this.tm.view = null; this.tm.cursor = TM.ready ? this.tm.meBlock() : null; } }
+  get original() { return TM.ready; }
 
   setPlayer(name) {
     this.key = 'platin.visited.' + name.toLowerCase();
@@ -252,8 +260,11 @@ export class WorldMap {
 
   visit(mapId) {
     const a = areaOf(mapId);
-    if (this.visited.has(a)) return;
+    // Hoehlen und Inseln mit eigenem Feld auf der Originalkarte (versteckte Orte) zaehlen selbst
+    const own = PLACES[mapId] && a !== mapId ? mapId : null;
+    if (this.visited.has(a) && (!own || this.visited.has(own))) return;
     this.visited.add(a);
+    if (own) this.visited.add(own);
     this.baked = null;
     try { localStorage.setItem(this.key, JSON.stringify([...this.visited])); } catch { /* privat */ }
   }
@@ -265,20 +276,25 @@ export class WorldMap {
   // Zoomstufe, bei der die ganze Welt hineinpasst
   fitK(W, H) { const L = layout(); return Math.max(1, Math.min(W / (L.w + 16), H / (L.h + 16))); }
   resetView(W, H, onMe = true) {
+    if (TM.ready) return this.tm.resetView(W, H, onMe);
     const L = layout();
     const me = onMe && this.me && worldPos(this.me.map, this.me.x, this.me.y);
     const k = this.fitK(W, H);
     this.view = { k: me ? Math.min(k * 2.5, 8) : k, cx: me ? me.x : L.w / 2, cy: me ? me.y : L.h / 2 };
     this.clampView(W, H);
   }
+  // Tastatur-Cursor auf der Originalkarte (Pfeiltasten); liefert den Ort unter dem Cursor
+  moveCursor(dx, dy) { return TM.ready ? this.tm.moveCursor(dx, dy) : null; }
+  cursorSpot() { return TM.ready ? this.tm.cursorSpot() : null; }
   zoomAt(factor, sx, sy, W, H) {
+    if (TM.ready) return this.tm.zoomAt(factor, sx, sy, W, H);
     const v = this.view; const before = this.toWorld(sx, sy, W, H);
     v.k = Math.max(this.fitK(W, H), Math.min(24, v.k * factor));
     const after = this.toWorld(sx, sy, W, H);
     v.cx += before.x - after.x; v.cy += before.y - after.y;
     this.clampView(W, H);
   }
-  pan(dx, dy, W, H) { this.view.cx -= dx / this.view.k; this.view.cy -= dy / this.view.k; this.clampView(W, H); }
+  pan(dx, dy, W, H) { if (TM.ready) return this.tm.pan(dx, dy, W, H); this.view.cx -= dx / this.view.k; this.view.cy -= dy / this.view.k; this.clampView(W, H); }
   clampView(W, H) {
     const L = layout(); const v = this.view;
     const hw = W / 2 / v.k, hh = H / 2 / v.k;
@@ -288,17 +304,20 @@ export class WorldMap {
   toWorld(sx, sy, W, H) { const v = this.view; return { x: v.cx + (sx - W / 2) / v.k, y: v.cy + (sy - H / 2) / v.k }; }
 
   screenOf(id, W, H) {
+    if (TM.ready) return this.tm.screenOf(id, W, H);
     const s = spots(layout()).find((x) => x.id === id); const v = this.view;
     return s && v && { x: W / 2 + (s.x - v.cx) * v.k, y: H / 2 + (s.y - v.cy) * v.k };
   }
   // Ort an einer Bildschirmposition (fuer Fliegen per Klick)
   spotAt(sx, sy, W, H) {
+    if (TM.ready) return this.tm.spotAt(sx, sy, W, H);
     const L = layout(); const w = this.toWorld(sx, sy, W, H);
     return spots(L).find((s) => Math.abs(w.x - s.x) <= s.w / 2 && Math.abs(w.y - s.y) <= s.h / 2) || null;
   }
 
   // Zeichnet die Welt. opts.zoom = feste Zoomstufe um die eigene Figur (Minikarte)
   draw(g, W, H, now, opts = {}) {
+    if (TM.ready) return this.tm.draw(g, W, H, now, opts.zoom ? { zoom: 2 } : {});
     const L = layout();
     g.imageSmoothingEnabled = false;
     let k, cx, cy;
