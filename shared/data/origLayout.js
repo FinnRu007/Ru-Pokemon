@@ -380,8 +380,10 @@ export function applyOrigMaps(MAPS) {
 
 // Flugziel: vor der Tuer des Pokemon-Centers, sonst der umgerechnete Punkt
 function flyPoint(map, p) {
-  const c = (map.warps || []).find((w) => /_center$/.test(w.to) && !w.off);
+  // In der Pokemon Liga liegt das Center im Hauptgebaeude, in Zweiblattdorf landet man vor dem eigenen Haus
+  const c = (map.warps || []).find((w) => /_center$|^league_lobby$|^twinleaf_home_1f$/.test(w.to) && (!w.off || w.off === 'up'));
   if (c && standable(map, c.x, c.y + 1)) return [c.x, c.y + 1];
+  if (c?.off && standable(map, c.x, c.y)) return [c.x, c.y];
   return snap(map, p[0], p[1]);
 }
 
@@ -414,6 +416,9 @@ export function applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns = [], fixes = {
   // Zusaetzliche Figuren und Skripte nur fuer die Originalkarten
   for (const [id, list] of Object.entries(fixes._add || {})) (NPCS[id] ||= []).push(...list.map((n) => ({ ...n, _fixed: true })));
   Object.assign(SCRIPTS, fixes._scripts || {});
+  // Zusaetzliche Ausloeser (fixes._triggers: { karte: [{ x, y, w, h, when, script }] }), schon in Originalkoordinaten
+  const fixedTr = new Set();
+  for (const [id, list] of Object.entries(fixes._triggers || {})) for (const t of list) { (TRIGGERS[id] ||= []).push(t); fixedTr.add(t); }
   // NPCs, die auf eine andere Karte ziehen (fix mit map), zuerst umhaengen
   for (const [id, fx] of Object.entries(fixes)) {
     if (id.startsWith('_')) continue;
@@ -443,6 +448,7 @@ export function applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns = [], fixes = {
     const R = REMAP[id]; if (!R) continue;
     const fx = fixes[id] || {};
     TRIGGERS[id] = list.flatMap((t) => {
+      if (fixedTr.has(t)) return [t];
       const f = fx['trigger:' + (t.script || t.id)];
       if (f === null) return [];
       if (Array.isArray(f)) return f.map((r) => ({ ...t, ...r }));

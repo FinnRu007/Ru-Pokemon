@@ -97,7 +97,15 @@ export async function buildWorld({ log = console.log } = {}) {
     const area = HEAD[hd]?.area ?? HEAD[Object.values(ORIG_SPEC).find((s) => s.m === +m)?.h]?.area ?? 0;
     cells.push({ m: +m, x, y, land: +id.slice(4), hd, area, alt: X.alt ? X.alt[y][x] : 0 });
   }
-  const areas = [...new Set(cells.map((c) => c.area))];
+  // Randfelder ohne eigenes Gebiet (Meer, Waldrand) nutzen im Spiel die Texturen des Gebiets, in dem man steht:
+  // hier die des naechsten Feldes mit Gebiet
+  for (const c of cells) {
+    if (c.area) continue;
+    let best = null, bd = Infinity;
+    for (const o of cells) if (o.m === c.m && o.area) { const d = Math.hypot(o.x - c.x, o.y - c.y); if (d < bd) { bd = d; best = o; } }
+    if (best) c.texArea = best.area;
+  }
+  const areas = [...new Set(cells.flatMap((c) => [c.area, c.texArea]).filter((a) => a != null))];
   await prefetch(areas.map((a) => `res/field/area_data/area_data_${pad3(a)}.json`));
   const AREA = {};
   for (const a of areas) AREA[a] = JSON.parse(text(`res/field/area_data/area_data_${pad3(a)}.json`) || '{}');
@@ -144,15 +152,17 @@ export async function buildWorld({ log = console.log } = {}) {
     const ad = AREA[c.area] || {};
     const land = LAND[c.land];
     if (!land) continue;
-    const name = `l${c.land}_a${c.area}_h${c.alt}`;
+    const name = `l${c.land}_a${c.area}_h${c.alt}` + (c.texArea != null ? `_t${c.texArea}` : '');
     const dir = path.join(OUT, String(c.m));
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, name + '.png');
     const mt = tex(`res/field/maps/texture_sets/${ad.mapTextureSet}.nsbtx`);
+    const ta = c.texArea != null ? AREA[c.texArea] : null;
+    const mts = ta ? [tex(`res/field/maps/texture_sets/${ta.mapTextureSet}.nsbtx`), mt] : mt;
     const pt = tex(`res/field/props/texture_sets/${(ad.mapPropSet || '').replace('model_set', 'texture_set')}.nsbtx`);
     let info = fresh ? oldIdx.matrices?.[c.m]?.files?.[name] : null;
     if (!info || !fs.existsSync(file)) {
-      const tris = cellTris(land, c.alt, mt, pt, propModel(pt));
+      const tris = cellTris(land, c.alt, mts, pt, propModel(pt));
       const img = renderCell(tris);
       if (!img) continue;
       fs.writeFileSync(file, encodePNG(img.w, img.h, img.color));
@@ -170,6 +180,11 @@ export async function buildWorld({ log = console.log } = {}) {
   }
   if (drawn) process.stdout.write(`\r  ${drawn} Kartenteile gezeichnet\n`);
   fs.writeFileSync(idxFile, JSON.stringify(index));
+  // Alte Bilder, die nicht mehr gebraucht werden, aufraeumen
+  for (const [m, M] of Object.entries(index.matrices)) {
+    const keep = new Set(Object.keys(M.files));
+    for (const f of fs.readdirSync(path.join(OUT, m))) if (!keep.has(f.replace(/(\.rows)?\.png$/, ''))) fs.rmSync(path.join(OUT, m, f));
+  }
 
   // ------------------------------------------------------------------ Kollision je Karte
   const maps = {};
