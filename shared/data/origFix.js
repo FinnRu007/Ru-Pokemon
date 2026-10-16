@@ -18,6 +18,7 @@ import { FIX as R5 } from './origfix/r5.js';
 //   _add: { karte: [npc, ...] }, _scripts: { name: [...] }   Figuren und Skripte nur fuer die Originalkarten
 //   _maps: { karte: { encounters, fly, name, ... } }        Felder einer Karte setzen
 //   _links: [['pass', von, x, y, nach, tx, ty, richtung], ['tile', karte, x, y, zeichen]]  Durchgaenge in eigenen Raeumen
+//   _signs: { karte: { 'x,y': text | null } }               Schild- oder Tuertext an dieser Stelle (null entfernt ihn)
 // Jede Region hat eine eigene Datei in origfix/, hier werden alle zusammengefuehrt.
 const BASE = {
   // Das Nordmeer gibt es in Platin nicht: das Schiff zur Kampfzone legt im Hafen von Blizzach ab
