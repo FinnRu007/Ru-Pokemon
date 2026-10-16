@@ -93,7 +93,11 @@ export const ITEMS = {
   'adamant-orb': { name: 'Diamantkugel', price: 0, kind: 'key', sell: false },
   'lustrous-orb': { name: 'Weißkugel', price: 0, kind: 'key', sell: false },
   'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false },
-  bicycle: { name: 'Fahrrad', price: 0, kind: 'key', sell: false, bike: true }
+  bicycle: { name: 'Fahrrad', price: 0, kind: 'key', sell: false, bike: true },
+  // Pokétch-Kampagne in Jubelstadt (Clowns)
+  'coupon-1': { name: 'Coupon 1', price: 0, kind: 'key', sell: false },
+  'coupon-2': { name: 'Coupon 2', price: 0, kind: 'key', sell: false },
+  'coupon-3': { name: 'Coupon 3', price: 0, kind: 'key', sell: false }
 };
 
 // Items zum Tragen (Wirkung im Kampf: HELD weiter unten und server/game/held.js)

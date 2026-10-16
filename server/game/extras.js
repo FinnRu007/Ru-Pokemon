@@ -351,14 +351,7 @@ export const Extras = {
         this.sendParty(s);
         return;
       }
-      case 'poketch':
-        if (p.flags.poketch) { say('Firmenchef', 'Wie gefällt dir dein Pokétch? Öffne ihn mit der Taste P oder im Menü.'); return; }
-        p.flags.poketch = true;
-        say('Firmenchef', 'Ich bin der Chef der Pokétch-Firma! Ein Pokétch ist eine Uhr für Trainer, mit vielen praktischen Anwendungen.');
-        say(null, 'Du erhältst den Pokétch!');
-        say('Firmenchef', 'Er zeigt die Uhrzeit, dein Team, die Schritte und auf der Markierungskarte, wo wandernde Pokémon gerade sind. Öffne ihn mit der Taste P.');
-        this.sendProgress(s);
-        return;
+      case 'poketch': return this.poketchStep(s, { who: 'president', ...step }, sc, lines);
       case 'villaShop': {
         p.villa ||= ['table'];
         const offers = FURNITURE.filter(([id]) => !p.villa.includes(id));
@@ -415,14 +408,6 @@ export const Extras = {
     if (req === 'steps300k') return (p.steps || 0) >= 300000;
     if (p.flags[req]) return true;
     return (p.villa || []).includes(req);
-  },
-
-  // Pokétch: Daten für Markierungskarte und Schrittzähler
-  poketch(s) {
-    const p = s.player;
-    if (!p.flags.poketch) return;
-    const roamers = Object.entries(p.roamers || {}).filter(([, r]) => !r.defeated).map(([id, r]) => ({ speciesId: Number(id), map: r.map, name: species(id).name }));
-    this.send(s.ws, { t: S2C.POKETCH, roamers, steps: p.steps || 0, party: s.party.map((m) => ({ speciesId: m.speciesId, name: displayName(m), hp: m.hp, maxHp: m.stats.hp, egg: !!m.egg, item: m.item || null, alive: m.alive !== false, form: m.form || null, shiny: !!m.shiny })) });
   },
 
   // Feldhindernis mit Orden, aber ohne passendes Pokémon im Team: Hinweis wie in Platin
