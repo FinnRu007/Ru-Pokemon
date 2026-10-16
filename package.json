@@ -12,7 +12,8 @@
     "test": "node --no-warnings test/smoke.js",
     "sprites": "node scripts/fetch-sprites.js",
     "sounds": "node scripts/fetch-sounds.js",
-    "texts": "node scripts/fetch-texts.js"
+    "texts": "node scripts/fetch-texts.js",
+    "world": "node scripts/world/build-world.js"
   },
   "engines": {
     "node": ">=22.5"

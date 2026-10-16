@@ -13,6 +13,7 @@ import { MOVES } from '../shared/data/moves.js';
 import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
 import { TOWNMAP_SOURCES, TOWNMAP_DIR, buildTownMap } from './townmap-build.js';
+import { buildWorld } from './world/build-world.js';
 import { TERRAINS, TIMED_TERRAINS } from '../client/js/art/realTerrain.js';
 import { BATTLE_BGS, TIMED_BGS, BG_TIMES } from '../client/js/art/realBattleBg.js';
 import { unpackNarc, lzDecompress, readPalette, readTiles, readScreen, composeScreen, encodePng, parseJascPal, swapPngPalette, decodeIndexedPng, tilesFromIndexedPng } from './nitro.js';
@@ -165,6 +166,8 @@ index.forms = Object.keys(KINDS).flatMap((kind) => fs.readdirSync(path.join(OUT,
 index.egg = fs.existsSync(path.join(OUT, 'egg.png'));
 try { index.townmap = buildTownMap(); } catch (e) { index.townmap = false; console.log(`\nKarte von Sinnoh nicht erstellt: ${e.message}`); }
 index.evolution = fs.existsSync(EVO_BG);
+// Originale Oberwelt (Karten, Hoehen, Tueren, Grafik je Kartenteil) aus pret/pokeplatinum
+try { await buildWorld(); } catch (e) { console.log(`\nOriginalkarten nicht erstellt: ${e.message}`); }
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
 for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, battlebg: index.battlebg, field: index.field })) console.log(`  ${k}: ${ids.length}`);
