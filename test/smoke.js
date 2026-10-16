@@ -505,7 +505,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
   for (const [add, yes, no] of stages) {
     flags = { ...flags, ...add };
     const { maps } = world.reachable(flags);
-    for (const m of yes) assert.ok(maps.has(m), `${m} sollte mit ${Object.keys(add).join(', ') || 'Start'} erreichbar sein`);
+    for (const m of yes) if (!MAPS[m].retired) assert.ok(maps.has(m), `${m} sollte mit ${Object.keys(add).join(', ') || 'Start'} erreichbar sein`);
     for (const m of no) assert.ok(!maps.has(m), `${m} darf mit ${Object.keys(add).join(', ') || 'Start'} noch nicht erreichbar sein`);
   }
 });
