@@ -402,6 +402,9 @@ export function applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns = [], fixes = {
   // Zusaetzliche Figuren und Skripte nur fuer die Originalkarten
   for (const [id, list] of Object.entries(fixes._add || {})) (NPCS[id] ||= []).push(...list.map((n) => ({ ...n, _fixed: true })));
   Object.assign(SCRIPTS, fixes._scripts || {});
+  // Zusaetzliche Ausloeser (fixes._triggers: { karte: [{ x, y, w, h, when, script }] }), schon in Originalkoordinaten
+  const fixedTr = new Set();
+  for (const [id, list] of Object.entries(fixes._triggers || {})) for (const t of list) { (TRIGGERS[id] ||= []).push(t); fixedTr.add(t); }
   // NPCs, die auf eine andere Karte ziehen (fix mit map), zuerst umhaengen
   for (const [id, fx] of Object.entries(fixes)) {
     if (id.startsWith('_')) continue;
@@ -431,6 +434,7 @@ export function applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns = [], fixes = {
     const R = REMAP[id]; if (!R) continue;
     const fx = fixes[id] || {};
     TRIGGERS[id] = list.flatMap((t) => {
+      if (fixedTr.has(t)) return [t];
       const f = fx['trigger:' + (t.script || t.id)];
       if (f === null) return [];
       if (Array.isArray(f)) return f.map((r) => ({ ...t, ...r }));

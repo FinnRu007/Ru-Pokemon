@@ -16,6 +16,7 @@ import { FIX as R5 } from './origfix/r5.js';
 //   _warps: { skript: [karte, x, y, richtung] }   Ziel von { warp } in diesem Skript
 //   _retarget: { 'von>nach': [karte, x, y, richtung] | [karte, 'entrance'] }   Warps alter Raeume umleiten
 //   _add: { karte: [npc, ...] }, _scripts: { name: [...] }   Figuren und Skripte nur fuer die Originalkarten
+//   _triggers: { karte: [{ x, y, w, h, when, script }] }      zusaetzliche Ausloeser (Originalkoordinaten)
 //   _maps: { karte: { encounters, fly, name, ... } }        Felder einer Karte setzen
 //   _links: [['pass', von, x, y, nach, tx, ty, richtung], ['tile', karte, x, y, zeichen]]  Durchgaenge in eigenen Raeumen
 // Jede Region hat eine eigene Datei in origfix/, hier werden alle zusammengefuehrt.
