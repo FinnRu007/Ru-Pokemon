@@ -849,7 +849,7 @@ await test('Beeren: weicher Boden, Startbeeren, pflanzen, gießen, wachsen und e
   assert.equal(repo.getPlayer(w.selfId).berry.p[0][1], B.STAGE.SPROUTED);
   // Blumenladen: Enton-Kanne von der Göre, Beere am Tag von der Züchterin
   delete s.player.items.sprayduck;
-  Object.assign(s.player, { map: 'floaroma_flowershop', x: 2, y: 4, dir: 'up' });
+  { const g = story.NPCS.floaroma_flowershop.find((n) => n.id === 'flower_lass'); Object.assign(s.player, { map: 'floaroma_flowershop', x: g.x, y: g.y + 1, dir: 'up' }); }
   a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.got_sprayduck);
   assert.equal(s.player.items.sprayduck, 1);
