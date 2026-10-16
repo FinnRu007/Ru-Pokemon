@@ -503,6 +503,12 @@ export class GameMenu {
       if (n && it.rope && !/nicht benutzen/.test(n)) { this.close(); return; }
       return n && this.say(n);
     }
+    // Enton-Kanne, Mulch und Beeren wirken auf das Beet vor dem Spieler
+    if (it.sprayduck || it.mulch || it.kind === 'berry') {
+      this.close();
+      this.ctx.net.send({ t: 'useItem', item: k });
+      return;
+    }
     if (!(it.kind === 'med' || it.evo)) return this.say(it.kind === 'battle' ? 'Das kann man nur im Kampf benutzen.' : 'Das kann man hier nicht benutzen.');
     if (!this.party.length) return this.say('Du hast keine Pokémon.');
     const evoTo = (mon) => (speciesOf(mon.speciesId)?.evos || []).find((e) => e.item === k);

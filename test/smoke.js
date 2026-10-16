@@ -720,6 +720,83 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   a.ws.close();
 });
 
+await sleep(200);
+await test('Beeren: weicher Boden, Startbeeren, pflanzen, gießen, wachsen und ernten wie in Platin', async () => {
+  const B = await import('../shared/data/berries.js');
+  const { ITEMS } = await import('../shared/data/items.js');
+  const { npcAt } = await import('../shared/data/story.js');
+  // 118 Beete an den Originalstellen, fest wie ein Feldobjekt, frei von Figuren und von unten erreichbar
+  const soil = B.soilIndex(MAPS);
+  assert.equal(B.BERRY_INIT.length, 118);
+  assert.equal(soil.byId.filter(Boolean).length, 118);
+  for (const p of soil.byId) {
+    assert.equal(MAPS[p.map].tiles[p.y][p.x], '#', `Boden ${p.id}`);
+    assert.ok(!npcAt(p.map, p.x, p.y, {}), `Figur auf Boden ${p.id}`);
+    assert.ok(isStandable(MAPS, p.map, p.x, p.y + 1), `vor Boden ${p.id}`);
+  }
+  assert.equal(Object.values(ITEMS).filter((it) => it.kind === 'berry').length, 64);
+  assert.ok(ITEMS.sprayduck && MAPS.floaroma_mart.events.some((e) => e.stock === 'mulch'));
+  // Wachstum: Amrenabeere braucht 3 Stunden je Stufe, nach 4 Stufen 4 bis 5 Beeren (Ertrag Grundwert mal Wertung)
+  const st = { t: 0, p: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]] };
+  B.plant(st, 0, 1);
+  B.elapseMinutes(st, 179); assert.equal(st.p[0][1], B.STAGE.PLANTED);
+  B.elapseMinutes(st, 1); assert.equal(st.p[0][1], B.STAGE.SPROUTED);
+  B.water(st, 0); B.elapseMinutes(st, 180); B.water(st, 0); B.elapseMinutes(st, 180); B.water(st, 0); B.elapseMinutes(st, 180);
+  assert.equal(st.p[0][1], B.STAGE.FRUIT);
+  assert.equal(st.p[0][5], 5);
+  // Ohne Gießen trocknet der Boden aus und der Ertrag sinkt bis auf 2
+  B.plant(st, 0, 1); B.elapseMinutes(st, 12 * 60);
+  assert.equal(st.p[0][1], B.STAGE.FRUIT); assert.equal(st.p[0][5], 2);
+  // Wachsmulch: Stufen ein Viertel kürzer
+  st.p[0] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; B.setMulch(st, 0, 1); B.plant(st, 0, 1); B.elapseMinutes(st, 135);
+  assert.equal(st.p[0][1], B.STAGE.SPROUTED);
+
+  game.storyOn = true;
+  const a = client('Beere');
+  await a.open;
+  autoplay(a);
+  a.send({ t: 'hello', name: 'Beere', runCode: 'BERRY1' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  const view = await a.wait((m) => m.t === 'berries');
+  assert.equal(view.patches.length, 118);
+  assert.ok(view.patches.every((p, i) => p[0] === B.BERRY_INIT[i][0] && p[1] === B.STAGE.FRUIT));
+  const s = game.sessions.get(w.selfId);
+  Object.assign(s.player.flags, { intro: true });
+  const patch = soil.byId[0];
+  // Startbeere pflücken: Sinelbeere ins Beerenfach, der Boden ist danach leer
+  Object.assign(s.player, { map: patch.map, x: patch.x, y: patch.y + 1, dir: 'up' });
+  a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /Sinelbeere/.test(l.text)));
+  await a.wait((m) => m.t === 'berries' && m.patches[0][1] === B.STAGE.NONE);
+  assert.equal(s.player.items['oran-berry'], 1);
+  // Pflanzen über den Dialog (Ja, erste Beere im Beutel)
+  await sleep(100);
+  s.player.items['cheri-berry'] = 1; s.player.items.sprayduck = 1;
+  a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'berries' && m.patches[0][1] === B.STAGE.PLANTED);
+  assert.equal(s.player.items['cheri-berry'], 0);
+  // Drei Stunden später ist sie gekeimt, Gießen mit der Enton-Kanne macht den Boden wieder feucht
+  await sleep(100);
+  s.player.berry.t -= 3 * 3600000;
+  s.player.berry.p[0][6] = 40;
+  a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /gekeimt/.test(l.text)));
+  await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /glücklich/.test(l.text)));
+  assert.equal(s.player.berry.p[0][1], B.STAGE.SPROUTED);
+  assert.equal(s.player.berry.p[0][6], 100);
+  // Der Zustand gehört zum Spielstand
+  await sleep(100);
+  game.savePlayerNow(s);
+  assert.equal(repo.getPlayer(w.selfId).berry.p[0][1], B.STAGE.SPROUTED);
+  // Blumenladen: Enton-Kanne von der Göre, Beere am Tag von der Züchterin
+  delete s.player.items.sprayduck;
+  Object.assign(s.player, { map: 'floaroma_flowershop', x: 2, y: 4, dir: 'up' });
+  a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.got_sprayduck);
+  assert.equal(s.player.items.sprayduck, 1);
+  a.ws.close();
+});
+
 game.stop();
 server.close();
 repo.close();

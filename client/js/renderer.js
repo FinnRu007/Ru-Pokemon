@@ -15,6 +15,8 @@ import { FIELD, fieldFlags } from '/shared/world.js';
 import { visibleNpcs } from '/shared/data/story.js';
 import { fieldObject } from './art/realField.js';
 import * as OV from './origView.js';
+import { drawSoil, drawBerryTree } from './art/berryTrees.js';
+import { soilIndex } from '/shared/data/berries.js';
 
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
 const CLEARABLE = ['Q', 'Z', 'M'];
@@ -163,6 +165,11 @@ export class Renderer {
           if (OBJ[t] && !open.has(t)) ents.push({ kind: 'obj', o: { obj: OBJ[t] }, p: { x, y, hop: 0 }, map: mm });
         }
       }
+      // Beerenbeete: weicher Boden und die Pflanze im Zustand dieses Spielers
+      for (const b of soilIndex(MAPS).byMap[id] || []) {
+        if (Math.abs(mm.orig.x + b.x - gx) > 10 || Math.abs(mm.orig.z + b.y - gz) > 9) continue;
+        ents.push({ kind: 'berry', o: { state: world.berries?.[b.id] || [0, 0, 1, 0] }, p: { x: b.x, y: b.y, hop: 0 }, map: mm });
+      }
     }
     for (const e of ents) {
       e.gx = e.map.orig.x + e.p.x; e.gz = e.map.orig.z + e.p.y;
@@ -174,7 +181,12 @@ export class Renderer {
       e.ox = Ox + e.map.orig.x * T; e.oy = Math.round(Oy + e.map.orig.z * T - OV.CY * e.h * S);
       e.orig = true;
       let fw = 32;
-      if (e.kind === 'obj') {
+      if (e.kind === 'berry') {
+        const [b, stage, moist, mulch] = e.o.state;
+        const sx = Math.round(e.ox + e.p.x * T), sy = Math.round(e.oy + e.p.y * T);
+        drawSoil(g, sx, sy, S, moist, mulch);
+        fw = drawBerryTree(g, sx, sy, S, b, stage, now) || 12;
+      } else if (e.kind === 'obj') {
         const img = fieldObject(e.o.obj);
         fw = img ? img.width : 16;
         const sx = Math.round(e.ox + e.p.x * T + T / 2 - (fw / 2) * S), sy = Math.round(e.oy + (e.p.y + 1) * T - (img ? img.height : 16) * S);

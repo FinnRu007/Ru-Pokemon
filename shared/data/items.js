@@ -1,4 +1,5 @@
 // Gegenstaende: Baelle, Heilmittel und Statusheiler mit Preisen im Pokemon-Markt.
+import { BERRY_ITEMS, BERRY_ITEM_NUM } from './berries.js';
 // heal: KP-Menge, cure: geheilte Statusprobleme, revive: Anteil der KP (nicht in Nuzlocke-Runs nutzbar).
 export const ITEMS = {
   'poke-ball': { name: 'Pokéball', price: 200, kind: 'ball' },
@@ -149,6 +150,8 @@ for (const [id, h] of Object.entries(HELD)) {
   if (ITEMS[id]) { ITEMS[id].hold = true; ITEMS[id].held = effect; if (name && ITEMS[id].kind === 'item' && !ITEMS[id].evo) ITEMS[id].name = name; continue; }
   ITEMS[id] = { name: name || id, price: price || (effect.berry ? 20 : 1000), kind: effect.berry ? 'berry' : 'item', hold: true, held: effect, buy: false };
 }
+// Alle Beeren, Mulch und Enton-Kanne (berries.js)
+for (const [id, it] of Object.entries(BERRY_ITEMS)) if (!ITEMS[id]) ITEMS[id] = it;
 // Tafeln und Räucherwerk aus HOLD bekommen ihre Wirkung, Beeren lassen sich auch tragen
 for (const [id, it] of Object.entries(ITEMS)) if (it.hold && !it.held) it.held = {};
 export const heldOf = (mon) => (mon?.item && ITEMS[mon.item]?.held) || null;
@@ -196,6 +199,7 @@ const ITEM_NUM = {
 };
 TM_MOVES.forEach((_, i) => { ITEM_NUM['tm' + String(i + 1).padStart(2, '0')] = 328 + i; });
 HM_MOVES.forEach((_, i) => { ITEM_NUM['hm' + String(i + 1).padStart(2, '0')] = 420 + i; });
+Object.assign(ITEM_NUM, BERRY_ITEM_NUM);
 export const itemNum = (id) => ITEM_NUM[id] ?? 9000;
 // Sortiert Item-Kennungen wie im Original nach Itemnummer
 export const sortItems = (ids) => [...ids].sort((a, b) => itemNum(a) - itemNum(b) || String(ITEMS[a]?.name || a).localeCompare(String(ITEMS[b]?.name || b), 'de'));

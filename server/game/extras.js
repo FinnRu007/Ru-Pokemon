@@ -342,7 +342,7 @@ export const Extras = {
         p.daily ||= {};
         if (p.daily.berry === this.dayKey(s)) { say('Beerenmeister', 'Heute habe ich dir schon eine Beere geschenkt. Komm morgen wieder!'); return; }
         p.daily.berry = this.dayKey(s);
-        const pool = Object.entries(ITEMS).filter(([, it]) => it.kind === 'berry').map(([id]) => id);
+        const pool = Object.entries(ITEMS).filter(([, it]) => it.kind === 'berry' && it.held?.berry).map(([id]) => id);
         const id = pick(pool);
         p.items[id] = (p.items[id] || 0) + 1;
         p.berries = (p.berries || 0) + 1;

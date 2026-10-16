@@ -18,6 +18,8 @@ import { addExp } from './pokemonFactory.js';
 import { expForLevel } from '../../shared/data/growth.js';
 import { TUTORS, BADGE_TMS, RELEARN_COST } from '../../shared/data/tutors.js';
 import { Extras } from './extras.js';
+import { Berries } from './berries.js';
+import { MULCH_STOCK } from '../../shared/data/berries.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
 export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381) % 100000).padStart(5, '0'); }
@@ -185,6 +187,7 @@ export class GameServer {
     this.sendParty(s);
     this.sendNuzlocke(s);
     this.sendProgress(s);
+    this.berrySeen(s); this.sendBerries(s, true);
     if (!player.starterChosen && !this.storyOn) this.sendStarterChoice(s);
     if (player.gameOver) this.send(conn.ws, { t: S2C.GAME_OVER, reason: 'Alle Pokemon deines Teams sind tot.' });
     this.broadcastMap(player.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(player) }, player.id);
@@ -385,6 +388,7 @@ export class GameServer {
     const p = s.player;
     const f = facingTile(p.x, p.y, p.dir);
     if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
+    if (this.berryTalk(s, f.x, f.y)) return;
     const map = MAPS[p.map];
     const ev = map.events.find((e) => e.x === f.x && e.y === f.y) || map.events.find((e) => e.x === p.x && e.y === p.y);
     if (!ev) return;
@@ -423,7 +427,7 @@ export class GameServer {
     return (s.shop || MART_STOCK).map((id) => ({ id, name: ITEMS[id].name, price: ITEMS[id].price, locked: !!ITEMS[id].requires && !s.player.flags?.[ITEMS[id].requires], have: s.player.items[id] || 0 }));
   }
   openShop(s, ev) {
-    s.shop = ev?.stock === 'store' ? STORE_STOCK : MART_STOCK;
+    s.shop = ev?.stock === 'store' ? STORE_STOCK : ev?.stock === 'mulch' ? MULCH_STOCK : MART_STOCK;
     this.send(s.ws, { t: S2C.SHOP, stock: this.shopStock(s), money: s.player.money });
   }
   // Verkaufen wie im Original: halber Preis, Basis-Items und VMs nicht
@@ -463,6 +467,7 @@ export class GameServer {
     if (it.bike) return this.toggleBike(s);
     if (it.repel) return this.useRepel(s, msg.item);
     if (it.rope) return this.useRope(s, msg.item);
+    if (!msg.pokemonId && this.berryUseItem(s, msg.item)) return;
     const mon = s.party.find((m) => m.id === msg.pokemonId);
     if (!mon) return;
     if (it.candy) return this.useCandy(s, mon, msg.item);
@@ -1021,3 +1026,5 @@ export class GameServer {
 
 // Begleiter, Wanderer, Eier, Icognito-Formen und Kampfturm (extras.js)
 Object.assign(GameServer.prototype, Extras);
+// Beerenpflanzen (berries.js)
+Object.assign(GameServer.prototype, Berries);
