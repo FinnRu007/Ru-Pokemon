@@ -23,11 +23,13 @@ import { FIELD_ITEMS } from './fieldItems.js';
 import { MAPS } from './maps.js';
 import { applyOrigStory, ORIG_ON } from './origLayout.js';
 import { applyStory10 } from './story10.js';
+import { applyStory11 } from './story11.js';
 import { ORIG_FIX } from './origFix.js';
 
 export function cond(flags, c) {
   if (!c) return true;
   if (Array.isArray(c)) return c.every((x) => cond(flags, x));
+  if (c.includes('|')) return c.split('|').some((x) => cond(flags, x)); // eine von mehreren
   if (c.startsWith('!')) return !flags?.[c.slice(1)];
   return !!flags?.[c];
 }
@@ -390,6 +392,7 @@ applyPoketch({ NPCS });
 applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORIG_FIX }, MAPS);
 // Szenen nach dem Original mit laufenden Figuren (story10.js, Koordinaten der Originalkarten)
 applyStory10({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
+applyStory11({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

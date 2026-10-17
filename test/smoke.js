@@ -482,7 +482,8 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
   const base = Object.fromEntries(['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done', 'lucia_tip', 'rival2', 'roark_mine'].map((f) => [f, true]));
   const stages = [
     [{}, ['jubilife_city', 'route_204', 'lake_verity'], ['route_203', 'oreburgh_city', 'floaroma_town']],
-    [{ grunts_jub: true }, ['oreburgh_city', 'oreburgh_mine', 'route_207'], ['floaroma_town', 'mt_coronet']],
+    [{ school_barry: true }, ['jubilife_school'], ['route_203']],
+    [{ poketch: true }, ['route_203', 'oreburgh_city', 'oreburgh_mine', 'route_207'], ['floaroma_town', 'mt_coronet']],
     [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'floaroma_meadow', 'valley_windworks'], ['eterna_forest', 'windworks_inside']],
     [{ windworks_key: true }, ['windworks_inside'], ['eterna_forest']],
     [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
@@ -619,6 +620,17 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   assert.equal(s.player.items.parcel, 1);
   await trip('route_202', 'lucia202', 'got_balls');
   assert.equal(s.player.items['poke-ball'], 5);
+  // Jubelstadt: Lucia führt dich, LeBelle stellt sich vor, Barry bekommt in der Trainerschule das Paket
+  await trip('jubilife_city', 'jubArrive', 'jub_arrive');
+  tp('jubilife_school', 6, 4); s.player.dir = 'up'; a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.school_barry, 20000);
+  for (let i = 0; i < 100 && s.script; i++) await sleep(50);
+  assert.equal(s.player.items['town-map'], 1);
+  assert.ok(!s.player.items.parcel, 'Paket abgegeben');
+  // Ohne Pokétch schickt LeBelle dich zurück
+  { const [lx, ly, ld] = beforeTrigger('jubilife_city', 'lookerBlock2'); tp('jubilife_city', lx, ly); await step(ld); }
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'jubilife_city', 8000);
+  for (let i = 0; i < 100 && s.script; i++) await sleep(50);
   // Trainer Tim schaut in eine Richtung: ein Schritt in seine Sichtlinie startet den Kampf
   for (const m of s.party) { m.level = 30; m.hp = m.stats.hp = 200; }
   a.inbox.length = 0;
@@ -638,6 +650,12 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   await a.wait((m) => m.t === 'shop' && m.money === before - 600);
   a.send({ t: 'buy', item: 'great-ball', count: 1 });
   await a.wait((m) => m.t === 'notice' && m.kind === 'error');
+  a.send({ t: 'shopClose' });
+  // Nach dem Kohleorden: Doppelkampf mit Lucia gegen Team Galaktik, Prof. Eibe geht
+  s.player.flags.badge_coal = true; a.inbox.length = 0;
+  for (const m of s.party) m.hp = m.stats.hp;
+  await trip('jubilife_city', 'jubGrunts', 'jub_rowan_left', 30000);
+  assert.ok(s.player.flags.grunts_jub_tag, 'Doppelkampf gewonnen');
   a.ws.close();
 });
 

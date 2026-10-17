@@ -100,6 +100,15 @@ export class StoryRunner {
       g.sendParty(s);
       return;
     }
+    if (step.take) {
+      if (p.items[step.take] > 0) { p.items[step.take] -= 1; if (!p.items[step.take]) delete p.items[step.take]; g.sendParty(s); }
+      return;
+    }
+    if ('partyAtLeast' in step) {
+      const n = s.party.filter((m) => !m.egg).length;
+      sc.stack.push({ steps: (n >= step.partyAtLeast ? step.then : step.else) || [], i: 0 });
+      return;
+    }
     if (step.money) { p.money = (p.money || 0) + step.money; lines.push({ speaker: null, text: `Du erhältst ${step.money} ¥.` }); g.sendProgress(s); return; }
     if (step.heal) { g.healParty(s, step.heal === 'center'); return; }
     if (step.emote) { g.send(s.ws, { t: S2C.NPC_EMOTE, id: step.emote }); return; }

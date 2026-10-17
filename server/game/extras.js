@@ -7,6 +7,7 @@ import { ITEMS } from '../../shared/data/items.js';
 import { MOVES } from '../../shared/data/moves.js';
 import { S2C } from '../../shared/protocol.js';
 import { PARTNERS, ROAMERS, TOWER } from '../../shared/data/story8.js';
+import { RIVAL_STARTER } from '../../shared/data/story.js';
 import { RIBBONS, DAY_RIBBONS, RIBBON_SHOP } from '../../shared/data/ribbons.js';
 import { FURNITURE, FURNITURE_REQ_TEXT } from '../../shared/data/villa.js';
 import { createPokemon, displayName, recalc, species } from './pokemonFactory.js';
@@ -53,7 +54,11 @@ export const Extras = {
     const id = tr?.partner || (p.partner && PARTNERS[p.partner]?.maps.includes(p.map) ? p.partner : null);
     const d = id && PARTNERS[id];
     if (!d) return null;
-    const party = d.party.map(([sp, lv]) => createPokemon(sp, lv, { metRoute: 'partner', shiny: false }));
+    // 'third': der Starter, den weder du noch Barry genommen habt (Lucia), mit dem Level entwickelt
+    const st = p.starterSpecies || s.party.concat(s.box).find((m) => m.metRoute === 'starter')?.speciesId || 387;
+    const base = [387, 390, 393].find((b) => st >= b && st <= b + 2) || 387;
+    const third = 387 + 390 + 393 - base - RIVAL_STARTER[base];
+    const party = d.party.map(([sp, lv]) => createPokemon(sp === 'third' ? third + (lv >= 34 ? 2 : lv >= 16 ? 1 : 0) : sp, lv, { metRoute: 'partner', shiny: false }));
     return { id, name: d.name, party, mon: party[0] };
   },
   // Fahrrad wie in Platin: aufsteigen und absteigen über den Beutel oder Taste R
