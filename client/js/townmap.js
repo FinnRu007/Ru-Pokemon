@@ -281,7 +281,8 @@ export class TownMap {
       const text = c ? c.name : this.o.placeLabel?.() || '';
       g.fillStyle = BAR.text; g.font = `700 ${Math.round(14 * s)}px "Pixelify Sans", monospace`; g.textAlign = 'left'; g.textBaseline = 'middle';
       g.fillText(text, 12 * s, y0 + 13 * s);
-      if (c && c.fly && this.o.canFlyTo(c.id)) { g.textAlign = 'right'; g.fillText('Fliegen möglich', Wd - 12 * s, y0 + 13 * s); }
+      const hint = c && c.fly ? (this.o.canFlyTo(c.id) ? 'Fliegen möglich' : this.o.flyHint?.(c.id) || '') : '';
+      if (hint) { g.textAlign = 'right'; g.fillText(hint, Wd - 12 * s, y0 + 13 * s); }
     }
     g.restore();
   }

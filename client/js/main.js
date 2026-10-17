@@ -304,7 +304,6 @@ $('chatInput').addEventListener('blur', () => { if (!$('chatInput').value) $('ch
 input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
 input.on('escape', () => { if (mapOpen) toggleMap(false); if (freeCam) toggleFreeCam(false); });
 input.on('menu', () => openMenu());
-$('menuBtn').onclick = () => openMenu();
 hud.onOpenItem = (k) => {
   if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen) return;
   if (mapOpen) toggleMap(false);
@@ -326,7 +325,6 @@ input.on('mute', () => toggleMute());
 input.on('freecam', () => toggleFreeCam());
 input.on('zoomIn', () => { if (freeCam) freeCam.zoom = Math.min(1, freeCam.zoom * 1.25); });
 input.on('zoomOut', () => { if (freeCam) freeCam.zoom = Math.max(0.02, freeCam.zoom / 1.25); });
-$('freeCamBtn').onclick = () => toggleFreeCam();
 input.on('poketch', () => {
   if (!world.me || !introDone || battle.active || starterOpen || gameOver || dialog.open || scriptActive || shopOpen || menu.isOpen) return;
   if (mapOpen) toggleMap(false);
@@ -355,9 +353,10 @@ wmc.addEventListener('pointermove', (e) => {
 });
 function wmHover(s) {
   worldMap.hover = s && s.fly && worldMap.canFlyTo(s.id) ? s.id : null;
-  const why = !s?.fly || worldMap.hover || s.id === world.me?.map ? '' : !world.flags?.hm_fly ? 'Fliegen ist noch nicht freigeschaltet · ' : !world.flags['visit_' + s.id] ? `${MAPS[s.id].name}: noch nicht besucht · ` : '';
-  $('wmFoot').textContent = worldMap.hover ? `Klicken oder Enter: nach ${MAPS[worldMap.hover].name} fliegen` : why + `Mausrad oder +/−: Zoom · Ziehen: verschieben${worldMap.original ? ' · Pfeiltasten: Cursor' : ''} · M oder Esc: schließen`;
+  // Feste, einzeilige Fusszeile: der Hinweis zum Fliegen steht rechts in der Namensleiste der Karte
+  $('wmFoot').textContent = worldMap.hover ? `Klicken oder Enter: nach ${MAPS[worldMap.hover].name} fliegen` : `Mausrad oder +/−: Zoom · Ziehen: verschieben${worldMap.original ? ' · Pfeiltasten: Cursor' : ''} · M oder Esc: schließen`;
 }
+worldMap.flyHint = (id) => (id === world.me?.map ? '' : !world.flags?.hm_fly ? 'Fliegen gesperrt' : !world.flags['visit_' + id] ? 'Noch nicht besucht' : '');
 wmc.addEventListener('pointerup', (e) => {
   const d = wmDrag; wmDrag = null;
   if (!d || d.moved > 4) return;
@@ -394,13 +393,14 @@ $('sfxVol').onchange = () => audio.sfx('select');
 function renderToggles() {
   $('musicBtn').classList.toggle('on', audio.prefs.musicOn);
   $('sfxBtn').classList.toggle('on', audio.prefs.sfxOn);
-  $('fullBtn').classList.toggle('on', !!document.fullscreenElement);
 }
 $('musicBtn').onclick = () => toggleMute();
 $('sfxBtn').onclick = () => { audio.toggle('sfx'); renderToggles(); audio.sfx('select'); };
 function toggleMute() { audio.toggle('music'); renderToggles(); }
-hud.onTab = (tab) => { if (tab === 'map') drawMinimap(true); };
-hud.restoreTab();
+// Einstellungen bleiben auf- oder zugeklappt wie zuletzt
+try { $('setPanel').open = localStorage.getItem('platin.settings') === '1'; $('boxPanel').open = localStorage.getItem('platin.box') === '1'; } catch { /* privat */ }
+$('setPanel').addEventListener('toggle', () => { try { localStorage.setItem('platin.settings', $('setPanel').open ? '1' : '0'); } catch { /* privat */ } });
+$('boxPanel').addEventListener('toggle', () => { try { localStorage.setItem('platin.box', $('boxPanel').open ? '1' : '0'); } catch { /* privat */ } });
 renderToggles();
 
 // Vollbild: das Spielfeld fuellt den Bildschirm, alles darin (Kampf, Menues, Karte) waechst mit
@@ -414,9 +414,8 @@ function fitStage() {
   const k = Math.min(innerWidth / st.offsetWidth, innerHeight / st.offsetHeight);
   st.style.transform = `scale(${k})`;
 }
-document.addEventListener('fullscreenchange', () => { fitStage(); renderToggles(); });
+document.addEventListener('fullscreenchange', fitStage);
 addEventListener('resize', fitStage);
-$('fullBtn').onclick = () => toggleFullscreen();
 input.on('fullscreen', () => toggleFullscreen());
 
 // ------------------------------------------------------------------ Weltkarte und Minikarte
@@ -450,7 +449,7 @@ function drawWorldMap(now) {
 let miniAt = 0;
 function drawMinimap(force) {
   const now = performance.now();
-  if (!world.me || (!force && now - miniAt < 200) || $('tab-map').classList.contains('hidden')) return;
+  if (!world.me || (!force && now - miniAt < 200)) return;
   miniAt = now;
   const c = $('minimap');
   worldMap.me = world.me;

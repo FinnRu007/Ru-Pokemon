@@ -1,7 +1,6 @@
-// Seitenleiste: ein Reiter mit Karte, Team (mit Nuzlocke und Seelenbaendern) und Box. Chat und Meldungen
+// Seitenleiste ohne Reiter: Minikarte, Team (mit Nuzlocke und Seelenbaendern) und einklappbare Box. Chat und Meldungen
 // laufen unten links im Spielbild ein und verblassen (#chatFeed).
 import { monsterIcon } from './art/monsters.js';
-import { BADGES } from '/shared/data/story.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ROUTE_NAMES = { starter: 'Starter' };
@@ -12,19 +11,6 @@ export class Hud {
   constructor(net, manifest, maps) {
     this.net = net; this.m = manifest; this.maps = maps;
     this.party = []; this.box = []; this.items = {}; this.progress = { flags: {}, money: 0 };
-    document.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => this.showTab(b.dataset.tab); });
-  }
-
-  showTab(tab) {
-    document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x.dataset.tab === tab));
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('hidden', t.id !== 'tab-' + tab));
-    try { localStorage.setItem('platin.tab', tab); } catch { /* privat */ }
-    this.onTab?.(tab);
-  }
-  restoreTab() {
-    let tab = 'party';
-    try { tab = localStorage.getItem('platin.tab') || tab; } catch { /* privat */ }
-    this.showTab(document.getElementById('tab-' + tab) ? tab : 'party');
   }
 
   routeName(r) { return ROUTE_NAMES[r] || this.maps[r]?.name || r; }
@@ -52,20 +38,15 @@ export class Hud {
       <div class="hpbar ${cls}"><i style="width:${pct}%"></i></div></div><div class="acts">${actions}</div></div>`;
   }
 
-  setProgress(m) {
-    this.progress = m;
-    const badges = BADGES.filter((b) => m.flags?.[b.flag]);
-    $('trainerCard').innerHTML = `<span>Geld: <b>${m.money ?? 0} ¥</b></span><span>Orden: ${badges.length
-      ? badges.map((b) => `<i class="badge-icon" style="background:${b.color}" title="${esc(b.name)}"></i>${esc(b.name)}`).join(' ') : 'keine'}</span>`;
-  }
+  setProgress(m) { this.progress = m; }
 
   setParty(msg) {
     this.party = msg.party; this.box = msg.box; this.items = msg.items || {};
     $('partyList').innerHTML = msg.party.length ? msg.party.map((p, i) => this.monRow(p,
       `${i > 0 ? `<button data-a="up" data-i="${i}">▲</button>` : ''}<button data-a="nick" data-id="${p.id}">✎</button><button data-a="tobox" data-id="${p.id}">Box</button>`)).join('')
       : '<div class="hint">Du hast noch kein Pokémon.</div>';
-    $('tab-box').innerHTML = msg.box.length ? msg.box.map((p) => this.monRow(p, p.alive ? `<button data-a="toparty" data-id="${p.id}">Team</button>` : '')).join('') : '<div class="hint">Box ist leer.</div>';
-    for (const btn of document.querySelectorAll('#partyList button, #tab-box button')) {
+    $('boxList').innerHTML = msg.box.length ? msg.box.map((p) => this.monRow(p, p.alive ? `<button data-a="toparty" data-id="${p.id}">Team</button>` : '')).join('') : '<div class="hint">Box ist leer.</div>';
+    for (const btn of document.querySelectorAll('#partyList button, #boxList button')) {
       btn.onclick = () => {
         const a = btn.dataset.a;
         if (a === 'up') this.net.send({ t: 'partySwap', from: Number(btn.dataset.i), to: Number(btn.dataset.i) - 1 });

@@ -452,3 +452,16 @@ details.help summary { cursor: pointer; color: var(--muted); }
 
 /* Kampf: Cursor fuer die Tastatur immer sichtbar */
 #battle button:focus { outline: 3px solid #ffe066; outline-offset: 1px; }
+
+/* Seitenleiste ohne Reiter (Stand 2): Minikarte, Team, Box und Einstellungen einklappbar */
+#hud .mini canvas { height: auto; }
+.hud-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.hud-head .online { font-size: 12px; color: var(--muted); }
+#partyList { max-height: 330px; overflow: auto; }
+.box-panel summary, .settings summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--muted); }
+.box-panel { background: var(--panel2); border-radius: 8px; padding: 6px 8px; }
+.box-panel[open] summary { margin-bottom: 6px; }
+#boxList { max-height: 260px; overflow: auto; }
+.box-panel .mon { background: #1e2238; }
+.settings:not([open]) { gap: 0; }
+.wm-foot { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

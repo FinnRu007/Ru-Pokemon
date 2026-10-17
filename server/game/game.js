@@ -29,6 +29,9 @@ export function trainerNo(id) { return String([...String(id)].reduce((a, c) => (
 const NAME_RE = /^[\p{L}\p{N} _-]{2,16}$/u;
 const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#fdd835', '#6d4c41'];
 
+// Begegnungsrate im hohen Gras gegenueber Platin
+const GRASS_FACTOR = 0.8;
+
 export class GameServer {
   // opts.story = false schaltet Story, Ausloeser und Trainer ab (freies Spiel wie vor Etappe 3).
   constructor(repo, log = console, opts = {}) {
@@ -734,7 +737,8 @@ export class GameServer {
     const list = tile === GRASS ? table.grass : tile === CAVE_FLOOR ? table.cave : tile === WATER ? table.water : null;
     if (!list?.length) return;
     if (!s.party.some((m) => m.alive && m.hp > 0)) return;
-    if (!encounterRoll(tile === GRASS ? table.grassRate : tile === WATER ? (table.waterRate || 10) : table.caveRate)) return;
+    // Im Gras etwas seltener als im Original (Wunsch: weniger Unterbrechungen beim Laufen)
+    if (!encounterRoll(tile === GRASS ? table.grassRate * GRASS_FACTOR : tile === WATER ? (table.waterRate || 10) : table.caveRate)) return;
     const roamer = tile !== CAVE_FLOOR && this.roamerHere(s);
     if (roamer) return this.startWildBattle(s, roamer, s.player.roamers[roamer].level, s.player.map, { roamer });
     const total = list.reduce((a, e) => a + e.weight, 0);

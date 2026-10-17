@@ -80,31 +80,19 @@
     </div>
 
     <aside id="hud">
-      <div class="tabs">
-        <button data-tab="map">Karte</button>
-        <button data-tab="party" class="active">Team</button>
-        <button data-tab="box">Box</button>
-      </div>
-      <div id="tab-map" class="tab hidden">
-        <div class="mini"><canvas id="minimap" width="306" height="200"></canvas><span id="miniLabel"></span></div>
-        <div class="map-row"><button id="mapBtn" title="Weltkarte (M)">Weltkarte öffnen</button><span class="online">Online: <b id="onlineCount">0</b></span></div>
-        <div id="trainerCard" class="trainer-card"></div>
-      </div>
-      <div id="tab-party" class="tab"><div id="partyList"></div><div id="nuzInfo"></div></div>
-      <div id="tab-box" class="tab hidden"></div>
-      <section class="settings">
-        <h3>Einstellungen</h3>
+      <div class="mini"><canvas id="minimap" width="306" height="170"></canvas><span id="miniLabel"></span><button id="mapBtn" title="Weltkarte (M)">Karte</button></div>
+      <div class="hud-head"><b>Team</b><span class="online">Online: <b id="onlineCount">0</b></span></div>
+      <div id="partyList"></div>
+      <div id="nuzInfo"></div>
+      <details id="boxPanel" class="box-panel"><summary>Box</summary><div id="boxList"></div></details>
+      <details id="setPanel" class="settings">
+        <summary>Einstellungen</summary>
         <div class="volumes">
           <label><button id="musicBtn" class="tg" title="Musik an/aus (N)">♪ Musik</button><input id="musicVol" type="range" min="0" max="100"></label>
           <label><button id="sfxBtn" class="tg" title="Effekte an/aus">Effekte</button><input id="sfxVol" type="range" min="0" max="100"></label>
         </div>
-        <div class="toggles">
-          <button id="fullBtn" class="tg" title="Vollbild an/aus (V)">⛶ Vollbild</button>
-          <button id="freeCamBtn" class="tg" title="Freikamera: frei über die ganze Karte fliegen (C)">Kamera</button>
-          <button id="menuBtn" class="tg" title="Menü mit Pokédex, Beutel, Trainerpass und Speichern (X)">Menü</button>
-        </div>
-        <details class="help"><summary>Tasten</summary>Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Bestätigen · X/Esc: Menü und zurück · T: Chat · M: Karte · F: Fliegen · R: Fahrrad · P: Pokétch · 1 bis 6: Emotes · N: Musik · C: Freikamera · V: Vollbild</details>
-      </section>
+        <div class="help">Pfeiltasten/WASD: Laufen · Shift: Rennen · Z/Enter: Bestätigen · X/Esc: Menü und zurück · T: Chat · M: Karte · F: Fliegen · R: Fahrrad · P: Pokétch · 1 bis 6: Emotes · N: Musik · C: Freikamera · V: Vollbild</div>
+      </details>
     </aside>
   </div>
   <script type="module" src="js/main.js"></script>
