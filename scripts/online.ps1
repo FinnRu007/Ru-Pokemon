@@ -48,6 +48,30 @@ if (Test-Port $port) {
   $server = Start-Process -FilePath 'node' -ArgumentList '--no-warnings', 'server/index.js' -NoNewWindow -PassThru
 }
 
+# Traegt die aktuelle Tunnel-Adresse in die versteckte Seite auf Ru-Services ein,
+# damit das Spiel immer unter derselben Adresse erreichbar ist (siehe README).
+$siteSlug = 'r5ec5sacle6b'
+$siteUrl = "https://finnru007.github.io/Ru-Services/$siteSlug/"
+function Publish-Adresse($tunnelUrl) {
+  $site = Join-Path (Split-Path -Parent $root) 'Ru-Services'
+  try {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'git fehlt' }
+    if (-not (Test-Path (Join-Path $site '.git'))) {
+      & git clone -q https://github.com/FinnRu007/Ru-Services.git $site 2>&1 | Out-Null
+    }
+    & git -C $site pull -q --rebase 2>&1 | Out-Null
+    $json = @{ url = $tunnelUrl; seit = (Get-Date).ToUniversalTime().ToString('o') } | ConvertTo-Json -Compress
+    [IO.File]::WriteAllText((Join-Path $site "$siteSlug\adresse.json"), $json)
+    & git -C $site add "$siteSlug/adresse.json" 2>&1 | Out-Null
+    & git -C $site -c user.name=FinnRu007 -c user.email=208017591+FinnRu007@users.noreply.github.com commit -q -m 'Spieladresse aktualisiert' 2>&1 | Out-Null
+    & git -C $site push -q 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'push fehlgeschlagen' }
+    Write-Host "  Feste Adresse (in etwa einer Minute aktuell): $siteUrl" -ForegroundColor Green
+  } catch {
+    Write-Host "  Feste Adresse konnte nicht aktualisiert werden ($_). Die Adresse oben geht trotzdem." -ForegroundColor DarkYellow
+  }
+}
+
 $log = Join-Path $tools 'tunnel.log'
 $logOut = Join-Path $tools 'tunnel.out.log'
 Remove-Item $log, $logOut -ErrorAction SilentlyContinue
@@ -87,6 +111,7 @@ try {
     Write-Host '  Fenster offen lassen, solange gespielt wird.'
     Write-Host '=============================================================' -ForegroundColor Yellow
     Write-Host ''
+    Publish-Adresse $url
     Start-Process "http://localhost:$port"
   }
   if ($server) { Wait-Process -Id $server.Id } else { Wait-Process -Id $tunnel.Id }

@@ -22,6 +22,8 @@ Doppelklick auf **`Online spielen.bat`**. Das Skript startet den Server, lädt b
 
 Kein Konto, keine Kosten, keine Router-Einstellungen. Die Spielstände bleiben auf deinem Rechner. Das Fenster muss offen bleiben, solange gespielt wird, und die Adresse ist bei jedem Start eine neue.
 
+**Feste Adresse:** Zusätzlich trägt das Skript die neue Tunnel-Adresse in eine versteckte, nicht verlinkte Seite im Repo `Ru-Services` ein (`C:\Users\finnr\Spiele\Ru-Services`, wird beim ersten Mal geklont). Unter `https://finnru007.github.io/Ru-Services/r5ec5sacle6b/` läuft das Spiel dann immer, egal welche Tunnel-Adresse gerade gilt. Die feste Seite merkt sich auch den Spielstand-Schlüssel, damit man nach einem Neustart des Tunnels nicht neu anfangen muss. Ist der Server aus, zeigt die Seite das an.
+
 ### Umgebungsvariablen
 
 | Variable | Standard | Bedeutung |

@@ -78,8 +78,26 @@ function updateFreeCam() {
 }
 
 // ------------------------------------------------------------------ Login
-const saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
-if (saved) $('loginSaved').innerHTML = `Gespeicherter Spielstand: <b>${saved.name}</b>. Leer lassen und "Spielen" drücken, um fortzufahren.`;
+let saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
+function showSaved() { if (saved) $('loginSaved').innerHTML = `Gespeicherter Spielstand: <b>${saved.name}</b>. Leer lassen und "Spielen" drücken, um fortzufahren.`; }
+showSaved();
+// Eingebettet in die feste Seite (Ru-Services): die Online-Adresse wechselt bei jedem Start,
+// darum merkt sich die feste Seite den Spielstand-Schluessel und reicht ihn hier herein.
+const HOST_ORIGIN = 'https://finnru007.github.io';
+const embedded = window.parent !== window;
+function toHost(msg) { if (embedded) try { window.parent.postMessage(msg, HOST_ORIGIN); } catch { /* */ } }
+if (embedded) {
+  window.addEventListener('message', (e) => {
+    if (e.origin !== HOST_ORIGIN || !e.data || e.data.t !== 'platin:session') return;
+    const s = e.data.session;
+    if (s && typeof s.token === 'string' && typeof s.name === 'string' && !saved) {
+      saved = { token: s.token, name: s.name };
+      try { localStorage.setItem('platin.session', JSON.stringify(saved)); } catch { /* privat */ }
+      showSaved();
+    }
+  });
+  toHost({ t: 'platin:getSession' });
+}
 $('loginBtn').onclick = () => {
   const name = $('loginName').value.trim();
   const runCode = $('loginRun').value.trim();
@@ -108,6 +126,7 @@ $('loginName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('lo
 // ------------------------------------------------------------------ Netzwerk-Handler
 net.on('welcome', (m) => {
   try { localStorage.setItem('platin.session', JSON.stringify({ token: m.token, name: m.player.name })); } catch { /* privat */ }
+  toHost({ t: 'platin:setSession', session: { token: m.token, name: m.player.name } });
   net.helloMsg = { t: 'hello', token: m.token };
   $('login').classList.add('hidden');
   world.walkMs = m.walkMs; world.runMs = m.runMs; if (m.bikeMs) world.bikeMs = m.bikeMs;
@@ -201,7 +220,7 @@ net.on('battleEnd', (m) => {
 net.on('gameOver', (m) => {
   gameOver = true; world.locked = true;
   openModal(`<h1>Game Over</h1><p>${m.reason}</p><p class="hint">Der Spielstand bleibt erhalten. Für einen neuen Run einen neuen Namen wählen.</p><button id="newRun">Neuer Trainer</button>`);
-  $('newRun').onclick = () => { try { localStorage.removeItem('platin.session'); } catch { /* */ } location.reload(); };
+  $('newRun').onclick = () => { try { localStorage.removeItem('platin.session'); } catch { /* */ } toHost({ t: 'platin:clearSession' }); location.reload(); };
 });
 
 // ------------------------------------------------------------------ UI-Helfer
