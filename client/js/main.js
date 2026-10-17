@@ -81,14 +81,15 @@ function updateFreeCam() {
 let saved = (() => { try { return JSON.parse(localStorage.getItem('platin.session') || 'null'); } catch { return null; } })();
 function showSaved() { if (saved) $('loginSaved').innerHTML = `Gespeicherter Spielstand: <b>${saved.name}</b>. Leer lassen und "Spielen" drücken, um fortzufahren.`; }
 showSaved();
-// Eingebettet in die feste Seite (Ru-Services): die Online-Adresse wechselt bei jedem Start,
+// Eingebettet in die feste Seite (ru-services.de): die Online-Adresse wechselt bei jedem Start,
 // darum merkt sich die feste Seite den Spielstand-Schluessel und reicht ihn hier herein.
-const HOST_ORIGIN = 'https://finnru007.github.io';
+const HOST_ORIGINS = ['https://ru-services.de', 'https://finnru007.github.io'];
 const embedded = window.parent !== window;
-function toHost(msg) { if (embedded) try { window.parent.postMessage(msg, HOST_ORIGIN); } catch { /* */ } }
+// postMessage mit falschem Ziel-Origin wird vom Browser verworfen, darum an alle erlaubten senden
+function toHost(msg) { if (embedded) for (const o of HOST_ORIGINS) try { window.parent.postMessage(msg, o); } catch { /* */ } }
 if (embedded) {
   window.addEventListener('message', (e) => {
-    if (e.origin !== HOST_ORIGIN || !e.data || e.data.t !== 'platin:session') return;
+    if (!HOST_ORIGINS.includes(e.origin) || !e.data || e.data.t !== 'platin:session') return;
     const s = e.data.session;
     if (s && typeof s.token === 'string' && typeof s.name === 'string' && !saved) {
       saved = { token: s.token, name: s.name };

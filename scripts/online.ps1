@@ -48,10 +48,11 @@ if (Test-Port $port) {
   $server = Start-Process -FilePath 'node' -ArgumentList '--no-warnings', 'server/index.js' -NoNewWindow -PassThru
 }
 
-# Traegt die aktuelle Tunnel-Adresse in die versteckte Seite auf Ru-Services ein,
+# Traegt die aktuelle Tunnel-Adresse im Repo Ru-Services ein. Die versteckte Seite
+# https://ru-services.de/<slug>/ (Repo Ru-Rechnungen-Web) liest sie dort aus,
 # damit das Spiel immer unter derselben Adresse erreichbar ist (siehe README).
 $siteSlug = 'r5ec5sacle6b'
-$siteUrl = "https://finnru007.github.io/Ru-Services/$siteSlug/"
+$siteUrl = "https://ru-services.de/$siteSlug/"
 function Publish-Adresse($tunnelUrl) {
   $site = Join-Path (Split-Path -Parent $root) 'Ru-Services'
   try {
