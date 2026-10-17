@@ -70,6 +70,23 @@ export function renderCell(tris) {
   return { w, h, ox: minX, oy: minY, color: cv.data, rows };
 }
 
+// Rendert ein einzelnes Modell (Schild, Briefkasten) in derselben Schraegsicht. ox/oy: Lage der linken
+// oberen Bildecke relativ zum Ursprung des Modells.
+export function renderModel(model) {
+  const tris = model.tris.filter((t) => t.mat?.alpha !== 0);
+  if (!tris.length) return null;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const t of tris) for (const [x, y, z] of t.v) {
+    const sy = z - y * CY;
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+  }
+  minX = Math.floor(minX) - 1; minY = Math.floor(minY) - 1; maxX = Math.ceil(maxX) + 1; maxY = Math.ceil(maxY) + 1;
+  const w = maxX - minX, h = maxY - minY;
+  const cv = makeCanvas(w, h);
+  drawTris(cv, tris, ([x, y, z]) => [x - minX, z - y * CY - minY, z + y * DEPTH_Y]);
+  return { w, h, ox: minX, oy: minY, color: cv.data };
+}
+
 // Welche Kacheln das Bodenmodell ueberhaupt abdeckt (Innenraeume: ausserhalb des Raums ist nichts)
 export function groundCover(land) {
   const cov = new Uint8Array(1024);

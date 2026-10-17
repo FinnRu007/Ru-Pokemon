@@ -165,6 +165,12 @@ export class Renderer {
           if (OBJ[t] && !open.has(t)) ents.push({ kind: 'obj', o: { obj: OBJ[t] }, p: { x, y, hop: 0 }, map: mm });
         }
       }
+      // Schilder und Briefkaesten (im Original eigene Modelle, nicht Teil der Kartenbilder)
+      for (const ob of mm.orig.objects || []) {
+        if (Math.abs(mm.orig.x + ob.x - gx) > 10 || Math.abs(mm.orig.z + ob.y - gz) > 9) continue;
+        const md = OV.fieldModel(ob.g);
+        if (md) ents.push({ kind: 'model', o: md, p: { x: ob.x, y: ob.y, hop: 0 }, map: mm });
+      }
       // Beerenbeete: weicher Boden und die Pflanze im Zustand dieses Spielers
       for (const b of soilIndex(MAPS).byMap[id] || []) {
         if (Math.abs(mm.orig.x + b.x - gx) > 10 || Math.abs(mm.orig.z + b.y - gz) > 9) continue;
@@ -186,6 +192,10 @@ export class Renderer {
         const sx = Math.round(e.ox + e.p.x * T), sy = Math.round(e.oy + e.p.y * T);
         drawSoil(g, sx, sy, S, moist, mulch);
         fw = drawBerryTree(g, sx, sy, S, b, stage, now) || 12;
+      } else if (e.kind === 'model') {
+        const { img, info } = e.o;
+        fw = info.w;
+        g.drawImage(img, Math.round(e.ox + (e.p.x * 16 + info.ox) * S), Math.round(e.oy + (e.p.y * 16 + info.oy) * S), info.w * S, info.h * S);
       } else if (e.kind === 'obj') {
         const img = fieldObject(e.o.obj);
         fw = img ? img.width : 16;
@@ -201,7 +211,9 @@ export class Renderer {
         if (!e.p.hop && OV.tileAt(map, tx, tz) === '"') OV.drawTileBottom(g, m, Ox, Oy, tx, tz, OV.heightF(map, tx, tz));
       }
       const top = e.feetY - fw - (e.p.hop || 0) * 16 - 2;
-      OV.occlude(g, m, Ox, Oy, { x: (e.gx + 0.5) * 16 - fw / 2 - 1, y: top, w: fw + 2, h: e.feetY + 4 - top }, Math.round(e.gz));
+      // Waehrend eines Schritts zaehlt die weiter suedliche Reihe: sonst malt der Boden der naechsten Reihe
+      // ab der Haelfte des Schritts ueber die Fuesse und die Figur flackert beim Laufen
+      OV.occlude(g, m, Ox, Oy, { x: (e.gx + 0.5) * 16 - fw / 2 - 1, y: top, w: fw + 2, h: e.feetY + 4 - top }, Math.ceil(e.gz - 0.001));
     }
     this.amb.drawSky(g, map, world.me.map, W, H, now, { x: W / 2, y: H / 2 }, { ox, oy, T });
     for (const e of ents) if (e.o.emote) {

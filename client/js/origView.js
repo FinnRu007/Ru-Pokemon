@@ -38,6 +38,20 @@ function pixels(c) {
   return c;
 }
 
+// Schilder und Briefkaesten (eigene Bilder in client/sprites/world/objects, Lage in index.json)
+const objImgs = new Map();
+export function fieldModel(g) {
+  const info = INDEX?.objects?.[g];
+  if (!info) return null;
+  let o = objImgs.get(g);
+  if (!o) {
+    o = { info, img: null };
+    const img = new Image(); img.onload = () => { o.img = img; }; img.src = `/sprites/world/objects/${g}.png`;
+    objImgs.set(g, o);
+  }
+  return o.img ? o : null;
+}
+
 export function origReady(map) { return !!(INDEX && map?.orig && INDEX.matrices[map.orig.m]); }
 export function matrixOf(map) { return INDEX?.matrices[map.orig.m]; }
 

@@ -9,8 +9,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readLandData, cellTris, renderCell, groundHeights, groundCover, parseNsbmd, resolveTextures, parseTex0, ROW_BIAS } from './render.js';
+import { readLandData, cellTris, renderCell, renderModel, groundHeights, groundCover, parseNsbmd, resolveTextures, parseTex0, ROW_BIAS } from './render.js';
 import { encodePNG } from './png.js';
+import { unpackNarc, lzDecompress } from '../nitro.js';
 import { ORIG_SPEC } from '../../shared/data/origSpec.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -50,6 +51,8 @@ async function prefetch(list) {
   if (todo.length) process.stdout.write(`\r  ${todo.length} Dateien geladen\n`);
 }
 const text = (rel) => { const b = fetchFile(rel); return b ? Buffer.from(b).toString('utf8') : null; };
+// Objektgrafiken, die Platin als 3D-Modell aus fldeff.narc zeichnet (pret: ov5_021F10E8.c)
+const FIELD_MODELS = { MAP_SIGNPOST: 0x45, MAILBOX: 0x46, SIGNBOARD: 0x47, ARROW_SIGNPOST: 0x48, GYM_SIGNPOST: 0x49, TRAINER_TIPS_SIGNPOST: 0x4a };
 const pad3 = (n) => String(n).padStart(3, '0');
 
 // ------------------------------------------------------------------ Kopfdaten
@@ -179,6 +182,25 @@ export async function buildWorld({ log = console.log } = {}) {
     cellInfo[`${c.m},${c.x},${c.y}`] = { ...c, heights: groundHeights(land, c.alt) };
   }
   if (drawn) process.stdout.write(`\r  ${drawn} Kartenteile gezeichnet\n`);
+  // Schilder, Briefkaesten und Buecher sind im Original eigene 3D-Modelle (Feldeffekte, fldeff.narc),
+  // nicht Teil der Karte. Sie werden einzeln gezeichnet und im Spiel wie Figuren auf ihr Feld gestellt.
+  await prefetch(['res/prebuilt/data/mmodel/fldeff.narc']);
+  const fe = fetchFile('res/prebuilt/data/mmodel/fldeff.narc');
+  if (fe) {
+    let narc = null;
+    try { narc = unpackNarc(Buffer.from(fe)).map(lzDecompress); } catch { narc = null; }
+    const objDir = path.join(OUT, 'objects');
+    fs.mkdirSync(objDir, { recursive: true });
+    index.objects = {};
+    for (const [g, n] of Object.entries(FIELD_MODELS)) {
+      let img = null;
+      try { const md = parseNsbmd(new Uint8Array(narc[n])); resolveTextures(md); img = renderModel(md); } catch { img = null; }
+      if (!img) continue;
+      fs.writeFileSync(path.join(objDir, g + '.png'), encodePNG(img.w, img.h, img.color));
+      // Ursprung des Modells: Feldmitte, im Original 2 Einheiten nach hinten versetzt
+      index.objects[g] = { ox: img.ox + 8, oy: img.oy + 8 - 2, w: img.w, h: img.h };
+    }
+  }
   fs.writeFileSync(idxFile, JSON.stringify(index));
   // Alte Bilder, die nicht mehr gebraucht werden, aufraeumen
   for (const [m, M] of Object.entries(index.matrices)) {
@@ -257,6 +279,7 @@ export async function buildWorld({ log = console.log } = {}) {
         const g = o.graphics_id.replace('OBJ_EVENT_GFX_', '');
         const t = { CUT_TREE: 'Z', ROCK_SMASH: 'Q', STRENGTH_BOULDER: 'M', SIGNBOARD: 'S', ARROW_SIGNPOST: 'S', MAP_SIGNPOST: 'S', TRAINER_TIPS_SIGNPOST: 'S', GYM_SIGNPOST: 'S' }[g];
         if (t && grid[y][x] !== ' ') grid[y][x] = t;
+        else if (g === 'MAILBOX' && grid[y][x] !== ' ') grid[y][x] = '#';
         objects.push({ x, y, g, id: o.id, flag: o.hidden_flag, script: o.script, dir: o.initial_dir, move: o.movement_type, tr: o.trainer_type, range: o.data?.[0] });
       }
     }
