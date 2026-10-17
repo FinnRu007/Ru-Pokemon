@@ -15,7 +15,7 @@ const CLERK = (map) => ({ id: `${map}_clerk`, x: 0, y: 3, dir: 'right', look: 'c
 const GUIDE = (map, script) => ({ id: `${map}_guide`, x: 9, y: 16, dir: 'left', look: 'worker', name: 'Arenaberater', talk: script });
 const say = (who, text) => [[who, text]];
 const gift = (flag, lines, after) => [{ if: '!' + flag, then: [...lines, { flag }], else: after }];
-const hm = (name) => [null, `Du erhältst die VM ${name}! Ab jetzt setzt dein Team ${name} automatisch ein, wenn du davorstehst.`];
+const hm = (name) => [null, `Du erhältst die VM ${name}! Stell dich vor das Hindernis und drück die Aktionstaste, dann setzt ein Pokémon aus deinem Team ${name} ein.`];
 
 // ------------------------------------------------------------------ Trainer
 export const TRAINERS2 = {
@@ -25,7 +25,7 @@ export const TRAINERS2 = {
     after: say('Göre Sina', 'In Flori riecht es immer nach Blumen. Ich liebe es dort!') },
   youngster_ben: { name: 'Ben', cls: 'Knirps', look: 'youngster', prize: 16, sight: 3, party: [[401, 10], [399, 10]],
     intro: say('Knirps Ben', 'Ich hab die Felsige Schneise ganz allein geschafft. Jetzt bist du dran!'), win: say('Knirps Ben', 'Okay, du bist auch nicht schlecht.'),
-    after: say('Knirps Ben', 'Mit Zertrümmerer zerlegst du Felsbrocken einfach, indem du dagegen läufst.') },
+    after: say('Knirps Ben', 'Mit Zertrümmerer zerlegst du Felsbrocken. Stell dich davor und sprich sie an!') },
   // Flori-Wiese und Windkraftwerk
   grunt_meadow_a: { name: 'Rüpel', cls: 'Team Galaktik', look: 'grunt', prize: 30, sight: 4, party: [[434, 12]],
     intro: say('Galaktik-Rüpel', 'Diese Wiese gehört jetzt Team Galaktik! Der süße Honig hier ist für unsere Forschung!'),

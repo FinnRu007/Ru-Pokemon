@@ -74,6 +74,7 @@ export const Extras = {
   },
   onMapChange(s, oldMap) {
     const p = s.player;
+    s.npcPos = null;
     const d = p.partner && PARTNERS[p.partner];
     if (d && d.maps.includes(oldMap) && !d.maps.includes(p.map)) {
       p.partner = null;

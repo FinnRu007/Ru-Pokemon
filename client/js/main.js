@@ -23,6 +23,7 @@ import { weatherFor, timeOfDay, TIME_NAMES } from './ambience.js';
 import { GameMenu } from './menu.js';
 import { loadTexts } from './texts.js';
 import { onOptions } from './options.js';
+import { playCutIn, fieldMon } from './fieldFx.js';
 
 const $ = (id) => document.getElementById(id);
 const manifest = await (await fetch('/assets/sprites/manifest.json')).json();
@@ -204,9 +205,25 @@ net.on('soulDeath', (m) => {
 net.on('battleStart', (m) => { world.locked = true; world.anim = null; battle.start(m); });
 // Story: Dialoge vom Server. Waehrend eines Kampfes warten sie, bis der Kampfbildschirm zu ist.
 net.on('dialog', (m) => { pendingDialogs.push(m); flushDialogs(); });
-net.on('script', (m) => { scriptActive = m.active; updateLock(); });
-net.on('progress', (m) => { const wasRiding = !!world.flags?.riding; world.flags = m.flags || {}; if (wasRiding !== !!world.flags.riding && world.me && !battle.active) playMapMusic(); hud.setProgress(m); menu.refresh(); });
+net.on('script', (m) => { scriptActive = m.active; world.scriptActive = m.active; updateLock(); });
+net.on('progress', (m) => { const wasRiding = !!world.flags?.riding; world.setFlags(m.flags); if (wasRiding !== !!world.flags.riding && world.me && !battle.active) playMapMusic(); hud.setProgress(m); menu.refresh(); });
 net.on('npcEmote', (m) => { world.emote(m.id); audio.sfx('exclaim'); });
+// Szenen: Figuren laufen, drehen sich, der Spieler wird ein paar Schritte gefuehrt
+net.on('npcWalk', (m) => world.npcWalk(m));
+net.on('npcFace', (m) => world.faceNpc(m.id, m.dir));
+net.on('selfWalk', (m) => world.selfWalk(m));
+net.on('selfFace', (m) => { if (world.me) world.me.dir = m.dir; });
+net.on('npcMove', (m) => world.npcMoved(m));
+net.on('npcPos', (m) => { for (const [map, id, x, y, dir] of m.list) world.npcMoved({ map, id, x, y, dir }); });
+// Feldattacken: Einblendung des Pokemon und Wirkung auf das Hindernis
+net.on('fieldMove', (m) => {
+  if (m.reset) { world.cleared.clear(); return; }
+  if (m.other) return;
+  if (!['surf', 'fly'].includes(m.move)) world.cleared.add(`${m.map}:${m.x},${m.y}`);
+  playCutIn(m, m.move);
+  renderer.addFieldFx({ ...m, start: performance.now() });
+});
+world.onFieldStep = (move) => { const mon = fieldMon(world.party, move); return mon ? playCutIn(mon, move) : 0; };
 net.on('shop', (m) => openShop(m));
 net.on('battleEvents', (m) => battle.enqueue(m.events, m.state));
 // Entwicklung ausserhalb des Kampfes (Stein, Sonderbonbon): Szene ueber allem, danach wieder die Musik der Karte

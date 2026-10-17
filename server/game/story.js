@@ -6,6 +6,7 @@ import { MOVES } from '../../shared/data/moves.js';
 import { MAPS } from '../../shared/data/maps.js';
 import { DIRS, tileAt, SOLID } from '../../shared/world.js';
 import { S2C } from '../../shared/protocol.js';
+import { Scenes } from './scenes.js';
 
 // Nacht wie in Platin: 20 bis 4 Uhr (Uhr des Servers)
 export const isNight = (d = new Date()) => d.getHours() >= 20 || d.getHours() < 4;
@@ -19,6 +20,7 @@ export class StoryRunner {
   start(s, steps, ctx = {}) {
     if (s.script || s.battle) return false;
     s.script = { stack: [{ steps, i: 0 }], ctx, waiting: null, token: 0, ask: null };
+    this.sceneDiff(s);
     this.game.send(s.ws, { t: S2C.SCRIPT, active: true });
     this.run(s);
     return true;
@@ -30,6 +32,9 @@ export class StoryRunner {
     const sc = s.script;
     if (!sc) return;
     const lines = [];
+    // Figuren, die durch einen Kampf verschwunden sind, gehen erst weg
+    const away = this.sceneDiff(s);
+    if (away) return this.sceneWait(s, away);
     for (;;) {
       const frame = sc.stack[sc.stack.length - 1];
       if (!frame) break;
@@ -41,6 +46,9 @@ export class StoryRunner {
       if (lines.length) return this.dialog(s, lines);
       frame.i++;
       if (this.exec(s, step, lines, sc) === 'wait') return;
+      if (s.script !== sc) return;
+      const ms = this.sceneDiff(s);
+      if (ms) return this.sceneWait(s, ms);
     }
     if (lines.length) return this.dialog(s, lines);
     this.finish(s);
@@ -48,7 +56,12 @@ export class StoryRunner {
 
   exec(s, step, lines, sc) {
     const g = this.game; const p = s.player; const flags = this.flags(s);
+    if (step.walk || step.me || step.face || step.wait) {
+      const ms = this.sceneStep(s, step);
+      return ms ? this.sceneWait(s, ms) : undefined;
+    }
     if (step.flag) {
+      if (step.quiet) sc.quiet = true;
       flags[step.flag] = true;
       // Feldattacke erhalten: die passende VM kommt in den Beutel
       if (HM_FLAGS[step.flag] && !p.items[HM_FLAGS[step.flag]]) { p.items[HM_FLAGS[step.flag]] = 1; g.sendParty(s); }
@@ -64,10 +77,12 @@ export class StoryRunner {
       return;
     }
     if (step.tower) return g.towerStep(s, step, sc, lines);
+    if (step.fieldMove) return g.fieldStep(s, step, sc, lines);
+    if (step.fieldFx) { g.fieldFx(s, step.fieldFx); return; }
     if (step.x) return g.extraStep(s, step, sc, lines);
     if (step.berry) return g.berryStep(s, step, sc, lines);
     if (step.service) { g.openService(s, step); sc.waiting = 'service'; return 'wait'; }
-    if (step.unflag) { delete flags[step.unflag]; g.sendProgress(s); return; }
+    if (step.unflag) { if (step.quiet) sc.quiet = true; delete flags[step.unflag]; g.sendProgress(s); return; }
     if (step.give) {
       const n = step.count || 1;
       p.items[step.give] = (p.items[step.give] || 0) + n;
@@ -89,6 +104,7 @@ export class StoryRunner {
     if (step.heal) { g.healParty(s, step.heal === 'center'); return; }
     if (step.emote) { g.send(s.ws, { t: S2C.NPC_EMOTE, id: step.emote }); return; }
     if (step.back) { g.pushBack(s); return; }
+    if (step.run) { sc.stack.push({ steps: SCRIPTS[step.run] || [], i: 0 }); return; }
     if (step.warp) { g.teleport(s, step.warp[0], step.warp[1], step.warp[2], step.warp[3] || 'down'); return; }
     if (step.legend) {
       // Legendaeres Pokemon: echter Wildkampf (fangbar, zaehlt fuer Nuzlocke auf dieser Karte)
@@ -125,6 +141,10 @@ export class StoryRunner {
     sc.waiting = 'dialog';
     sc.token++;
     sc.ask = ask || null;
+    // Platzhalter: @P = Name des Spielers
+    const name = s.player.name;
+    const fill = (t) => (typeof t === 'string' && t.includes('@P') ? t.replaceAll('@P', name) : t);
+    lines = lines.map((l) => ({ ...l, text: fill(l.text) }));
     this.game.send(s.ws, {
       t: S2C.DIALOG, token: sc.token, lines,
       choices: ask ? (ask.ask || ask.choose).map((label, value) => ({ label, value })) : null,
@@ -184,13 +204,14 @@ export class StoryRunner {
     const trg = (TRIGGERS[p.map] || []).find((t) => p.x >= t.x && p.x < t.x + (t.w || 1) && p.y >= t.y && p.y < t.y + (t.h || 1) && cond(flags, t.when));
     if (trg) return this.runNamed(s, trg.script);
     const spotter = this.spottedBy(s);
-    if (spotter) return this.start(s, [{ emote: spotter.id }, ...TRAINERS[spotter.trainer].intro, { battle: spotter.trainer }], { face: { id: spotter.id, dir: spotter.dir } });
+    // Wie in Platin: Ausrufezeichen, dann kommt der Trainer zum Spieler
+    if (spotter) return this.start(s, [{ emote: spotter.id }, { wait: 450 }, { walk: spotter.id, to: 'player' }, ...TRAINERS[spotter.trainer].intro, { battle: spotter.trainer }], { face: { id: spotter.id, dir: spotter.dir } });
     return false;
   }
 
   spottedBy(s) {
     const p = s.player; const flags = this.flags(s); const map = MAPS[p.map];
-    for (const n of visibleNpcs(p.map, flags)) {
+    for (const n of this.npcsFor(s)) {
       const tr = n.trainer && TRAINERS[n.trainer];
       const sight = n.sight ?? tr?.sight;
       // Trainerpaare sehen den Spieler wie in Platin erst mit zwei kampfbereiten Pokémon
@@ -200,7 +221,7 @@ export class StoryRunner {
         const x = n.x + d.dx * k; const y = n.y + d.dy * k;
         if (x === p.x && y === p.y) return n;
         const t = tileAt(map, x, y);
-        if (t === null || SOLID.has(t) || npcAt(p.map, x, y, flags)) break;
+        if (t === null || SOLID.has(t) || this.npcAtFor(s, p.map, x, y)) break;
       }
     }
     return null;
@@ -212,7 +233,7 @@ export class StoryRunner {
   // Ansprechen eines NPCs. Liefert true, wenn ein NPC vor dem Spieler stand.
   talk(s, x, y) {
     const p = s.player; const flags = this.flags(s);
-    const n = npcAt(p.map, x, y, flags);
+    const n = this.npcAtFor(s, p.map, x, y);
     if (!n) return false;
     const ctx = { face: { id: n.id, dir: OPPOSITE[p.dir] } };
     if (n.trainer) {
@@ -227,3 +248,4 @@ export class StoryRunner {
     return this.start(s, [[n.name, '...']], ctx);
   }
 }
+Object.assign(StoryRunner.prototype, Scenes);

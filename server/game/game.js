@@ -21,6 +21,8 @@ import { Extras } from './extras.js';
 import { Berries } from './berries.js';
 import { MULCH_STOCK } from '../../shared/data/berries.js';
 import { PoketchLogic } from './poketch.js';
+import { FieldMoves } from './fieldmoves.js';
+import { Wander } from './scenes.js';
 import { Link } from './pvp.js';
 
 // Trainer-ID wie im Original: fuenfstellig, fest aus der Spieler-ID abgeleitet
@@ -194,6 +196,7 @@ export class GameServer {
     this.sendNuzlocke(s);
     this.sendProgress(s);
     this.berrySeen(s); this.sendBerries(s, true);
+    if (this.wanderList) this.send(conn.ws, { t: S2C.NPC_POS, list: this.wanderPositions() });
     if (!player.starterChosen && !this.storyOn) this.sendStarterChoice(s);
     if (player.gameOver) this.send(conn.ws, { t: S2C.GAME_OVER, reason: 'Alle Pokemon deines Teams sind tot.' });
     this.broadcastMap(player.map, { t: S2C.PLAYER_JOINED, player: this.publicPlayer(player) }, player.id);
@@ -344,18 +347,19 @@ export class GameServer {
   move(s, msg) {
     const p = s.player;
     const ack = (ok) => this.send(s.ws, { t: S2C.MOVE_ACK, seq: msg.seq, ok, map: p.map, x: p.x, y: p.y, dir: p.dir });
-    if (!DIRS[msg.dir] || s.battle || s.script || s.trade || (!p.starterChosen && !this.storyOn)) return ack(false);
+    if (!DIRS[msg.dir] || s.battle || s.script || s.trade || s.flying || (!p.starterChosen && !this.storyOn)) return ack(false);
     const now = Date.now();
     const minGap = (p.flags.riding ? BIKE_MS : msg.running ? RUN_MS : WALK_MS) * 0.75; // Toleranz fuer Netzwerk-Jitter
     if (now - s.lastMoveAt < minGap) return ack(false);
     p.dir = msg.dir;
-    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!npcAt(m, x, y, p.flags) : undefined, this.storyOn ? fieldFlags(p.flags, s.party) : undefined);
+    const r = resolveStep(MAPS, p.map, p.x, p.y, msg.dir, this.storyOn ? (m, x, y) => !!this.story.npcAtFor(s, m, x, y) : undefined, this.storyOn ? this.moveFlags(s) : undefined);
     if (!r.ok) { ack(false); this.fieldHint(s, msg.dir); return this.broadcastMap(p.map, { t: S2C.PLAYER_STATE, player: this.publicPlayer(p) }, p.id); }
     s.lastMoveAt = now;
     s.prev = { map: p.map, x: p.x, y: p.y };
     const oldMap = p.map;
     p.map = r.map; p.x = r.x; p.y = r.y;
     if (r.dir) p.dir = r.dir;
+    if (r.warp) this.clearField(s);
     s.posDirty = true;
     ack(true);
 
@@ -404,6 +408,8 @@ export class GameServer {
     const desk = counter && map.events.find(near);
     if (desk) return desk.type === 'heal' ? this.healAt(s, desk) : this.openShop(s, desk);
     if (this.storyOn && this.story.talk(s, f.x, f.y)) return;
+    // Feldattacke vor Baum, Felsbrocken, Felsblock oder Wasser (direkt vor dem Spieler)
+    if (this.storyOn && !counter) { const ft = facingTile(p.x, p.y, p.dir); if (this.fieldInteract(s, ft.x, ft.y)) return; }
     // Anderer Spieler vor dir: Kampf oder Tausch wie im Union-Raum
     const other = this.storyOn && this.sessionAt(p.map, f.x, f.y, p.id);
     if (other) return this.talkToPlayer(s, other);
@@ -686,6 +692,7 @@ export class GameServer {
     const p = s.player; const old = p.map;
     Object.assign(p, { map, x, y, dir });
     s.posDirty = true; s.prev = null;
+    this.clearField(s);
     if (MAPS[map].fly) p.flags['visit_' + map] = true;
     if (old !== map) this.onMapChange(s, old);
     this.broadcastMap(old, { t: S2C.PLAYER_LEFT, id: p.id });
@@ -704,13 +711,15 @@ export class GameServer {
       const hit = spots.find(([id]) => id === msg.to);
       if (!hit) return this.notice(s, 'Dorthin kannst du nicht fliegen.', 'error');
       this.notice(s, `Du fliegst nach ${hit[1].name}.`);
-      return this.teleport(s, hit[0], hit[1].fly[0], hit[1].fly[1]);
+      return this.flyTo(s, hit[0], hit[1].fly[0], hit[1].fly[1]);
     }
     if (!fieldFlags(p.flags, s.party).hm_fly) return this.notice(s, 'Kein Pokémon in deinem Team beherrscht Fliegen.', 'error');
     if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
     if (!spots.length) return this.notice(s, 'Du kennst noch keine anderen Orte.', 'error');
     const labels = [...spots.map(([, m]) => m.name), 'Abbrechen'];
-    const branches = spots.map(([id, m]) => [{ warp: [id, m.fly[0], m.fly[1]] }]);
+    const mon = this.fieldUser(s, 'hm_fly');
+    const fx = mon ? [{ fieldFx: { move: 'fly', speciesId: mon.speciesId, shiny: !!mon.shiny, name: displayName(mon), map: p.map, x: p.x, y: p.y } }, { wait: 1500 }] : [];
+    const branches = spots.map(([id, m]) => [...fx, { warp: [id, m.fly[0], m.fly[1]] }]);
     this.story.start(s, [[null, 'Wohin möchtest du fliegen?'], { choose: labels, branches }]);
   }
 
@@ -1049,7 +1058,7 @@ export class GameServer {
     this.sendParty(s);
   }
 
-  stop() { clearInterval(this.saveTimer); clearInterval(this.rosterTimer); this.flushPositions(); }
+  stop() { clearInterval(this.saveTimer); clearInterval(this.rosterTimer); clearInterval(this.wanderTimer); this.flushPositions(); }
 }
 
 // Begleiter, Wanderer, Eier, Icognito-Formen und Kampfturm (extras.js)
@@ -1057,3 +1066,4 @@ Object.assign(GameServer.prototype, Extras, Link);
 // Beerenpflanzen (berries.js)
 Object.assign(GameServer.prototype, Berries);
 Object.assign(GameServer.prototype, PoketchLogic);
+Object.assign(GameServer.prototype, FieldMoves, Wander);

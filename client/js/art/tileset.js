@@ -28,7 +28,7 @@ function themeOf(map, theme) {
 // open: Menge von Hinderniszeichen, die der Spieler schon beseitigt hat (gemalt als Boden)
 export function paintTile(g, map, x, y, frame, pass, open) {
   let t = map.tiles[y][x];
-  if (open && open.has(t)) t = map.indoor ? ':' : (map.tint === 'snow' ? 'n' : ',');
+  if (open && (open.has(t) || open.at?.(x, y, t))) t = map.indoor ? ':' : (map.tint === 'snow' ? 'n' : ',');
   const ox = x * 16; const oy = y * 16;
   const n = (dx, dy) => map.tiles[y + dy]?.[x + dx] ?? null;
   const theme = map.theme || 'house';

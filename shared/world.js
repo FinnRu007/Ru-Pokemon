@@ -5,7 +5,7 @@ export const DIRS = {
 const EDGE = { up: 'north', down: 'south', left: 'west', right: 'east' };
 export const SOLID = new Set([' ', '#', '~', 'H', 'S', 'F', 'X', 'W', 'K', 'B', 'T', 'Y', 'P', 'V', 'R', 'O', 'Q', 'Z', 'M', 'N', 'J']);
 // Tueren, Treppen und Hoehleneingaenge sind nur mit Warp begehbar
-const PORTAL = new Set(['D', 'C', 'G', 'U']);
+export const PORTAL = new Set(['D', 'C', 'G', 'U']);
 export const GRASS = '"';
 // Vorspruenge: nur in diese Richtung ueberspringbar
 export const LEDGE = { L: 'down', '>': 'right', '<': 'left', '^': 'up' };
@@ -36,7 +36,10 @@ export function fieldFlags(flags, party) {
   return out;
 }
 export function fieldOpen(t, flags) { const need = FIELD[t]; return !!(need && flags && flags[need]); }
-const passable = (t, flags) => t !== null && (!SOLID.has(t) || fieldOpen(t, flags));
+// Baum, Felsbrocken und Felsblock: Spieler setzen die Attacke wie in Platin vor dem Hindernis ein
+// (flags._cleared: freigeraeumte Felder "karte:x,y"). Ohne _cleared (Erreichbarkeitspruefung) gilt das Flag.
+export const CLEARABLE = new Set(['Q', 'Z', 'M']);
+const passable = (t, flags, key) => t !== null && (!SOLID.has(t) || (fieldOpen(t, flags) && (!CLEARABLE.has(t) || !(flags._cleared instanceof Set) || flags._cleared.has(key))));
 export const CAVE_FLOOR = ':';
 
 export function tileAt(map, x, y) {
@@ -95,7 +98,7 @@ export function resolveStep(maps, mapId, x, y, dir, blocked, flags) {
 
   const target = maps[nMapId];
   const t = tileAt(target, nx, ny);
-  if (!passable(t, flags)) return { ok: false };
+  if (!passable(t, flags, `${nMapId}:${nx},${ny}`)) return { ok: false };
   if (PORTAL.has(t)) {
     const w = warpAt(target, nx, ny);
     return w ? warpResult(w) : { ok: false };
@@ -122,7 +125,7 @@ export function isStandable(maps, mapId, x, y, flags) {
   const map = maps[mapId];
   if (!map) return false;
   const t = tileAt(map, x, y);
-  return passable(t, flags) && !PORTAL.has(t) && !LEDGE[t];
+  return passable(t, flags, `${mapId}:${x},${y}`) && !PORTAL.has(t) && !LEDGE[t];
 }
 
 // Fahrrad: draußen und in Höhlen ja, in Gebäuden nicht

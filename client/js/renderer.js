@@ -12,6 +12,7 @@ import { overworldSheet } from './art/realSheets.js';
 import { fieldReady } from './art/realField.js';
 import { forestTile } from './art/realTiles.js';
 import { FIELD, fieldFlags } from '/shared/world.js';
+import { drawFieldFx } from './fieldFx.js';
 import { visibleNpcs } from '/shared/data/story.js';
 import { fieldObject } from './art/realField.js';
 import { drawProp, PROP_KINDS } from './art/props.js';
@@ -22,6 +23,7 @@ import { soilIndex } from '/shared/data/berries.js';
 // Hindernisse, die nach dem Einsatz der Feldattacke verschwinden (pro Spieler gemalt)
 const CLEARABLE = ['Q', 'Z', 'M'];
 function openSet(flags) { return new Set(CLEARABLE.filter((t) => flags?.[FIELD[t]])); }
+const OBJ_OF = { Z: 'cut_tree', Q: 'rock_smash', M: 'strength_boulder' };
 import { Ambience } from './ambience.js';
 
 const VIEW_W = 15, VIEW_H = 11;
@@ -35,6 +37,7 @@ export class Renderer {
     this.m = manifest;
     this.T = canvasEl.width / VIEW_W; // 48
     this.baked = new Map();
+    this.fx = [];        // laufende Feldattacken (Baum faellt, Felsen zerspringt)
     this.images = {};
     for (const [k, t] of Object.entries(manifest.tiles || {})) if (t.image) this.load('tile:' + k, t.image);
     if (manifest.player?.image) this.load('player', manifest.player.image);
@@ -55,8 +58,11 @@ export class Renderer {
 
   // Karte einmalig in drei Animationsbildern vorrendern
   bake(mapId) {
-    const open = openSet(fieldFlags(this.flags, this.party));
-    const key = mapId + '|' + [...open].join('');
+    // Nur die Hindernisse, die dieser Spieler mit der Feldattacke weggeraeumt hat, sind offen
+    const can = openSet(fieldFlags(this.flags, this.party));
+    const cl = [...(this.cleared || [])].filter((k) => k.startsWith(mapId + ':'));
+    const open = { has: () => false, at: (x, y, t) => can.has(t) && cl.includes(`${mapId}:${x},${y}`) };
+    const key = mapId + '|' + [...can].join('') + cl.join(';');
     if (this.baked.has(key)) return this.baked.get(key);
     const map = MAPS[mapId];
     const buildings = findBuildings(map);
@@ -82,7 +88,7 @@ export class Renderer {
 
   draw(world, now) {
     const g = this.g; const T = this.T;
-    this.flags = world.flags; this.party = world.party;
+    this.flags = world.flags; this.party = world.party; this.cleared = world.cleared;
     if (!world.me) { g.fillStyle = '#000'; g.fillRect(0, 0, this.c.width, this.c.height); return; }
     const map = MAPS[world.me.map];
     const me = world.selfPos(now);
@@ -117,11 +123,12 @@ export class Renderer {
 
     // Figuren nach y sortiert (NPCs, andere Spieler, man selbst)
     const ents = [];
-    for (const n of world.visibleNpcs()) ents.push({ kind: 'npc', o: n, p: { x: n.x, y: n.y, hop: 0 } });
+    for (const n of world.visibleNpcs(now)) ents.push({ kind: 'npc', o: n, p: { x: n.rx ?? n.x, y: n.ry ?? n.y, hop: 0, t: n.t }, anim: n.anim });
     for (const o of world.others.values()) ents.push({ kind: 'player', o, p: world.otherPos(o, now), anim: o.anim });
     ents.push({ kind: 'self', o: world.me, p: me, anim: world.anim });
     ents.sort((a, b) => a.p.y - b.p.y);
     for (const e of ents) this.drawEntity(e, map, ox, oy, now);
+    for (const fx of this.fx) if (fx.map === world.me.map) drawFieldFx(this.g, fx, ox + fx.x * T, oy + fx.y * T, T, S, null, now);
     this.amb.drawSky(g, map, world.me.map, this.c.width, this.c.height, now, { x: ox + me.x * T + T / 2, y: oy + me.y * T + T / 2 }, { ox, oy, T });
     // Sprechblasen erst nach Licht und Wetter, damit sie gut lesbar bleiben
     for (const e of ents) if (e.o.emote) {
@@ -150,7 +157,7 @@ export class Renderer {
     }
     for (const id of maps) {
       const mm = MAPS[id];
-      for (const n of id === world.me.map ? world.visibleNpcs() : visibleNpcs(id, this.flags)) ents.push({ kind: 'npc', o: n, p: { x: n.x, y: n.y, hop: 0 }, map: mm });
+      for (const n of id === world.me.map ? world.visibleNpcs(now) : visibleNpcs(id, this.flags)) ents.push({ kind: 'npc', o: n, p: { x: n.rx ?? n.x, y: n.ry ?? n.y, hop: 0, t: n.t }, anim: n.anim, map: mm });
     }
     for (const other of world.others.values()) ents.push({ kind: 'player', o: other, p: world.otherPos(other, now), anim: other.anim, map });
     ents.push({ kind: 'self', o: world.me, p: me, anim: world.anim, map });
@@ -163,7 +170,10 @@ export class Renderer {
         const row = mm.tiles[y];
         for (let x = Math.max(0, Math.floor(gx - mm.orig.x - 9)); x < Math.min(mm.width, gx - mm.orig.x + 10); x++) {
           const t = row[x];
-          if (OBJ[t] && !open.has(t)) ents.push({ kind: 'obj', o: { obj: OBJ[t] }, p: { x, y, hop: 0 }, map: mm });
+          if (!OBJ[t]) continue;
+          const fx = this.fx.find((f) => f.map === id && f.x === x && f.y === y && f.own);
+          if (fx) ents.push({ kind: 'fx', o: { obj: OBJ[t], fx }, p: { x, y, hop: 0 }, map: mm });
+          else if (!(open.has(t) && world.cleared.has(`${id}:${x},${y}`))) ents.push({ kind: 'obj', o: { obj: OBJ[t] }, p: { x, y, hop: 0 }, map: mm });
         }
       }
       // Schilder und Briefkaesten (im Original eigene Modelle, nicht Teil der Kartenbilder)
@@ -199,6 +209,10 @@ export class Renderer {
         const { img, info } = e.o;
         fw = info.w;
         g.drawImage(img, Math.round(e.ox + (e.p.x * 16 + info.ox) * S), Math.round(e.oy + (e.p.y * 16 + info.oy) * S), info.w * S, info.h * S);
+      } else if (e.kind === 'fx') {
+        const img = fieldObject(e.o.obj);
+        fw = img ? img.width : 20;
+        drawFieldFx(g, e.o.fx, Math.round(e.ox + e.p.x * T), Math.round(e.oy + e.p.y * T), T, S, img, now);
       } else if (e.kind === 'obj') {
         const img = fieldObject(e.o.obj);
         if (img) {
@@ -300,7 +314,20 @@ export class Renderer {
     this.g.drawImage(frames[frame], ox, oy, W, H);
   }
 
+  addFieldFx(fx) {
+    const now = performance.now();
+    this.fx = this.fx.filter((f) => now - f.start < 2500);
+    if (['cut', 'rock-smash', 'strength'].includes(fx.move)) this.fx.push({ ...fx, own: true });
+  }
+
   drawEntity(e, map, ox, oy, now) {
+    if (e.o.alpha !== undefined && e.o.alpha < 1) {
+      this.g.save(); this.g.globalAlpha = Math.max(0, e.o.alpha);
+      try { return this.drawEntityInner(e, map, ox, oy, now); } finally { this.g.restore(); }
+    }
+    return this.drawEntityInner(e, map, ox, oy, now);
+  }
+  drawEntityInner(e, map, ox, oy, now) {
     const g = this.g; const T = this.T;
     const { o, p, anim } = e;
     const sx = Math.round(ox + p.x * T); const sy = Math.round(oy + (p.y - (p.hop || 0)) * T);

@@ -1,4 +1,5 @@
 // Rauchtest: Regelwerk (Nuzlocke + Soulbound) direkt und Multiplayer ueber echte WebSockets.
+process.env.SCENE_FAST ||= '1';
 // Aufruf: npm test
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -522,7 +523,7 @@ await test('Story-Daten: NPCs, Ausloeser und Skripte sind stimmig', () => {
     assert.ok(MAPS[mapId], 'Karte fehlt: ' + mapId);
     for (const n of list) {
       const t = MAPS[mapId].tiles[n.y]?.[n.x];
-      assert.ok(t && (!SOLID.has(t) || t === '~') && !'DCGU'.includes(t), `${mapId}/${n.id} steht auf ${t}`);
+      assert.ok(t && (!SOLID.has(t) || t === '~') && (!'DCGU'.includes(t) || (n.fromDoor && t === 'D')), `${mapId}/${n.id} steht auf ${t}`);
       if (n.trainer) assert.ok(story.TRAINERS[n.trainer], n.trainer);
       if (typeof n.talk === 'string') assert.ok(story.SCRIPTS[n.talk], n.talk);
     }
@@ -593,19 +594,34 @@ await test('Story: Intro, See mit Starter, Labor und Trainer mit Sichtlinie', as
   let [sx, sy, sd] = beforeTrigger('route_201', 'noPokemon');
   tp('route_201', sx, sy); await step(sd);
   await a.wait((m) => m.t === 'mapChange' && m.x === sx && m.y === sy);
-  // See: Zyrus, Koffer, Starter, Wildkampf, Rivalenkampf
-  [sx, sy, sd] = beforeTrigger('lake_verity', 'lake');
-  tp('lake_verity', sx, sy); await step(sd);
-  await a.wait((m) => m.t === 'progress' && m.flags.lake_done, 20000);
+  // Route 201: Prof. Eibe hält dich auf, Lucia bringt den Koffer, Starter, Kampf gegen Barry, Laufschuhe
+  const trip = async (map, script, flag, ms = 20000) => {
+    const [x, y, d] = beforeTrigger(map, script); tp(map, x, y); await step(d);
+    await a.wait((m) => m.t === 'progress' && m.flags[flag], ms);
+    for (let i = 0; i < 100 && s.script; i++) await sleep(50);
+  };
+  await trip('route_201', 'route201', 'barry_201');
   assert.equal(s.party.length, 1);
   assert.equal(s.party[0].speciesId, 393);
+  assert.equal(s.player.items['running-shoes'], 1);
   assert.equal(s.player.items['poke-ball'] || 0, 0);
-  // Labor: Pokedex und Baelle
-  { const [lx, ly, ld] = beforeTrigger('sandgem_lab', 'lab'); tp('sandgem_lab', lx, ly); await step(ld); }
-  await a.wait((m) => m.t === 'progress' && m.flags.lab_done, 8000);
+  // Barry will zum See, Zyrus am See, Wettrennen nach Sandgemme
+  await trip('route_201', 'barryToLake', 'barry_lake_go');
+  await trip('verity_lakefront', 'atTheLake', 'barry_at_lake');
+  await trip('lake_verity', 'lake', 'lake_done');
+  // Lucia führt ins Labor: Pokédex
+  await trip('sandgem_town', 'needLab', 'lab_done');
+  assert.ok(s.player.flags.dex);
+  // TM27 von Prof. Eibe, Lucia zeigt Center und Markt, Paket von Barrys Mutter, Pokébälle auf Route 202
+  await trip('sandgem_town', 'sgTour', 'sg_tour');
+  assert.equal(s.player.items.tm27, 1);
+  await trip('twinleaf_home_1f', 'momParcel', 'parcel');
+  assert.equal(s.player.items.parcel, 1);
+  await trip('route_202', 'lucia202', 'got_balls');
   assert.equal(s.player.items['poke-ball'], 5);
   // Trainer Tim schaut in eine Richtung: ein Schritt in seine Sichtlinie startet den Kampf
   for (const m of s.party) { m.level = 30; m.hp = m.stats.hp = 200; }
+  a.inbox.length = 0;
   [sx, sy, sd] = intoSight('route_202', 'tim');
   tp('route_202', sx, sy); await step(sd);
   await a.wait((m) => m.t === 'npcEmote' && m.id === 'tim');
@@ -689,6 +705,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   a.send({ t: 'hello', name: 'Feld', runCode: 'FIELD1' });
   const w = await a.wait((m) => m.t === 'welcome');
   const s = game.sessions.get(w.selfId);
+  for (let i = 0; i < 100 && s.script; i++) await sleep(50);
   const mon = createPokemon(395, 100, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
   Object.assign(mon.stats, { hp: 9999, atk: 999, def: 999, spa: 999, spd: 999, spe: 999 }); mon.hp = 9999;
   mon.moves[0] = { id: 'hydro-pump', pp: 99, maxPp: 99 };
@@ -707,6 +724,12 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   assert.equal((await step('up')).ok, false);
   await a.wait((m) => m.t === 'notice' && /Zertrümmerer/.test(m.text));
   mon.moves = [{ id: 'hydro-pump', pp: 99, maxPp: 99 }, { id: 'rock-smash', pp: 15, maxPp: 15 }, { id: 'fly', pp: 15, maxPp: 15 }, { id: 'surf', pp: 15, maxPp: 15 }];
+  // Wie in Platin: erst vor dem Felsen die Aktionstaste, Frage, Einblendung, dann ist der Weg frei
+  assert.equal((await step('up')).ok, false);
+  s.player.dir = 'up'; a.send({ t: 'interact' });
+  const fx = await a.wait((m) => m.t === 'fieldMove', 5000);
+  assert.equal(fx.move, 'rock-smash');
+  await a.wait((m) => m.t === 'script' && !m.active, 5000);
   assert.equal((await step('up')).ok, true);
   // Fliegen zu einem besuchten Ort
   s.player.flags.hm_fly = true; s.player.flags.visit_floaroma_town = true;
@@ -900,6 +923,7 @@ await test('Spieler gegen Spieler: Einzelkampf, Doppelkampf und Tausch mit Tausc
     c.send({ t: 'hello', name, runCode: 'LINK1' });
     const w = await c.wait((m) => m.t === 'welcome');
     const s = game.sessions.get(w.selfId);
+    for (let i = 0; i < 100 && s.script; i++) await sleep(50);
     for (const sp of [395, 64, 25]) {
       const m = createPokemon(sp, 30, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
       m.moves[0] = { id: name === 'LinkA' ? 'surf' : 'tackle', pp: 99, maxPp: 99 };

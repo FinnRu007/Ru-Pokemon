@@ -175,7 +175,7 @@ export const SCRIPTS4 = {
     ['Cynthia', 'Du hast meiner Großmutter geholfen. Danke! Ich bin froh, dass gerade du es warst.'],
     ['Cynthia', 'Team Galaktik sucht nach den Wesen der drei Seen. Ich fürchte, sie wollen etwas Schreckliches.'],
     ['Cynthia', 'Nimm das hier. Mit Surfer kannst du über das Wasser reisen. Westlich von Jubelstadt liegt Fleetburg, dort wartet der nächste Orden.'],
-    hm('Surfer', 'Lauf einfach aufs Wasser, und dein Pokémon trägt dich.'),
+    hm('Surfer', 'Stell dich ans Ufer und drück die Aktionstaste, oder lauf einfach aufs Wasser: dein Pokémon trägt dich.'),
     { flag: 'hm_surf' }
   ],
   rival4: [
@@ -188,7 +188,7 @@ export const SCRIPTS4 = {
   adamStrength: [
     ['Adam', 'Hast du das gehört? Ein lauter Knall aus dem Osten! Er kam vom See der Kühnheit!'],
     ['Adam', 'Da steckt bestimmt Team Galaktik dahinter. Nimm das hier mit. Mit Stärke schiebst du schwere Felsblöcke aus dem Weg.'],
-    hm('Stärke', 'Laufe gegen einen Felsblock, und dein Pokémon schiebt ihn beiseite.'),
+    hm('Stärke', 'Stell dich vor einen Felsblock und drück die Aktionstaste, dann schiebt dein Pokémon ihn beiseite.'),
     { flag: 'hm_strength' },
     ['Adam', 'Der See der Kühnheit liegt westlich von Route 214. Beeil dich!']
   ],

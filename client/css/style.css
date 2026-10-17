@@ -465,3 +465,18 @@ details.help summary { cursor: pointer; color: var(--muted); }
 .box-panel .mon { background: #1e2238; }
 .settings:not([open]) { gap: 0; }
 .wm-foot { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Feldattacke: Band mit dem Pokemon wie in Platin */
+#fieldCut { position: absolute; inset: 0; z-index: 30; pointer-events: none; display: none; }
+#fieldCut.on { display: block; animation: cutDim 1.15s linear forwards; }
+#fieldCut .band { position: absolute; left: 0; right: 0; top: 50%; height: 34%; transform: translateY(-50%) scaleY(0); overflow: hidden;
+  background: linear-gradient(180deg, #f8f0c8 0 6%, #f0a838 6% 10%, #fff8e0 10% 90%, #f0a838 90% 94%, #f8f0c8 94%); box-shadow: 0 0 0 3px rgba(0,0,0,.35); }
+#fieldCut.on .band { animation: cutBand 1.15s ease-in-out forwards; }
+#fieldCut img { position: absolute; top: 50%; height: 92%; image-rendering: pixelated; transform: translate(-50%, -50%); left: 120%; }
+#fieldCut.on img { animation: cutMon 1.15s ease-in-out forwards; }
+#fieldCut span { position: absolute; right: 4%; bottom: 10%; font: bold 20px "Pixelify Sans", monospace; color: #6a4410; opacity: 0; }
+#fieldCut.on span { animation: cutWord 1.15s linear forwards; }
+@keyframes cutDim { 0% { background: rgba(0,0,0,0); } 15%, 85% { background: rgba(0,0,0,.28); } 100% { background: rgba(0,0,0,0); } }
+@keyframes cutBand { 0% { transform: translateY(-50%) scaleY(0); } 14%, 86% { transform: translateY(-50%) scaleY(1); } 100% { transform: translateY(-50%) scaleY(0); } }
+@keyframes cutMon { 0%, 12% { left: 120%; } 38%, 70% { left: 50%; } 90%, 100% { left: -30%; } }
+@keyframes cutWord { 0%, 30% { opacity: 0; } 40%, 75% { opacity: 1; } 85%, 100% { opacity: 0; } }

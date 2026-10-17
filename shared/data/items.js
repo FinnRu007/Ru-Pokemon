@@ -94,6 +94,9 @@ export const ITEMS = {
   'adamant-orb': { name: 'Diamantkugel', price: 0, kind: 'key', sell: false },
   'lustrous-orb': { name: 'Weißkugel', price: 0, kind: 'key', sell: false },
   'lunar-wing': { name: 'Mondflügel', price: 0, kind: 'key', sell: false },
+  parcel: { name: 'Paket', price: 0, kind: 'key', sell: false },
+  'running-shoes': { name: 'Laufschuhe', price: 0, kind: 'key', sell: false },
+  'town-map': { name: 'Karte', price: 0, kind: 'key', sell: false },
   bicycle: { name: 'Fahrrad', price: 0, kind: 'key', sell: false, bike: true },
   // Pokétch-Kampagne in Jubelstadt (Clowns)
   'coupon-1': { name: 'Coupon 1', price: 0, kind: 'key', sell: false },

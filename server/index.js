@@ -70,6 +70,7 @@ if (added.pokemon || added.moves) console.log(`PokeAPI-Cache: +${added.pokemon} 
 
 const repo = openStorage(config.dataDir);
 const game = new GameServer(repo);
+game.startWander();
 const server = http.createServer(serveStatic);
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
 // Belegter Port wird oben am HTTP-Server behandelt

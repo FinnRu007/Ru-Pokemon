@@ -63,6 +63,13 @@ export const S2C = {
   PLAYER_EMOTE: 'playerEmote',    // { id, kind }
   TRADE: 'trade',                 // { open, partner, mine, theirs, okMine, okTheirs, done?, texts?, text? }
   POKETCH: 'poketch',             // { roamers: [{ speciesId, map, name }], steps, party }
+  NPC_WALK: 'npcWalk',            // { map, id, from: [x, y, dir], path: [[x, y, dir], ...], face, mode: stay|hide|show, fast } Szene
+  NPC_FACE: 'npcFace',            // { id, dir }
+  SELF_WALK: 'selfWalk',          // { path, face, fast } Spieler laeuft in einer Szene
+  SELF_FACE: 'selfFace',          // { dir }
+  NPC_MOVE: 'npcMove',            // { map, id, x, y, dir, step } Leute gehen umher
+  NPC_POS: 'npcPos',              // { list: [[map, id, x, y, dir], ...] } aktuelle Plaetze beim Anmelden
+  FIELD_MOVE: 'fieldMove',        // { move, speciesId, name, map, x, y } Feldattacke mit Einblendung
   PONG: 'pong'
 };
 

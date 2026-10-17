@@ -21,7 +21,8 @@ import { TRAINERS2, NPCS2, TRIGGERS2, SCRIPTS2, BADGES2 } from './story2.js';
 import { SERVICE_NPCS, SERVICE_SCRIPTS } from './services.js';
 import { FIELD_ITEMS } from './fieldItems.js';
 import { MAPS } from './maps.js';
-import { applyOrigStory } from './origLayout.js';
+import { applyOrigStory, ORIG_ON } from './origLayout.js';
+import { applyStory10 } from './story10.js';
 import { ORIG_FIX } from './origFix.js';
 
 export function cond(flags, c) {
@@ -355,7 +356,7 @@ import { applyBerryStory } from './berries.js';
 import { applyPoketch } from './poketch.js';
 export const NEW_PLAYER_SPAWN = { map: 'twinleaf_home_2f', x: 3, y: 4, dir: 'up' };
 // Flags fuer Spielstaende von vor der Story (Starter schon gewaehlt)
-export const LEGACY_FLAGS = ['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done'];
+export const LEGACY_FLAGS = ['intro', 'barry_room', 'barry_201', 'zyrus_lake', 'eibe_left', 'has_starter', 'lake_done', 'dex', 'got_balls', 'lab_done', 'intro_tv', 'mom_talk1', 'mom_warned', 'barry_out', 'barry_thud', 'eibe_201_left', 'lucia_201_left', 'barry_lake_go', 'barry_at_lake', 'sg_lucia_in', 'sg_barry_gone', 'sg_eibe_in', 'sg_tour', 'parcel', 'lucia_tip'];
 
 export const BADGES = [{ flag: 'badge_coal', name: 'Kohleorden', color: '#7a6a58' }];
 
@@ -387,6 +388,8 @@ applyBerryStory({ SCRIPTS, NPCS });
 applyPoketch({ NPCS });
 // Auf die Originalkarten umrechnen (origLayout.js, feste Stellen in origFix.js)
 applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORIG_FIX }, MAPS);
+// Szenen nach dem Original mit laufenden Figuren (story10.js, Koordinaten der Originalkarten)
+applyStory10({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

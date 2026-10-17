@@ -102,7 +102,7 @@ export function checkWorld() {
   for (const id of Object.keys(TRAINERS)) if (!used.has(id)) errors.push(`Trainer ${id} wird nirgends eingesetzt`);
   for (const [id, list] of Object.entries(NPCS)) for (const n of list) {
     const t = MAPS[id]?.tiles[n.y]?.[n.x];
-    if (!t || (SOLID.has(t) && t !== '~') || 'DCGU'.includes(t)) errors.push(`${id}/${n.id} steht auf ${t}`);
+    if (!t || (SOLID.has(t) && t !== '~') || ('DCGU'.includes(t) && !(n.fromDoor && t === 'D'))) errors.push(`${id}/${n.id} steht auf ${t}`);
   }
   // Mit allen Faehigkeiten muss jede Karte erreichbar sein
   const all = reachable(ALL);
