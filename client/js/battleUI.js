@@ -46,27 +46,48 @@ export class BattleUI {
     this.root.addEventListener('click', () => { this.skip = true; });
     this.bagPocket = 'medicine';
     addEventListener('keydown', (e) => this.onKey(e), true);
+    // Leertaste loest Knoepfe sonst beim Loslassen ein zweites Mal aus
+    addEventListener('keyup', (e) => { if (e.code === 'Space' && !this.root.classList.contains('hidden') && e.target?.tagName === 'BUTTON') e.preventDefault(); }, true);
   }
 
-  // Tasten im Kampf: Z/Enter/Leertaste weiter, X/Esc zurueck, Pfeiltasten waehlen
+  // Tasten im Kampf: Pfeiltasten/WASD bewegen den Cursor in Blickrichtung, Z/Enter/Leertaste waehlen
+  // (oder Text weiter), X/Esc/Ruecktaste zurueck. Jedes Menue startet mit dem Cursor auf dem ersten Knopf.
   onKey(e) {
     if (this.root.classList.contains('hidden')) return;
     if (e.target?.tagName === 'INPUT') return;
-    if (['KeyZ', 'Enter', 'Space'].includes(e.code)) { this.skip = true; return; }
-    const btns = this.visibleButtons();
-    if (['KeyX', 'Escape', 'Backspace'].includes(e.code)) {
-      const back = btns.find((b) => b.classList.contains('back') && !b.disabled);
+    const usable = this.visibleButtons().filter((b) => !b.disabled);
+    if (['KeyZ', 'Enter', 'Space'].includes(e.code)) {
+      if (!usable.length) { this.skip = true; return; }
       e.preventDefault(); e.stopImmediatePropagation();
-      if (back) back.click();
+      if (e.repeat) return;
+      const cur = usable.includes(document.activeElement) ? document.activeElement : null;
+      if (cur) cur.click(); else usable[0].focus({ preventScroll: true });
       return;
     }
-    const dir = { ArrowLeft: -1, ArrowUp: -1, KeyA: -1, KeyW: -1, ArrowRight: 1, ArrowDown: 1, KeyD: 1, KeyS: 1 }[e.code];
-    if (dir && btns.length) {
+    if (['KeyX', 'Escape', 'Backspace'].includes(e.code)) {
+      const back = usable.find((b) => b.classList.contains('back'));
       e.preventDefault(); e.stopImmediatePropagation();
-      const usable = btns.filter((b) => !b.disabled);
-      const i = usable.indexOf(document.activeElement);
-      (usable[i < 0 ? 0 : (i + dir + usable.length) % usable.length] || usable[0])?.focus();
+      if (back && !e.repeat) back.click();
+      return;
     }
+    const d = { ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0], ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1] }[e.code];
+    if (!d || !usable.length) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const cur = usable.includes(document.activeElement) ? document.activeElement : null;
+    if (!cur) { usable[0].focus({ preventScroll: true }); audio.sfx('select'); return; }
+    const c = (b) => { const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const [x0, y0] = c(cur);
+    let best = null, bestScore = Infinity;
+    for (const b of usable) {
+      if (b === cur) continue;
+      const [x, y] = c(b);
+      const along = (x - x0) * d[0] + (y - y0) * d[1];
+      if (along <= 2) continue;
+      const across = Math.abs((x - x0) * d[1]) + Math.abs((y - y0) * d[0]);
+      const score = along + across * 2;
+      if (score < bestScore) { bestScore = score; best = b; }
+    }
+    if (best) { best.focus(); best.scrollIntoView?.({ block: 'nearest' }); audio.sfx('select'); }
   }
   visibleButtons() {
     const panel = this.root.querySelector('.bpanel:not(.hidden)');
@@ -374,6 +395,8 @@ export class BattleUI {
     this.hidePanel();
     if (!buttons) return;
     for (const b of buttons) el.appendChild(this.button(b));
+    // Cursor gleich auf den ersten waehlbaren Knopf, damit die Tastatur sofort geht
+    el.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
   }
   button(b) {
     const btn = document.createElement('button');

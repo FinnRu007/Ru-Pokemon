@@ -295,7 +295,12 @@ input.on('action', () => {
   if (dialog.open) return dialog.advance();
   if (world.me && !world.anim && !scriptActive) net.send({ t: 'interact' });
 });
-input.on('chat', () => $('chatInput').focus());
+// Chat: T oeffnet die Zeile im Spielbild, Enter sendet, Esc schliesst
+function openChat() { $('chatForm').classList.remove('hidden'); $('chatInput').focus(); }
+function closeChat() { $('chatInput').value = ''; $('chatInput').blur(); $('chatForm').classList.add('hidden'); }
+input.on('chat', () => openChat());
+$('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeChat(); } });
+$('chatInput').addEventListener('blur', () => { if (!$('chatInput').value) $('chatForm').classList.add('hidden'); });
 input.on('map', () => { if (world.me && !battle.active) toggleMap(); });
 input.on('escape', () => { if (mapOpen) toggleMap(false); if (freeCam) toggleFreeCam(false); });
 input.on('menu', () => openMenu());
@@ -334,7 +339,8 @@ input.on('fly', () => { if (world.me && !battle.active) net.send({ t: 'fly' }); 
 input.on('emote', () => { if (world.me && !battle.active) net.send({ t: 'emote', kind: EMOTES[input.emote] }); });
 $('mapBtn').onclick = () => { if (world.me && !battle.active) toggleMap(); };
 // Weltkarte: Mausrad zoomt, Ziehen verschiebt, Klick auf einen besuchten Ort fliegt dorthin
-worldMap.canFlyTo = (id) => !!(fieldFlags(world.flags, world.party).hm_fly && world.flags['visit_' + id] && world.me && id !== world.me.map && !MAPS[world.me.map]?.indoor);
+// Sobald Fliegen freigeschaltet ist (Orden), geht es von der Karte aus immer direkt los
+worldMap.canFlyTo = (id) => !!(world.flags?.hm_fly && world.flags['visit_' + id] && world.me && id !== world.me.map);
 const wmc = $('wmCanvas');
 const wmSize = () => { const r = wmc.getBoundingClientRect(); return { W: r.width, H: r.height }; };
 const wmPoint = (e) => { const r = wmc.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -349,7 +355,8 @@ wmc.addEventListener('pointermove', (e) => {
 });
 function wmHover(s) {
   worldMap.hover = s && s.fly && worldMap.canFlyTo(s.id) ? s.id : null;
-  $('wmFoot').textContent = worldMap.hover ? `Klicken: nach ${MAPS[worldMap.hover].name} fliegen` : `Mausrad oder +/−: Zoom · Ziehen: verschieben${worldMap.original ? ' · Pfeiltasten: Cursor' : ''} · M oder Esc: schließen`;
+  const why = !s?.fly || worldMap.hover || s.id === world.me?.map ? '' : !world.flags?.hm_fly ? 'Fliegen ist noch nicht freigeschaltet · ' : !world.flags['visit_' + s.id] ? `${MAPS[s.id].name}: noch nicht besucht · ` : '';
+  $('wmFoot').textContent = worldMap.hover ? `Klicken oder Enter: nach ${MAPS[worldMap.hover].name} fliegen` : why + `Mausrad oder +/−: Zoom · Ziehen: verschieben${worldMap.original ? ' · Pfeiltasten: Cursor' : ''} · M oder Esc: schließen`;
 }
 wmc.addEventListener('pointerup', (e) => {
   const d = wmDrag; wmDrag = null;
@@ -382,29 +389,35 @@ $('sfxVol').value = Math.round(audio.prefs.sfx * 100);
 $('musicVol').oninput = (e) => audio.setVolume('music', e.target.value / 100);
 $('sfxVol').oninput = (e) => { audio.setVolume('sfx', e.target.value / 100); };
 $('sfxVol').onchange = () => audio.sfx('select');
-$('emoteBar').innerHTML = EMOTES.map((k, i) => `<button data-e="${i}" title="Taste ${i + 1}">${k}</button>`).join('');
-$('emoteBar').querySelectorAll('button').forEach((b) => { b.onclick = () => { if (world.me) net.send({ t: 'emote', kind: EMOTES[Number(b.dataset.e)] }); }; });
 
-// Seitenleiste: Verlauf und Einstellungen sind einklappbar, Musik und Effekte getrennt schaltbar
-const ui = (() => { try { return { log: false, settings: false, ...JSON.parse(localStorage.getItem('platin.ui') || '{}') }; } catch { return { log: false, settings: false }; } })();
-function saveUi() { try { localStorage.setItem('platin.ui', JSON.stringify(ui)); } catch { /* privat */ } }
+// Einstellungen unter dem Reiter: Musik und Effekte getrennt schaltbar, Vollbild
 function renderToggles() {
-  $('log').classList.toggle('hidden', !ui.log);
-  $('setPanel').classList.toggle('hidden', !ui.settings);
-  $('logBtn').classList.toggle('on', ui.log);
-  $('setBtn').classList.toggle('on', ui.settings);
   $('musicBtn').classList.toggle('on', audio.prefs.musicOn);
   $('sfxBtn').classList.toggle('on', audio.prefs.sfxOn);
-  if (ui.log) { $('logBadge').classList.add('hidden'); unread = 0; $('log').scrollTop = $('log').scrollHeight; }
+  $('fullBtn').classList.toggle('on', !!document.fullscreenElement);
 }
-let unread = 0;
-hud.onChat = () => { if (!ui.log) { unread++; $('logBadge').textContent = unread; $('logBadge').classList.remove('hidden'); } };
-$('logBtn').onclick = () => { ui.log = !ui.log; saveUi(); renderToggles(); };
-$('setBtn').onclick = () => { ui.settings = !ui.settings; saveUi(); renderToggles(); };
 $('musicBtn').onclick = () => toggleMute();
 $('sfxBtn').onclick = () => { audio.toggle('sfx'); renderToggles(); audio.sfx('select'); };
 function toggleMute() { audio.toggle('music'); renderToggles(); }
+hud.onTab = (tab) => { if (tab === 'map') drawMinimap(true); };
+hud.restoreTab();
 renderToggles();
+
+// Vollbild: das Spielfeld fuellt den Bildschirm, alles darin (Kampf, Menues, Karte) waechst mit
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else $('stageWrap').requestFullscreen?.().catch(() => {});
+}
+function fitStage() {
+  const st = $('stage');
+  if (document.fullscreenElement !== $('stageWrap')) { st.style.transform = ''; return; }
+  const k = Math.min(innerWidth / st.offsetWidth, innerHeight / st.offsetHeight);
+  st.style.transform = `scale(${k})`;
+}
+document.addEventListener('fullscreenchange', () => { fitStage(); renderToggles(); });
+addEventListener('resize', fitStage);
+$('fullBtn').onclick = () => toggleFullscreen();
+input.on('fullscreen', () => toggleFullscreen());
 
 // ------------------------------------------------------------------ Weltkarte und Minikarte
 function toggleMap(open = !mapOpen) {
@@ -437,7 +450,7 @@ function drawWorldMap(now) {
 let miniAt = 0;
 function drawMinimap(force) {
   const now = performance.now();
-  if (!world.me || (!force && now - miniAt < 200)) return;
+  if (!world.me || (!force && now - miniAt < 200) || $('tab-map').classList.contains('hidden')) return;
   miniAt = now;
   const c = $('minimap');
   worldMap.me = world.me;
@@ -449,8 +462,7 @@ $('chatForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const text = $('chatInput').value.trim();
   if (text) net.send({ t: 'chat', text });
-  $('chatInput').value = '';
-  $('chatInput').blur();
+  closeChat();
 });
 setInterval(() => net.send({ t: 'ping', at: Date.now() }), 20000);
 

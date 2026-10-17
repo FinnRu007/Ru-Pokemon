@@ -467,6 +467,11 @@ await test('Welt: Raender, Warps, Ausloeser und Erreichbarkeit aller Karten', ()
   const errors = world.checkWorld();
   assert.deepEqual(errors, []);
 });
+const hit = await import('./hitboxes.js');
+await test('Originalkarten: kein Hindernis ohne Grafik (Schilder, Briefkaesten, Poller, Feldhindernisse)', () => {
+  assert.deepEqual(hit.checkHitboxes(), []);
+  assert.deepEqual(hit.checkSprites(), []);
+});
 await test('Weltkarte: alle Gebiete passen zusammen und ueberlappen sich nicht', () => {
   // Originalkarten liegen fest in der Matrix von Platin, nur die eigenen Karten werden hier geprueft
   if (!ORIG_ON) assert.deepEqual(world.checkLayout(), []);

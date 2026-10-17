@@ -3,7 +3,7 @@
 // Leinwaende: Gras, Wege, hohes Gras, Blumen, Wasser, Strand, Klippen, Baeume und Zaeune.
 // Fehlen die Dateien, bleibt es bei der eigenen Pixelgrafik.
 const SETS = { normal: 'map_texture_set_006', snow: 'map_texture_set_014' };
-const OBJECTS = ['rock_smash', 'cut_tree', 'strength_boulder'];
+const OBJECTS = ['rock_smash', 'cut_tree', 'strength_boulder', 'bollard'];
 const tex = { normal: null, snow: null };
 const objects = {};
 let readyFlag = false;

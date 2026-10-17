@@ -52,7 +52,7 @@ async function prefetch(list) {
 }
 const text = (rel) => { const b = fetchFile(rel); return b ? Buffer.from(b).toString('utf8') : null; };
 // Objektgrafiken, die Platin als 3D-Modell aus fldeff.narc zeichnet (pret: ov5_021F10E8.c)
-const FIELD_MODELS = { MAP_SIGNPOST: 0x45, MAILBOX: 0x46, SIGNBOARD: 0x47, ARROW_SIGNPOST: 0x48, GYM_SIGNPOST: 0x49, TRAINER_TIPS_SIGNPOST: 0x4a };
+export const FIELD_MODELS = { MAP_SIGNPOST: 0x45, MAILBOX: 0x46, SIGNBOARD: 0x47, ARROW_SIGNPOST: 0x48, GYM_SIGNPOST: 0x49, TRAINER_TIPS_SIGNPOST: 0x4a, BOOK: 0x4f };
 const pad3 = (n) => String(n).padStart(3, '0');
 
 // ------------------------------------------------------------------ Kopfdaten

@@ -14,7 +14,8 @@
 html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font: 15px/1.35 var(--pixel); }
 body { background: radial-gradient(circle at 50% 0%, #2c3360, var(--bg) 70%); }
 #app { display: flex; gap: 14px; padding: 14px; min-height: 100vh; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
-#stage { position: relative; width: 720px; max-width: 100%; aspect-ratio: 720 / 528; border: 4px solid #0e1020; border-radius: 8px; box-shadow: 0 0 0 3px #59608a, 0 10px 30px rgba(0,0,0,.5); overflow: hidden; }
+#stageWrap { width: 720px; max-width: 100%; }
+#stage { position: relative; width: 100%; aspect-ratio: 720 / 528; border: 4px solid #0e1020; border-radius: 8px; box-shadow: 0 0 0 3px #59608a, 0 10px 30px rgba(0,0,0,.5); overflow: hidden; }
 #game { width: 100%; height: 100%; image-rendering: pixelated; background: #000; display: block; }
 .hidden { display: none !important; }
 button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; font: inherit; font-weight: 700; box-shadow: inset 0 -3px rgba(0,0,0,.25); }
@@ -58,7 +59,7 @@ fieldset { border: 2px solid var(--border); border-radius: 8px; margin: 10px 0; 
 #hud { width: 330px; max-width: 100%; background: var(--panel); border: 3px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 #hud > * { min-width: 0; max-width: 100%; }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; } .tabs button { flex: 1 1 auto; min-width: 0; padding: 6px 3px; background: var(--panel2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tabs button.active { background: var(--accent); }
-.tab { max-height: 260px; overflow: auto; }
+.tab { max-height: 380px; overflow: auto; }
 .mon { display: grid; grid-template-columns: 40px 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; background: var(--panel2); margin-bottom: 4px; }
 .mon.dead { opacity: .5; filter: grayscale(1); } .mon .icon { width: 40px; height: 40px; image-rendering: pixelated; }
 .mon .name { font-weight: 700; } .mon .sub { color: var(--muted); font-size: 12px; } .mon .acts button { padding: 2px 6px; font-size: 11px; background: #4a5278; }
@@ -228,8 +229,8 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 
 /* Einklappbare Bereiche der Seitenleiste */
 .toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 4px; }
-.toggles .tg { min-width: 0; padding: 5px 4px; font-size: 13px; background: var(--panel2); color: var(--muted); position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toggles .tg.on { background: var(--accent); color: #fff; }
+.settings .tg { min-width: 0; padding: 5px 4px; font-size: 13px; background: #1e2238; color: var(--muted); position: relative; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settings .tg.on { background: var(--accent); color: #fff; }
 #musicBtn:not(.on), #sfxBtn:not(.on) { text-decoration: line-through; }
 #logBadge { position: absolute; top: -6px; right: -4px; min-width: 18px; padding: 0 4px; border-radius: 9px; background: #e04848; color: #fff; font-style: normal; font-size: 11px; line-height: 18px; }
 .settings { display: flex; flex-direction: column; gap: 6px; background: var(--panel2); border-radius: 8px; padding: 8px; }
@@ -424,3 +425,30 @@ canvas.transition { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .tr-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 .tr-actions button:disabled { opacity: .45; }
 .tr-note { margin-top: 8px; color: #b02020; font-size: 13px; }
+
+/* Vollbild (Taste V): das Spielfeld wird als Ganzes skaliert, Schrift und Menues wachsen mit */
+#stageWrap:fullscreen { width: 100vw; height: 100vh; max-width: none; background: #000; display: flex; align-items: center; justify-content: center; }
+#stageWrap:fullscreen #stage { width: 720px; flex: none; border: 0; border-radius: 0; box-shadow: none; transform-origin: center; }
+
+/* Chat und Meldungen unten links im Spielbild */
+.chat-feed { position: absolute; left: 10px; bottom: 10px; max-width: 62%; display: flex; flex-direction: column; gap: 3px; z-index: 9; pointer-events: none; font-size: 14px; }
+.chat-feed > div { background: rgba(14,16,32,.78); color: #f4f4f4; padding: 2px 8px; border-radius: 6px; transition: opacity 1s; overflow-wrap: anywhere; }
+.chat-feed > div.old { opacity: 0; }
+.chat-feed .lg-chat b { color: #8fb4ff; } .chat-feed .lg-death { color: #ff8a8f; } .chat-feed .lg-error { color: #ffc28a; }
+.dialog:not(.hidden) ~ .chat-feed { bottom: 120px; }
+.chat-form { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 16; }
+.chat-form input { width: 100%; padding: 8px 10px; background: rgba(14,16,32,.9); color: #fff; border: 2px solid var(--accent); border-radius: 8px; font: inherit; }
+.chat-form:not(.hidden) ~ .chat-feed, .chat-feed:has(~ .chat-form:not(.hidden)) { bottom: 56px; }
+
+/* Seitenleiste: Reiter Karte, Team, Box und darunter die Einstellungen */
+.map-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; }
+.map-row button { padding: 6px 12px; font-size: 13px; }
+.map-row .online { font-size: 12px; color: var(--muted); }
+#nuzInfo h4 { margin: 10px 0 4px; font-size: 14px; } #nuzInfo h4 .hint { font-weight: 400; }
+.settings h3 { margin: 0; font-size: 14px; color: var(--muted); }
+.settings .volumes { flex-direction: column; gap: 4px; }
+.settings .volumes .tg { flex: 0 0 92px; }
+details.help summary { cursor: pointer; color: var(--muted); }
+
+/* Kampf: Cursor fuer die Tastatur immer sichtbar */
+#battle button:focus { outline: 3px solid #ffe066; outline-offset: 1px; }

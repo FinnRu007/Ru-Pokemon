@@ -4,12 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { config, ROOT } from './config.js';
-import { openStorage } from './db/storage.js';
-import { GameServer } from './game/game.js';
-import { loadCache, applyData, fetchSpecies, saveCache } from './data/pokeapiLoader.js';
-import { POKEMON } from '../shared/data/pokemon.js';
-import { MOVES } from '../shared/data/moves.js';
 import { codeVersion } from './version.js';
+import { ensureSprites } from './ensureSprites.js';
+
+// Erst die Originalgrafik pruefen: Die Spieldaten lesen beim Laden die erzeugten Karten (Kollision)
+ensureSprites();
+const { openStorage } = await import('./db/storage.js');
+const { GameServer } = await import('./game/game.js');
+const { loadCache, applyData, fetchSpecies, saveCache } = await import('./data/pokeapiLoader.js');
+const { POKEMON } = await import('../shared/data/pokemon.js');
+const { MOVES } = await import('../shared/data/moves.js');
 
 const VERSION = codeVersion();
 

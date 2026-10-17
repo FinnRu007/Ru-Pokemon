@@ -15,6 +15,7 @@ import { TRAINER_FILES } from '../client/js/art/realTrainers.js';
 import { OW_FILES } from '../client/js/art/realOverworld.js';
 import { TOWNMAP_SOURCES, TOWNMAP_DIR, buildTownMap } from './townmap-build.js';
 import { buildWorld } from './world/build-world.js';
+import { SPRITES_BUILD } from './spritesBuild.js';
 import { TERRAINS, TIMED_TERRAINS } from '../client/js/art/realTerrain.js';
 import { BATTLE_BGS, TIMED_BGS, BG_TIMES } from '../client/js/art/realBattleBg.js';
 import { unpackNarc, lzDecompress, readPalette, readTiles, readScreen, composeScreen, encodePng, parseJascPal, swapPngPalette, decodeIndexedPng, tilesFromIndexedPng } from './nitro.js';
@@ -78,7 +79,7 @@ for (const t of TERRAINS) {
 // Bodentexturen (NSBTX, entpackt der Browser selbst) und Feldobjekte fuer die Weltgrafik
 const FIELD_BASE = 'https://raw.githubusercontent.com/pret/pokeplatinum/main/res';
 const FIELD_SETS = ['map_texture_set_006', 'map_texture_set_014'];
-const FIELD_OBJECTS = ['rock_smash', 'cut_tree', 'strength_boulder'];
+const FIELD_OBJECTS = ['rock_smash', 'cut_tree', 'strength_boulder', 'bollard'];
 fs.mkdirSync(path.join(OUT, 'field'), { recursive: true });
 for (const f of FIELD_SETS) jobs.push({ url: `${FIELD_BASE}/field/maps/texture_sets/${f}.nsbtx`, file: path.join(OUT, 'field', `${f}.nsbtx`) });
 // Gebaeude im Stil der 4. Generation (Kachelsatz aus Pokemon Essentials)
@@ -180,6 +181,7 @@ index.evolution = fs.existsSync(EVO_BG);
 index.berryTrees = fs.readdirSync(BERRY_DIR).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4));
 // Originale Oberwelt (Karten, Hoehen, Tueren, Grafik je Kartenteil) aus pret/pokeplatinum
 try { await buildWorld(); } catch (e) { console.log(`\nOriginalkarten nicht erstellt: ${e.message}`); }
+index.build = SPRITES_BUILD;
 fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(index));
 console.log(`\nFertig: ${loaded} neu geladen, ${failed} nicht gefunden. Ordner: client/sprites/`);
 for (const [k, ids] of Object.entries({ ...index.kinds, types: index.types, items: index.items, trainers: index.trainers, overworld: index.overworld, terrain: index.terrain, battlebg: index.battlebg, field: index.field, berryTrees: index.berryTrees })) console.log(`  ${k}: ${ids.length}`);

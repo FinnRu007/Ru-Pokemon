@@ -14,6 +14,7 @@ import { forestTile } from './art/realTiles.js';
 import { FIELD, fieldFlags } from '/shared/world.js';
 import { visibleNpcs } from '/shared/data/story.js';
 import { fieldObject } from './art/realField.js';
+import { drawProp, PROP_KINDS } from './art/props.js';
 import * as OV from './origView.js';
 import { drawSoil, drawBerryTree } from './art/berryTrees.js';
 import { soilIndex } from '/shared/data/berries.js';
@@ -168,8 +169,10 @@ export class Renderer {
       // Schilder und Briefkaesten (im Original eigene Modelle, nicht Teil der Kartenbilder)
       for (const ob of mm.orig.objects || []) {
         if (Math.abs(mm.orig.x + ob.x - gx) > 10 || Math.abs(mm.orig.z + ob.y - gz) > 9) continue;
+        if (ob.g === 'BOLLARD') { ents.push({ kind: 'obj', o: { obj: 'bollard' }, p: { x: ob.x, y: ob.y, hop: 0 }, map: mm }); continue; }
+        if (!PROP_KINDS.has(ob.g)) continue;
         const md = OV.fieldModel(ob.g);
-        if (md) ents.push({ kind: 'model', o: md, p: { x: ob.x, y: ob.y, hop: 0 }, map: mm });
+        ents.push(md ? { kind: 'model', o: md, p: { x: ob.x, y: ob.y, hop: 0 }, map: mm } : { kind: 'obj', o: { obj: ob.g }, p: { x: ob.x, y: ob.y, hop: 0 }, map: mm });
       }
       // Beerenbeete: weicher Boden und die Pflanze im Zustand dieses Spielers
       for (const b of soilIndex(MAPS).byMap[id] || []) {
@@ -198,9 +201,11 @@ export class Renderer {
         g.drawImage(img, Math.round(e.ox + (e.p.x * 16 + info.ox) * S), Math.round(e.oy + (e.p.y * 16 + info.oy) * S), info.w * S, info.h * S);
       } else if (e.kind === 'obj') {
         const img = fieldObject(e.o.obj);
-        fw = img ? img.width : 16;
-        const sx = Math.round(e.ox + e.p.x * T + T / 2 - (fw / 2) * S), sy = Math.round(e.oy + (e.p.y + 1) * T - (img ? img.height : 16) * S);
-        if (img) g.drawImage(img, sx, sy, img.width * S, img.height * S);
+        if (img) {
+          fw = img.width;
+          const sx = Math.round(e.ox + e.p.x * T + T / 2 - (fw / 2) * S), sy = Math.round(e.oy + (e.p.y + 1) * T - img.height * S);
+          g.drawImage(img, sx, sy, img.width * S, img.height * S);
+        } else fw = drawProp(g, e.o.obj, Math.round(e.ox + e.p.x * T), Math.round(e.oy + e.p.y * T), S); // Ersatz, falls das Bild fehlt
       } else {
         e.tile = OV.tileAt(map, Math.round(e.gx), Math.round(e.gz));
         this.drawEntity(e, e.map, e.ox, e.oy, now);

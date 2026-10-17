@@ -674,7 +674,7 @@ export class GameServer {
     const text = String(msg.text || '').slice(0, 200).trim();
     if (!text) return;
     if (process.env.DEV === '1' && text.startsWith('/')) return this.devCommand(s, text.split(/\s+/));
-    this.broadcastMap(s.player.map, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text });
+    this.broadcastMap(s.player.map, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text }, s.player.id);
     this.send(s.ws, { t: S2C.CHAT, from: s.player.name, id: s.player.id, text });
   }
 
@@ -695,16 +695,16 @@ export class GameServer {
     if (s.battle || s.script || !this.storyOn) return;
     const p = s.player;
     if (!p.flags.hm_fly) return this.notice(s, 'Du beherrschst Fliegen noch nicht.', 'error');
-    if (!fieldFlags(p.flags, s.party).hm_fly) return this.notice(s, 'Kein Pokémon in deinem Team beherrscht Fliegen.', 'error');
-    if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
     const spots = Object.entries(MAPS).filter(([id, m]) => m.fly && p.flags['visit_' + id] && id !== p.map);
-    // Direktflug aus der Weltkarte: Ziel muss ein besuchter Ort sein
+    // Direktflug aus der Weltkarte: sobald Fliegen freigeschaltet ist, immer und von ueberall zu besuchten Orten
     if (msg.to) {
       const hit = spots.find(([id]) => id === msg.to);
       if (!hit) return this.notice(s, 'Dorthin kannst du nicht fliegen.', 'error');
       this.notice(s, `Du fliegst nach ${hit[1].name}.`);
       return this.teleport(s, hit[0], hit[1].fly[0], hit[1].fly[1]);
     }
+    if (!fieldFlags(p.flags, s.party).hm_fly) return this.notice(s, 'Kein Pokémon in deinem Team beherrscht Fliegen.', 'error');
+    if (MAPS[p.map].indoor) return this.notice(s, 'Hier drinnen kannst du nicht fliegen.', 'error');
     if (!spots.length) return this.notice(s, 'Du kennst noch keine anderen Orte.', 'error');
     const labels = [...spots.map(([, m]) => m.name), 'Abbrechen'];
     const branches = spots.map(([id, m]) => [{ warp: [id, m.fly[0], m.fly[1]] }]);

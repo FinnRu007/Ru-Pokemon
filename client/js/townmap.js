@@ -5,8 +5,8 @@ import { MAPS } from '/shared/data/maps.js';
 import { PLACES, FLY_SPOTS, areaName } from './townmapData.js';
 
 const BASE = '/sprites/townmap/';
-// Sichtbarer Teil des oberen Bildschirms (ohne die Namensleiste unten)
-const CROP = { x: 16, y: 0, w: 224, h: 168 };
+// Sichtbarer Teil des oberen Bildschirms (ohne die Namensleiste unten und ohne die weissen Raender links und rechts)
+const CROP = { x: 20, y: 0, w: 216, h: 168 };
 // Raster der Karten-App (TOWN_MAP_GRID_X/Y in defs.h): Feld (x, z) hat seine Mitte bei 7x+25 / 7z-34,
 // eine 16x16-Figur beginnt 8 Pixel davor. Ein Feld ist 7 Pixel gross, also beginnt es bei 7x+21 / 7z-38.
 const G = 7, GX = 21, GY = -38;
@@ -75,6 +75,8 @@ function placesAt(bx, bz) {
   return Object.keys(PLACES).filter((id) => { const b = box(id); return MAPS[id] && bx >= b.x0 && bx <= b.x1 && bz >= b.z0 && bz <= b.z1; });
 }
 const headerArea = (id) => (PLACES[id][0] || '').toLowerCase().replace('eterna_city', 'eternia_city');
+// Felder, die zusammen einen Ort bilden (Stadt, ganze Route; Nord- und Suedteil zaehlen zusammen)
+const groupKey = (b) => b.area.replace(/_(north|south)$/, '');
 
 // ------------------------------------------------------------------ Darstellung
 export class TownMap {
@@ -109,14 +111,17 @@ export class TownMap {
     if (!b || (b.hidden && !this.unlockedHidden().has(b.hidden))) return null;
     return b;
   }
-  // Name und Zielkarte eines Feldes
+  // Alle sichtbaren Felder desselben Ortes
+  group(b) { const k = groupKey(b); return TM.data.blocks.filter((q) => groupKey(q) === k && this.block(q.x, q.z)); }
+  // Name und Zielkarte eines Ortes (ueber alle seine Felder, damit jede Stelle der Stadt das Flugziel trifft)
   spot(b) {
-    const ids = placesAt(b.x, b.z);
+    const blocks = this.group(b);
+    const ids = [...new Set(blocks.flatMap((q) => placesAt(q.x, q.z)))];
     const main = ids.find((id) => headerArea(id) === b.area && !MAPS[id].indoor) || ids.find((id) => !MAPS[id].indoor) || null;
     const flyId = ids.find((id) => MAPS[id].fly && FLY_SPOTS.some((f) => f.map === id));
     const id = flyId || main;
-    const name = main && headerArea(main) === b.area ? MAPS[main].name : areaName(b.area);
-    return { id, name, fly: !!flyId, bx: b.x, bz: b.z };
+    const name = flyId ? MAPS[flyId].name : main && headerArea(main) === b.area ? MAPS[main].name : areaName(b.area);
+    return { id, name, fly: !!flyId, bx: b.x, bz: b.z, key: groupKey(b) };
   }
 
   // ---------------------------------------------------------------- Ansicht
@@ -160,14 +165,20 @@ export class TownMap {
     this.cursor = b ? { x: b.x, z: b.z } : null;
     return b ? this.spot(b) : null;
   }
+  // Pfeiltasten: zum naechsten Ort in dieser Richtung (Felder desselben Ortes werden uebersprungen)
   moveCursor(dx, dz) {
     const start = this.cursor || this.meBlock() || { x: 3, z: 27 };
-    let x = start.x, z = start.z;
-    for (let i = 0; i < 30; i++) { // zum naechsten Feld mit Ort springen
-      x += dx; z += dz;
-      if (x < 0 || z < 0 || x > 29 || z > 29) return this.cursorSpot();
-      if (this.block(x, z)) { this.cursor = { x, z }; break; }
+    const cur = this.block(start.x, start.z);
+    const key = cur && groupKey(cur);
+    let best = null, bestScore = Infinity;
+    for (const b of TM.data.blocks) {
+      if (!this.block(b.x, b.z) || (key && groupKey(b) === key)) continue;
+      const along = (b.x - start.x) * dx + (b.z - start.z) * dz;
+      if (along <= 0) continue;
+      const score = along + 2 * Math.abs((b.x - start.x) * dz + (b.z - start.z) * dx);
+      if (score < bestScore) { bestScore = score; best = b; }
     }
+    if (best) this.cursor = { x: best.x, z: best.z };
     return this.cursorSpot();
   }
   cursorSpot() { const b = this.cursor && this.block(this.cursor.x, this.cursor.z); return b ? this.spot(b) : null; }
@@ -214,11 +225,21 @@ export class TownMap {
       const [x, y] = at(f.x + 17, f.y - 42);
       g.drawImage(TM.img.fly, f.shape * 16, row * 16, 16, 16, x, y, 16 * k, 16 * k);
     }
-    // Cursor (weisse Ecken) auf dem Feld unter der Maus
-    if (!mini && this.cursor) {
-      const [x, y] = at(G * this.cursor.x + 25 - 8, G * this.cursor.z - 34 - 8);
-      const f = Math.floor(now / (34 * 1000 / 60)) % 2;
-      g.drawImage(TM.img.icons, 32 + f * 16, 0, 16, 16, x, y, 16 * k, 16 * k);
+    // Auswahl: der ganze Ort unter Maus oder Cursor leuchtet auf, mit weissem Rand um alle seine Felder
+    const cb = !mini && this.cursor && this.block(this.cursor.x, this.cursor.z);
+    if (cb) {
+      const cells = this.group(cb); const has = new Set(cells.map((q) => q.x + ',' + q.z));
+      const pulse = 0.35 + 0.3 * (0.5 + 0.5 * Math.sin(now / 180));
+      g.fillStyle = `rgba(255,255,255,${pulse})`;
+      for (const q of cells) { const [x, y] = at(G * q.x + GX, G * q.z + GY); g.fillRect(x, y, G * k, G * k); }
+      g.fillStyle = '#fff'; const t = Math.max(1, Math.round(k / 2));
+      for (const q of cells) {
+        const [x, y] = at(G * q.x + GX, G * q.z + GY); const s = G * k;
+        if (!has.has(q.x + ',' + (q.z - 1))) g.fillRect(x - t, y - t, s + 2 * t, t);
+        if (!has.has(q.x + ',' + (q.z + 1))) g.fillRect(x - t, y + s, s + 2 * t, t);
+        if (!has.has((q.x - 1) + ',' + q.z)) g.fillRect(x - t, y - t, t, s + 2 * t);
+        if (!has.has((q.x + 1) + ',' + q.z)) g.fillRect(x + s, y - t, t, s + 2 * t);
+      }
     }
     // Andere Spieler: Punkt in ihrer Farbe mit Namen, man selbst als Spielerkopf
     const ik = mini ? Math.max(1, k) : Math.max(1, Math.ceil(k / 2));
