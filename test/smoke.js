@@ -488,7 +488,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ ww_girl_talk: true }, ['floaroma_meadow'], ['eterna_forest', 'windworks_inside']],
     [{ windworks_key: true }, [], ['windworks_inside', 'eterna_forest']],
     [{ ww_guard_in: true }, ['windworks_inside'], ['eterna_forest']],
-    [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
+    [{ windworks_done: true, et_gardenia_in: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
     [{ badge_forest: true, hm_cut: true }, ['eterna_galactic'], ['route_206']],
     [{ eterna_done: true, bike: true, riding: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
     [{ rival3: true, badge_relic: true }, ['solaceon_town', 'solaceon_ruins', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
@@ -750,6 +750,16 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   talkTo(s, 'ww_dad'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.ww_dad_thanks, 8000); await idle();
   await trip('valley_windworks', 'wwLooker', 'ww_looker_done');
+  // Ewigenau: Barry und Zyrus an der Statue, Cynthia mit Zerschneider, Jupiter, Cynthias Ei
+  await trip('eterna_city', 'etArrive', 'et_arrive');
+  s.player.flags.badge_forest = true;
+  await trip('eterna_city', 'cynthiaEterna', 'hm_cut');
+  assert.equal(s.player.items.hm01, 1);
+  talkTo(s, 'jupiter_et'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.et_owner_home, 30000); await idle();
+  assert.ok(s.player.flags.eterna_done);
+  await trip('eterna_city', 'cynthiaEgg', 'et_egg');
+  assert.ok(s.party.some((m) => m.egg && m.speciesId === 175));
   a.ws.close();
 });
 
