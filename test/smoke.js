@@ -496,7 +496,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'turnback_cave', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
     [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, ['celestic_town'], ['celestic_ruins', 'lake_valor', 'canalave_city']],
     [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym', 'canalave_dock', 'verity_cavern'], ['lake_valor', 'route_216', 'iron_island']],
-    [{ rival4: true, badge_mine: true, hm_strength: true }, ['lake_valor', 'valor_cavern', 'route_216', 'route_217', 'iron_island', 'iron_island_deep'], ['snowpoint_city', 'galactic_hq']],
+    [{ rival4: true, badge_mine: true, hm_strength: true, cv_after: true }, ['lake_valor', 'valor_cavern', 'route_216', 'route_217', 'iron_island', 'iron_island_deep'], ['snowpoint_city', 'galactic_hq']],
     [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity', 'acuity_cavern'], ['galactic_hq']],
     [{ badge_icicle: true, acuity_done: true }, ['galactic_hq'], ['spear_pillar']],
     [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']],
@@ -793,6 +793,21 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   await trip('celestic_ruins', 'celPainting', 'cel_ru_done', 30000);
   assert.equal(s.player.items.hm03, 1);
   await trip('celestic_town', 'celCynthiaMeet', 'cel_cynthia_talk');
+  // Kapitel 7: Fleetburg mit Barry, Urs auf der Eiseninsel, Bibliothek, Explosion und Saturn
+  await trip('canalave_city', 'rival4', 'cv_barry_left', 30000);
+  assert.ok(s.player.flags.rival4);
+  talkTo(s, 'riley_out'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.iron_riley_in, 8000); await idle();
+  assert.equal(s.player.items.hm04, 1);
+  s.player.flags.badge_mine = true;
+  await trip('canalave_city', 'cvGymExit', 'cv_lib_call');
+  talkTo(s, 'barry_lib'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.cv_lib_in, 8000); await idle();
+  await trip('canalave_library', 'cvLibrary', 'cv_lib_done', 30000);
+  await trip('canalave_city', 'cvAfter', 'cv_after', 20000);
+  talkTo(s, 'saturn_vc'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.vc_saturn_left, 30000); await idle();
+  assert.ok(s.player.flags.valor_done);
   a.ws.close();
 });
 
