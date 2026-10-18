@@ -808,6 +808,13 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   talkTo(s, 'saturn_vc'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.vc_saturn_left, 30000); await idle();
   assert.ok(s.player.flags.valor_done);
+  // Kapitel 8: Mars am See der Wahrheit, Barry am Ufer, Jupiter am See der Willenskraft
+  await trip('lake_verity', 'lvRowan', 'lv_rowan_talk');
+  talkTo(s, 'mars_verity'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.verity_done, 30000); await idle();
+  await trip('acuity_lakefront', 'alfBarry', 'alf_barry');
+  s.player.flags.badge_icicle = true;
+  await trip('lake_acuity', 'laJupiter', 'acuity_done', 30000);
   a.ws.close();
 });
 
