@@ -27,6 +27,7 @@ import { applyStory11 } from './story11.js';
 import { applyStory12 } from './story12.js';
 import { applyStory13 } from './story13.js';
 import { applyStory14 } from './story14.js';
+import { applyStory15 } from './story15.js';
 import { ORIG_FIX } from './origFix.js';
 
 export function cond(flags, c) {
@@ -399,6 +400,7 @@ applyStory11({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 applyStory12({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 applyStory13({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 applyStory14({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
+applyStory15({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

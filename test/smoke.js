@@ -770,6 +770,29 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   talkTo(s, 'lucia_vs3'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'galactic_warehouse', 30000); await idle();
   assert.ok(s.player.flags.grunts_vs_tag && s.player.flags.vs_tag_done);
+  // Kapitel 6: LeBelle im Lagerhaus, Barry in Weideburg, die Bombe, das Seeufer, die Enton und Elyses
+  await a.wait((m) => m.t === 'progress' && m.flags.warehouse_done, 20000); await idle();
+  assert.equal(s.player.items.hm02, 1);
+  await trip('pastoria_city', 'paRival', 'rival_pa', 30000);
+  s.player.flags.badge_fen = true;
+  await trip('pastoria_city', 'paGymExit', 'pa_gym_exit');
+  await trip('pastoria_city', 'paBomb', 'pa_bomb');
+  talkTo(s, 'grunt_pa3'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.pa_grunt_gone, 8000); await idle();
+  talkTo(s, 'grunt_vl'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.vl_grunt_n, 8000); await idle();
+  talkTo(s, 'grunt_vl2'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.secret_potion, 30000); await idle();
+  talkTo(s, 'psy1'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.psyduck_cured, 20000); await idle();
+  assert.equal(s.player.items['old-charm'], 1);
+  await trip('celestic_town', 'celElderTrig', 'cel_elder_talk');
+  talkTo(s, 'cel_grunt'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.celestic_done, 30000); await idle();
+  assert.ok(!s.player.items['old-charm']);
+  await trip('celestic_ruins', 'celPainting', 'cel_ru_done', 30000);
+  assert.equal(s.player.items.hm03, 1);
+  await trip('celestic_town', 'celCynthiaMeet', 'cel_cynthia_talk');
   a.ws.close();
 });
 
