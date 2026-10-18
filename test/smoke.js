@@ -492,7 +492,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ badge_forest: true, hm_cut: true }, ['eterna_galactic'], ['route_206']],
     [{ eterna_done: true, bike: true, riding: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
     [{ rival3: true, badge_relic: true }, ['solaceon_town', 'solaceon_ruins', 'route_215', 'veilstone_gym'], ['galactic_warehouse', 'route_214', 'route_212', 'celestic_town']],
-    [{ badge_cobble: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
+    [{ badge_cobble: true, vs_grunts_left: true }, ['galactic_warehouse'], ['route_212', 'route_214', 'pastoria_gym']],
     [{ warehouse_done: true, hm_fly: true }, ['route_212', 'route_214', 'turnback_cave', 'valor_lakefront', 'route_213', 'pastoria_gym'], ['lake_valor', 'route_222']],
     [{ badge_fen: true, secret_potion: true, psyduck_cured: true }, ['celestic_town'], ['celestic_ruins', 'lake_valor', 'canalave_city']],
     [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym', 'canalave_dock', 'verity_cavern'], ['lake_valor', 'route_216', 'iron_island']],
@@ -760,6 +760,16 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   assert.ok(s.player.flags.eterna_done);
   await trip('eterna_city', 'cynthiaEgg', 'et_egg');
   assert.ok(s.party.some((m) => m.egg && m.speciesId === 175));
+  // Kapitel 5: Lucia auf Route 207, Zyrus im Kraterberg, Schleiede mit Marinus und dem Doppelkampf vor dem Lagerhaus
+  await trip('route_207', 'lucia207', 'papp_dowse');
+  await trip('mt_coronet', 'coronetCyrus', 'coronet_cyrus');
+  await trip('veilstone_city', 'vsWake', 'vs_lucia_left');
+  assert.ok(s.player.flags.vs_wake);
+  s.player.flags.badge_cobble = true;
+  await trip('veilstone_city', 'vsHelp', 'vs_help');
+  talkTo(s, 'lucia_vs3'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'galactic_warehouse', 30000); await idle();
+  assert.ok(s.player.flags.grunts_vs_tag && s.player.flags.vs_tag_done);
   a.ws.close();
 });
 
