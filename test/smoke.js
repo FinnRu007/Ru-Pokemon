@@ -498,7 +498,8 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ celestic_done: true, hm_surf: true }, ['celestic_ruins', 'route_218', 'canalave_city', 'canalave_gym', 'canalave_dock', 'verity_cavern'], ['lake_valor', 'route_216', 'iron_island']],
     [{ rival4: true, badge_mine: true, hm_strength: true, cv_after: true }, ['lake_valor', 'valor_cavern', 'route_216', 'route_217', 'iron_island', 'iron_island_deep'], ['snowpoint_city', 'galactic_hq']],
     [{ valor_done: true, verity_done: true, hm_rockclimb: true }, ['snowpoint_city', 'snowpoint_gym', 'lake_acuity', 'acuity_cavern'], ['galactic_hq']],
-    [{ badge_icicle: true, acuity_done: true }, ['galactic_hq'], ['spear_pillar']],
+    [{ badge_icicle: true, acuity_done: true }, [], ['galactic_hq', 'spear_pillar']],
+    [{ hq_open: true }, ['galactic_hq'], ['spear_pillar']],
     [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']],
     [{ spear_done: true }, ['route_222', 'sunyshore_city', 'sunyshore_lighthouse', 'route_223'], ['sunyshore_gym', 'pokemon_league_south']],
     [{ volkner_ready: true }, ['sunyshore_gym'], ['pokemon_league_south']],
@@ -815,6 +816,20 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   await trip('acuity_lakefront', 'alfBarry', 'alf_barry');
   s.player.flags.badge_icicle = true;
   await trip('lake_acuity', 'laJupiter', 'acuity_done', 30000);
+  // Kapitel 9: Lagerschlüssel, Hauptquartier, Speersäule und Zerrwelt
+  talkTo(s, 'grunt_key'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.hq_open, 20000); await idle();
+  await trip('galactic_hq', 'hqCyrus', 'hq_cyrus_left', 30000);
+  assert.equal(s.player.items['master-ball'], 1);
+  talkTo(s, 'saturn_hq'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.galactic_hq_done, 30000); await idle();
+  await trip('spear_pillar', 'spMars', 'sp_aside', 30000);
+  { const [x, y, d] = beforeTrigger('spear_pillar', 'spCyrus'); tp('spear_pillar', x, y); await step(d); }
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'distortion_world', 30000); await idle();
+  await trip('distortion_world', 'dwArrive', 'dw_arrive');
+  talkTo(s, 'cyrus_dw'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.dw_cyrus_left, 30000); await idle();
+  await trip('distortion_world', 'giratina', 'spear_done', 30000);
   a.ws.close();
 });
 
@@ -859,8 +874,8 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   tp('route_204', ...P('route_204', 7, 10)); a.send({ t: 'fly' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'floaroma_town', 5000);
   // Speersaeule: nach Zyrus in die Zerrwelt, Giratina, zurueck
-  Object.assign(s.player.flags, { galactic_hq_done: true, beat_zyrus2: true });
-  tp('spear_pillar', 7, 7); await step('up'); await step('up');
+  Object.assign(s.player.flags, { galactic_hq_done: true, beat_spear_tag: true, sp_aside: true, sp_cyrus_scene: true, sp_cyrus_gone: true, beat_zyrus2: true, dw_arrive: true, dw_cyrus_left: true });
+  talkTo(s, 'cynthia_sp2'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'mapChange' && m.map === 'distortion_world', 8000);
   await sleep(100); await step('up'); await step('up');
   await a.wait((m) => m.t === 'battleStart' && m.state.foe?.speciesId === 487, 8000);
