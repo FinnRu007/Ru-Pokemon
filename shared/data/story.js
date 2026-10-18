@@ -24,6 +24,7 @@ import { MAPS } from './maps.js';
 import { applyOrigStory, ORIG_ON } from './origLayout.js';
 import { applyStory10 } from './story10.js';
 import { applyStory11 } from './story11.js';
+import { applyStory12 } from './story12.js';
 import { ORIG_FIX } from './origFix.js';
 
 export function cond(flags, c) {
@@ -393,6 +394,7 @@ applyOrigStory({ NPCS, TRIGGERS, SCRIPTS, spawns: [NEW_PLAYER_SPAWN], fixes: ORI
 // Szenen nach dem Original mit laufenden Figuren (story10.js, Koordinaten der Originalkarten)
 applyStory10({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 applyStory11({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
+applyStory12({ TRAINERS, SCRIPTS, NPCS, TRIGGERS, MAPS, ORIG_ON });
 
 export function visibleNpcs(mapId, flags) {
   return (NPCS[mapId] || []).filter((n) => cond(flags, n.show));

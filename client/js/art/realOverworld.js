@@ -17,7 +17,7 @@ export const OW_BY_NAME = {
   Jasmin: 'npc/jasmine', Urs: 'npc/riley', Palmer: 'npc/palmer', Selfe: 'pokemon/uxie', Vesprit: 'pokemon/mesprit', Tobutz: 'pokemon/azelf',
   Dialga: 'pokemon/dialga', Palkia: 'pokemon/palkia', Heatran: 'pokemon/heatran', Regigigas: 'pokemon/regigigas', Cresselia: 'pokemon/cresselia',
   // Ohne Overworld-Bild in Platin: verkleinertes Kampfbild (mon:<Nr>)
-  Clown: 'npc/clown', LeBelle: 'npc/looker', 'Pokétch-Firmenchef': 'npc/middle_aged_man', Zwilling: 'npc/twin', 'Schnösel': 'npc/rich_boy', Forscher: 'npc/scientist_m',
+  Clown: 'npc/clown', LeBelle: 'npc/looker', Charon: 'npc/charon', 'Kleines Mädchen': 'npc/twin', Honigmann: 'npc/pokefan_m', 'Pokétch-Firmenchef': 'npc/middle_aged_man', Zwilling: 'npc/twin', 'Schnösel': 'npc/rich_boy', Forscher: 'npc/scientist_m',
   Regirock: 'mon:377', Regice: 'mon:378', Registeel: 'mon:379', Rotom: 'mon:479', Buck: 'npc/buck'
 };
 export const OW_BY_CLASS = {

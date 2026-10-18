@@ -484,8 +484,10 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{}, ['jubilife_city', 'route_204', 'lake_verity'], ['route_203', 'oreburgh_city', 'floaroma_town']],
     [{ school_barry: true }, ['jubilife_school'], ['route_203']],
     [{ poketch: true }, ['route_203', 'oreburgh_city', 'oreburgh_mine', 'route_207'], ['floaroma_town', 'mt_coronet']],
-    [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'floaroma_meadow', 'valley_windworks'], ['eterna_forest', 'windworks_inside']],
-    [{ windworks_key: true }, ['windworks_inside'], ['eterna_forest']],
+    [{ badge_coal: true, barry_ore: true, hm_rocksmash: true }, ['floaroma_town', 'valley_windworks'], ['floaroma_meadow', 'eterna_forest', 'windworks_inside']],
+    [{ ww_girl_talk: true }, ['floaroma_meadow'], ['eterna_forest', 'windworks_inside']],
+    [{ windworks_key: true }, [], ['windworks_inside', 'eterna_forest']],
+    [{ ww_guard_in: true }, ['windworks_inside'], ['eterna_forest']],
     [{ windworks_done: true }, ['eterna_forest', 'eterna_city', 'eterna_gym'], ['eterna_galactic', 'route_206', 'mt_coronet', 'old_chateau', 'wayward_cave']],
     [{ badge_forest: true, hm_cut: true }, ['eterna_galactic'], ['route_206']],
     [{ eterna_done: true, bike: true, riding: true, hm_cut: true }, ['route_206', 'mt_coronet', 'route_208', 'hearthome_city', 'hearthome_gym', 'old_chateau', 'wayward_cave'], ['route_209', 'route_212']],
@@ -710,6 +712,44 @@ await test('Trainerpaar: Zwillinge auf Route 204 nur im Doppelkampf mit zwei Pok
   // Danach gelten beide als besiegt, jede hat ihren eigenen Satz
   await sleep(150); talkTo(s, 'twin_lena'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'dialog' && m.lines.some((l) => /freut sich richtig/.test(l.text)), 5000);
+  a.ws.close();
+});
+
+await sleep(200);
+await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
+  game.storyOn = true;
+  const a = client('W');
+  await a.open;
+  autoplay(a);
+  a.send({ t: 'hello', name: 'Wind', runCode: 'WIND1' });
+  const w = await a.wait((m) => m.t === 'welcome');
+  const s = game.sessions.get(w.selfId);
+  for (let i = 0; i < 100 && s.script; i++) await sleep(50);
+  const mon = createPokemon(395, 60, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
+  Object.assign(mon.stats, { hp: 999, atk: 999, def: 999, spa: 999, spd: 999, spe: 999 }); mon.hp = 999;
+  mon.moves[0] = { id: 'surf', pp: 99, maxPp: 99 };
+  s.party.push(mon); s.player.starterChosen = true;
+  Object.assign(s.player.flags, { intro: true, has_starter: true, got_balls: true, badge_coal: true, poketch: true, school_barry: true, jub_rowan_left: true });
+  const tp = (map, x, y) => Object.assign(s.player, { map, x, y });
+  let seq = 0; const step = async (dir) => { s.lastMoveAt = 0; a.send({ t: 'move', dir, seq: ++seq }); await sleep(60); };
+  const idle = async () => { for (let i = 0; i < 200 && s.script; i++) await sleep(50); };
+  const trip = async (map, script, flag, ms = 20000) => {
+    const [x, y, d] = beforeTrigger(map, script); tp(map, x, y); await step(d);
+    await a.wait((m) => m.t === 'progress' && m.flags[flag], ms); await idle();
+  };
+  await trip('route_205_south', 'wwGirl205', 'ww_girl_talk');
+  await trip('floaroma_meadow', 'meadowGrunts', 'meadow_grunts_left', 30000);
+  assert.equal(s.player.items['works-key'], 1);
+  assert.equal(s.player.items.honey, 10);
+  talkTo(s, 'ww_guard'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.ww_guard_in, 20000); await idle();
+  await trip('valley_windworks', 'wwDoor', 'ww_door_open');
+  await trip('windworks_inside', 'wwFlee', 'ww_g1_fled');
+  await trip('windworks_inside', 'wwMars', 'windworks_done', 30000);
+  assert.ok(s.player.flags.beat_mars1);
+  talkTo(s, 'ww_dad'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.ww_dad_thanks, 8000); await idle();
+  await trip('valley_windworks', 'wwLooker', 'ww_looker_done');
   a.ws.close();
 });
 
