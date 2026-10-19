@@ -502,7 +502,7 @@ await test('Story-Blockaden: Wege oeffnen sich erst mit dem passenden Fortschrit
     [{ hq_open: true }, ['galactic_hq'], ['spear_pillar']],
     [{ galactic_hq_done: true }, ['spear_pillar'], ['route_222']],
     [{ spear_done: true }, ['route_222', 'sunyshore_city', 'sunyshore_lighthouse', 'route_223'], ['sunyshore_gym', 'pokemon_league_south']],
-    [{ volkner_ready: true }, ['sunyshore_gym'], ['pokemon_league_south']],
+    [{ volkner_ready: true, sun_flint_gone: true }, ['sunyshore_gym'], ['pokemon_league_south']],
     [{ hm_waterfall: true }, ['pokemon_league_south', 'league_south_center'], ['victory_road']],
     [{ badge_beacon: true }, ['victory_road', 'pokemon_league', 'league_lobby', 'e4_aaron'], ['e4_bertha']],
     [{ beat_e4_aaron: true }, ['e4_bertha'], ['e4_flint']],
@@ -722,11 +722,12 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   const a = client('W');
   await a.open;
   autoplay(a);
+  if (process.env.DEBUG_W) a.ws.on('message', (raw) => { const m = JSON.parse(raw); if (/dialog|mapChange|battleStart|battleEnd/.test(m.t)) console.log('   <', m.t, m.t === 'dialog' ? m.lines.map((l) => l.text).join(' | ').slice(0, 90) : m.t === 'battleEnd' ? JSON.stringify(m).slice(0, 600) : m.t === 'battleStart' ? JSON.stringify(m.state.ally?.mon || m.state).slice(0, 300) : m.map || ''); if (m.t !== 'dialog' && m.state?.state && m.state.state !== 'action') console.log('   st', m.t, m.state.state); if (/learn|evolve|prompt|choice/i.test(m.t)) console.log('   <', m.t, JSON.stringify(m).slice(0, 200)); });
   a.send({ t: 'hello', name: 'Wind', runCode: 'WIND1' });
   const w = await a.wait((m) => m.t === 'welcome');
   const s = game.sessions.get(w.selfId);
   for (let i = 0; i < 100 && s.script; i++) await sleep(50);
-  const mon = createPokemon(395, 60, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
+  const mon = createPokemon(395, 100, { ownerId: s.player.id, runId: s.player.runId, metRoute: 'starter' });
   Object.assign(mon.stats, { hp: 999, atk: 999, def: 999, spa: 999, spd: 999, spe: 999 }); mon.hp = 999;
   mon.moves[0] = { id: 'surf', pp: 99, maxPp: 99 };
   s.party.push(mon); s.player.starterChosen = true;
@@ -830,6 +831,22 @@ await test('Story: Flori, Wiese und Windkraftwerk wie in Platin', async () => {
   talkTo(s, 'cyrus_dw'); a.send({ t: 'interact' });
   await a.wait((m) => m.t === 'progress' && m.flags.dw_cyrus_left, 30000); await idle();
   await trip('distortion_world', 'giratina', 'spear_done', 30000);
+  // Kapitel 10: Ignaz am Stadteingang, Volkner im Leuchtturm, Barry und Jasmin, Barry in der Liga, Cynthia und die Ruhmeshalle
+  await trip('sunyshore_city', 'sunFlint', 'sun_flint_met');
+  talkTo(s, 'volkner_light'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.volkner_ready, 20000); await idle();
+  talkTo(s, 'flint_sun'); a.send({ t: 'interact' });
+  await a.wait((m) => m.t === 'progress' && m.flags.sun_flint_gone, 20000); await idle();
+  s.player.flags.badge_beacon = true;
+  await trip('sunyshore_city', 'sunBarry', 'sun_barry_left', 30000); await idle();
+  assert.equal(s.player.items.hm07, 1);
+  await trip('league_lobby', 'rival5', 'll_barry_left', 30000);
+  assert.ok(s.player.flags.rival5);
+  Object.assign(s.player.flags, { beat_e4_aaron: true, beat_e4_bertha: true, beat_e4_flint: true, beat_e4_lucian: true });
+  { const [x, y, d] = beforeTrigger('champion_room', 'champIntro'); tp('champion_room', x, y); await step(d); }
+  await a.wait((m) => m.t === 'mapChange' && m.map === 'hall_of_fame', 120000); await idle();
+  assert.ok(s.player.flags.beat_champ_cynthia);
+  await trip('hall_of_fame', 'hallOfFame', 'champion', 30000);
   a.ws.close();
 });
 
@@ -909,7 +926,7 @@ await test('Story: Feldattacken, Fliegen, Speersäule, Zerrwelt, Pokémon Liga u
   await sleep(100); await step('up');
   await a.wait((m) => m.t === 'mapChange' && m.map === 'e4_aaron', 5000);
   await sleep(100); tp('hall_of_fame', 5, 7); await step('up');
-  await a.wait((m) => m.t === 'progress' && m.flags.champion, 5000);
+  await a.wait((m) => m.t === 'progress' && m.flags.champion, 20000);
   await a.wait((m) => m.t === 'mapChange' && m.map === 'twinleaf_town', 8000);
   // Nach der Liga: Schiff zur Kampfzone, Charon am Kahlberg, Heatran
   await sleep(100); talkTo(s, 'ferry_snow'); a.send({ t: 'interact' });
